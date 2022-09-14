@@ -71,7 +71,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("keys of accounts: %v\n", ks.Accounts())
+	// fmt.Printf("keys of accounts: %v\n", ks.Accounts())
 
 	authority := ks.Accounts()[0].Address
 	user := ks.Accounts()[1].Address
@@ -104,6 +104,7 @@ func main() {
 	// legacy tx: send ether to auth
 	// tx := types.NewTransaction(nonce_user, authority, val, gasLimit, gasPrice, nil)
 
+	fmt.Println("point0")
 	// dummy encrypted tx
 	enc := &types.EncryptedTx{
 		ChainID:   big.NewInt(42),
@@ -115,13 +116,16 @@ func main() {
 		Data:      nil,
 	}
 	tx := types.NewTx(enc)
-
 	signedTx, err := ks.SignTx(user_acc, tx, chainID)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	fmt.Println("point1")
+
 	err = client.SendTransaction(context.Background(), signedTx)
+	fmt.Println("point2")
+
 	if err != nil {
 		log.Fatal(err)
 	}

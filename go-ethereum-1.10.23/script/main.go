@@ -51,6 +51,10 @@ func importKs(file string) *keystore.KeyStore {
 	// }
 }
 
+// func dummy_enc_tx(nonce uint64, gasPrice *big.Int, gasLimit uint64) (tx *types.Transaction) {
+// 	return tx
+// }
+
 func main() {
 	client, err := ethclient.Dial("//./pipe/geth.ipc")
 	if err != nil {
@@ -97,7 +101,20 @@ func main() {
 		log.Fatal(err)
 	}
 
-	tx := types.NewTransaction(nonce_user, authority, val, gasLimit, gasPrice, nil)
+	// legacy tx: send ether to auth
+	// tx := types.NewTransaction(nonce_user, authority, val, gasLimit, gasPrice, nil)
+
+	// dummy encrypted tx
+	enc := &types.EncryptedTx{
+		ChainID:   big.NewInt(42),
+		Nonce:     nonce_user,
+		GasFeeCap: gasPrice,
+		Gas:       gasLimit,
+		To:        &authority,
+		Value:     val,
+		Data:      nil,
+	}
+	tx := types.NewTx(enc)
 
 	signedTx, err := ks.SignTx(user_acc, tx, chainID)
 	if err != nil {

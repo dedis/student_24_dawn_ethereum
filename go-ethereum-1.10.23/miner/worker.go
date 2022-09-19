@@ -825,12 +825,21 @@ func (w *worker) updateSnapshot(env *environment) {
 func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*types.Log, error) {
 	snap := env.state.Snapshot()
 
-	receipt, err := core.ApplyTransaction(w.chainConfig, w.chain, &env.coinbase, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig())
+	var err error
+	var receipt *types.Receipt = types.NewReceipt([]byte("Bingo! Enc receipt"), false, 10)
+
+	// if tx.Type() != types.EncryptedTxType { //@remind only
+	receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &env.coinbase, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig())
+	// }
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
 		return nil, err
 	}
-	env.txs = append(env.txs, tx)
+	res := fmt.Sprintf("#### receipt: %v", receipt)
+	log.Info("commitTransaction called, append to the txs")
+	log.Info(res)
+	log.Info(fmt.Sprintf("############## append tx: %v", tx))
+	env.txs = append(env.txs, tx) //@audit append tx to the env probabily for later store?
 	env.receipts = append(env.receipts, receipt)
 
 	return receipt.Logs, nil

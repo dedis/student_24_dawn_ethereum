@@ -585,13 +585,13 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Accept only legacy transactions until EIP-2718/2930 activates.
-	if !pool.eip2718 && tx.Type() != types.LegacyTxType {
-		return ErrTxTypeNotSupported
-	}
-	// Reject dynamic fee transactions until EIP-1559 activates.
-	if !pool.eip1559 && tx.Type() == types.DynamicFeeTxType {
-		return ErrTxTypeNotSupported
-	}
+	// if !pool.eip2718 && tx.Type() != types.LegacyTxType { //@remind removed tx type validate because of hardfork
+	// 	return ErrTxTypeNotSupported
+	// }
+	// // Reject dynamic fee transactions until EIP-1559 activates.
+	// if !pool.eip1559 && tx.Type() == types.DynamicFeeTxType {
+	// 	return ErrTxTypeNotSupported
+	// }
 	// Reject transactions over defined size to prevent DOS attacks
 	if uint64(tx.Size()) > txMaxSize {
 		return ErrOversizedData
@@ -619,6 +619,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Make sure the transaction is signed properly.
 	from, err := types.Sender(pool.signer, tx)
 	if err != nil {
+		log.Error("#error triggered here 1")
 		return ErrInvalidSender
 	}
 	// Drop non-local transactions under our own minimal accepted gas price or tip
@@ -903,7 +904,8 @@ func (pool *TxPool) addTxs(txs []*types.Transaction, local, sync bool) []error {
 		// possible and cache senders in transactions before
 		// obtaining lock
 		_, err := types.Sender(pool.signer, tx)
-		if err != nil {
+		if err != nil { //@remind place invalidate the tx
+			log.Error("#error triggered here 2")
 			errs[i] = ErrInvalidSender
 			invalidTxMeter.Mark(1)
 			continue

@@ -109,7 +109,9 @@ type rpcBlock struct {
 
 func (ec *Client) getBlock(ctx context.Context, method string, args ...interface{}) (*types.Block, error) {
 	var raw json.RawMessage
+	fmt.Println("getBlock 1")
 	err := ec.c.CallContext(ctx, &raw, method, args...)
+	fmt.Println("getBlock 2")
 	if err != nil {
 		return nil, err
 	} else if len(raw) == 0 {
@@ -118,12 +120,15 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 	// Decode header and transactions.
 	var head *types.Header
 	var body rpcBlock
+	fmt.Println("getBlock 3")
 	if err := json.Unmarshal(raw, &head); err != nil {
 		return nil, err
 	}
+	fmt.Println("getBlock 4")
 	if err := json.Unmarshal(raw, &body); err != nil {
 		return nil, err
 	}
+	fmt.Println("getBlock 5")
 	// Quick-verify transaction and uncle lists. This mostly helps with debugging the server.
 	if head.UncleHash == types.EmptyUncleHash && len(body.UncleHashes) > 0 {
 		return nil, fmt.Errorf("server returned non-empty uncle list but block header indicates no uncles")

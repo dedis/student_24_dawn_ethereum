@@ -37,6 +37,7 @@ git clone https://github.com/ethereum/go-ethereum.git -b release/1.10
 
 // build
 go install -v ./...
+go install -v ./cmd/geth
 
 // install golang
 sudo apt update

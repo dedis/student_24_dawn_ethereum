@@ -1075,13 +1075,13 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 			localTxs[account] = txs
 		}
 	}
-	// pendingEncryptedTxs := w.retrievePendingEncryptedTransactions(5) //@remind add execution logic for pending encrypted txs
-	// if len(pendingEncryptedTxs) > 0 {
-	// 	txs := types.NewEncryptedTxsByConsensus(env.signer, pendingEncryptedTxs)
-	// 	if err := w.commitTransactions(env, txs, interrupt); err != nil {
-	// 		return err
-	// 	}
-	// }
+	pendingEncryptedTxs := w.retrievePendingEncryptedTransactions(5) //@remind add execution logic for pending encrypted txs
+	if len(pendingEncryptedTxs) > 0 {
+		txs := types.NewEncryptedTxsByConsensus(env.signer, pendingEncryptedTxs)
+		if err := w.commitTransactions(env, txs, interrupt); err != nil {
+			return err
+		}
+	}
 	if len(localTxs) > 0 {
 		txs := types.NewTransactionsByPriceAndNonce(env.signer, localTxs, env.header.BaseFee)
 		if err := w.commitTransactions(env, txs, interrupt); err != nil {

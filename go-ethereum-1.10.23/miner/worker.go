@@ -202,7 +202,7 @@ type worker struct {
 	chainSideSub event.Subscription
 
 	// Channels
-	newWorkCh          chan *newWorkReq
+	newWorkCh          chan *newWorkReq //@audit i need an explanation of the channels
 	getWorkCh          chan *getWorkReq
 	taskCh             chan *task
 	resultCh           chan *types.Block
@@ -586,6 +586,7 @@ func (w *worker) mainLoop() {
 			// already included in the current sealing block. These transactions will
 			// be automatically eliminated.
 			if !w.isRunning() && w.current != nil {
+				log.Info("## enter txsCh in clique: if")
 				// If block is already full, abort
 				if gp := w.current.gasPool; gp != nil && gp.Gas() < params.TxGas {
 					continue
@@ -605,6 +606,7 @@ func (w *worker) mainLoop() {
 					w.updateSnapshot(w.current)
 				}
 			} else {
+				log.Info("## enter txsCh in clique: else")
 				// Special case, if the consensus engine is 0 period clique(dev mode),
 				// submit sealing work here since all empty submission will be rejected
 				// by clique. Of course the advance sealing(empty submission) is disabled.
@@ -825,21 +827,27 @@ func (w *worker) updateSnapshot(env *environment) {
 func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*types.Log, error) {
 	snap := env.state.Snapshot()
 
-	var err error
-	var receipt *types.Receipt = types.NewReceipt([]byte("Bingo! Enc receipt"), false, 10)
+	var (
+		err     error
+		receipt *types.Receipt = types.NewReceipt([]byte("Bingo! Enc receipt"), false, 10)
+		sender  common.Address
+	)
 
-	// if tx.Type() != types.EncryptedTxType { //@remind only
-	receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &env.coinbase, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig())
-	// }
+	if tx.Type() != types.EncryptedTxType { //@remind only execute other txs
+		receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &env.coinbase, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig())
+	} else { //@remind for encrypted tx, update the nonce
+		if sender, err = env.signer.Sender(tx); err != nil {
+			return nil, err
+		}
+		env.state.SetNonce(sender, env.state.GetNonce(sender)+1)
+	}
+
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
 		return nil, err
 	}
-	res := fmt.Sprintf("#### receipt: %v", receipt)
-	log.Info("commitTransaction called, append to the txs")
-	log.Info(res)
-	log.Info(fmt.Sprintf("############## append tx: %v", tx))
-	env.txs = append(env.txs, tx) //@audit append tx to the env probabily for later store?
+
+	env.txs = append(env.txs, tx) //@audit append tx to the env probabily for later restore?
 	env.receipts = append(env.receipts, receipt)
 
 	return receipt.Logs, nil
@@ -1067,6 +1075,13 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 			localTxs[account] = txs
 		}
 	}
+	// pendingEncryptedTxs := w.retrievePendingEncryptedTransactions(5) //@remind add execution logic for pending encrypted txs
+	// if len(pendingEncryptedTxs) > 0 {
+	// 	txs := types.NewEncryptedTxsByConsensus(env.signer, pendingEncryptedTxs)
+	// 	if err := w.commitTransactions(env, txs, interrupt); err != nil {
+	// 		return err
+	// 	}
+	// }
 	if len(localTxs) > 0 {
 		txs := types.NewTransactionsByPriceAndNonce(env.signer, localTxs, env.header.BaseFee)
 		if err := w.commitTransactions(env, txs, interrupt); err != nil {
@@ -1080,6 +1095,29 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		}
 	}
 	return nil
+}
+
+func (w *worker) retrievePendingEncryptedTransactions(numbersBack uint64) types.Transactions {
+	encryptedTxs := make(types.Transactions, 0)
+	currentNumber := w.chain.CurrentHeader().Number.Uint64()
+
+	// regardless of the genesis block
+	if currentNumber <= numbersBack {
+		return encryptedTxs
+	}
+
+	previousNumber := currentNumber - numbersBack
+	preBlock := w.chain.GetBlockByNumber(previousNumber)
+
+	// retrieve all the pending encrypted txs that should be executed in this block
+	for _, tx := range preBlock.Transactions() {
+		if tx.Type() == types.EncryptedTxType {
+			encryptedTxs = append(encryptedTxs, tx)
+		}
+	}
+
+	return encryptedTxs
+
 }
 
 // generateWork generates a sealing block based on the given parameters.

@@ -18,12 +18,10 @@ package types
 
 import (
 	"bytes"
-	"fmt"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"golang.org/x/crypto/sha3"
 )
@@ -104,7 +102,6 @@ func DeriveSha(list DerivableList, hasher TrieHasher) common.Hash {
 	if list.Len() > 0 {
 		indexBuf = rlp.AppendUint64(indexBuf[:0], 0)
 		value := encodeForDerive(list, 0, valueBuf)
-		log.Error(fmt.Sprintf("index buf, val: %v, %v", indexBuf, value))
 		hasher.Update(indexBuf, value)
 	}
 	for i := 0x80; i < list.Len(); i++ {

@@ -21,7 +21,9 @@ import (
 	"container/heap"
 	"errors"
 	"fmt"
+
 	"io"
+	olog "log"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -554,6 +556,39 @@ func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transa
 	// Assemble and return the transaction set
 	return &TransactionsByPriceAndNonce{
 		txs:     txs,
+		heads:   heads,
+		signer:  signer,
+		baseFee: baseFee,
+	}
+}
+
+func NewEncryptedTxsByConsensus(signer Signer, txs Transactions) *TransactionsByPriceAndNonce {
+	// group txs into a map
+	txsMap := make(map[common.Address]Transactions)
+	// generate the heads
+	heads := make(TxByPriceAndTime, 0, len(txs))
+	// baseFee should not be considered
+	baseFee := big.NewInt(0)
+
+	for _, tx := range txs {
+		acc, _ := Sender(signer, tx)
+		if _, ok := txsMap[acc]; !ok {
+			txsMap[acc] = make(Transactions, 0)
+			wrapped, err := NewTxWithMinerFee(tx, baseFee)
+			if err != nil {
+				olog.Fatal("NewEncryptedTxsByConsensus Wrong")
+			}
+			heads = append(heads, wrapped)
+		} else {
+			txsMap[acc] = append(txsMap[acc], tx)
+		}
+	}
+
+	heap.Init(&heads)
+
+	// Assemble and return the transaction set
+	return &TransactionsByPriceAndNonce{
+		txs:     txsMap,
 		heads:   heads,
 		signer:  signer,
 		baseFee: baseFee,

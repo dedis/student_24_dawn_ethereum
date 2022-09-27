@@ -222,27 +222,31 @@ func (st *StateTransition) preCheck() error { //@remind nonce correction
 		// Make sure this transaction's nonce is correct.
 		stNonce := st.state.GetNonce(st.msg.From())
 
-		if st.msg.Type() == types.EncryptedTxType {
-			//@remind currently simply require the nonce is older than current nonce, so it won't be executed when the order is set, but executed upon decryption
-			if msgNonce := st.msg.Nonce(); stNonce == msgNonce {
-				return fmt.Errorf("%w: address %v, tx: %d state: %d, ordering the encrypted tx", ErrNonceTooHigh,
-					st.msg.From().Hex(), msgNonce, stNonce)
-			} else if stNonce < msgNonce {
-				return fmt.Errorf("%w: address %v, tx: %d state: %d", ErrNonceTooHigh,
-					st.msg.From().Hex(), msgNonce, stNonce)
-			}
-		} else {
-			if msgNonce := st.msg.Nonce(); stNonce < msgNonce {
-				return fmt.Errorf("%w: address %v, tx: %d state: %d", ErrNonceTooHigh,
-					st.msg.From().Hex(), msgNonce, stNonce)
-			} else if stNonce > msgNonce {
-				return fmt.Errorf("%w: address %v, tx: %d state: %d", ErrNonceTooLow,
-					st.msg.From().Hex(), msgNonce, stNonce)
-			} else if stNonce+1 < stNonce {
-				return fmt.Errorf("%w: address %v, nonce: %d", ErrNonceMax,
-					st.msg.From().Hex(), stNonce)
-			}
+		// if st.msg.Type() == types.EncryptedTxType {
+		// 	//@remind currently simply require the nonce is older than current nonce, so it won't be executed when the order is set, but executed upon decryption
+		// 	if msgNonce := st.msg.Nonce(); stNonce == msgNonce {
+		// 		log.Error(fmt.Sprintf("%v: address %v, tx: %d state: %d, ordering the encrypted tx", ErrNonceTooHigh,
+		// 			st.msg.From().Hex(), msgNonce, stNonce))
+		// 		return fmt.Errorf("%w: address %v, tx: %d state: %d, ordering the encrypted tx", ErrNonceTooHigh,
+		// 			st.msg.From().Hex(), msgNonce, stNonce)
+		// 	} else if stNonce < msgNonce {
+		// 		log.Error(fmt.Sprintf("%v: address %v, tx: %d state: %d, msg nonce too high for encrypted tx", ErrNonceTooHigh,
+		// 			st.msg.From().Hex(), msgNonce, stNonce))
+		// 		return fmt.Errorf("%w: address %v, tx: %d state: %d", ErrNonceTooHigh,
+		// 			st.msg.From().Hex(), msgNonce, stNonce)
+		// 	}
+		// } else {
+		if msgNonce := st.msg.Nonce(); stNonce < msgNonce {
+			return fmt.Errorf("%w: address %v, tx: %d state: %d", ErrNonceTooHigh,
+				st.msg.From().Hex(), msgNonce, stNonce)
+		} else if stNonce > msgNonce {
+			return fmt.Errorf("%w: address %v, tx: %d state: %d", ErrNonceTooLow,
+				st.msg.From().Hex(), msgNonce, stNonce)
+		} else if stNonce+1 < stNonce {
+			return fmt.Errorf("%w: address %v, nonce: %d", ErrNonceMax,
+				st.msg.From().Hex(), stNonce)
 		}
+		// }
 		// Make sure the sender is an EOA
 		if codeHash := st.state.GetCodeHash(st.msg.From()); codeHash != emptyCodeHash && codeHash != (common.Hash{}) {
 			return fmt.Errorf("%w: address %v, codehash: %s", ErrSenderNoEOA,
@@ -301,9 +305,29 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// 5. there is no overflow when calculating intrinsic gas
 	// 6. caller has enough balance to cover asset transfer for **topmost** call
 
-	// Check clauses 1-3, buy gas if everything is correct
-	if err := st.preCheck(); err != nil { //@remind where nonce is enforced for plaintext tx, should accept old nonce
-		return nil, err
+	// early exit when ordering the encrypted tx
+	stNonce := st.state.GetNonce(st.msg.From())
+	if st.msg.Type() == types.EncryptedTxType {
+		//@remind currently simply require the nonce is older than current nonce, so it won't be executed when the order is set, but executed upon decryption
+		if msgNonce := st.msg.Nonce(); stNonce == msgNonce {
+			log.Info(fmt.Sprintf("$ %v: address %v, tx: %d state: %d, ordering the encrypted tx", ErrNonceTooHigh,
+				st.msg.From().Hex(), msgNonce, stNonce))
+			return &ExecutionResult{ //@remind as only set the order, there is no execution result
+				UsedGas:    st.gasUsed(),
+				Err:        nil,
+				ReturnData: nil,
+			}, nil
+		} else if stNonce < msgNonce { // same as other tx types
+			return nil, fmt.Errorf("%w: address %v, tx: %d state: %d", ErrNonceTooHigh,
+				st.msg.From().Hex(), msgNonce, stNonce)
+		} else {
+			// @remind otherwise, execution follows
+		}
+	} else {
+		// Check clauses 1-3, buy gas if everything is correct
+		if err := st.preCheck(); err != nil { //@remind where nonce is enforced for plaintext tx, should accept old nonce
+			return nil, err
+		}
 	}
 
 	if st.evm.Config.Debug {

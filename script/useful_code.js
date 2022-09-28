@@ -1,3 +1,5 @@
+const eth = require("eth")
+
 // connect geth console
 geth attach .ethereum/geth.ipc
 
@@ -59,3 +61,10 @@ geth --nodiscover --networkid 42 --datadir .ethereum/ --unlock 0x280F6B48E4d9aEe
 
 // interact with blockchain
 geth attach //./pipe/geth.ipc
+
+// generate vanity address / contract address
+npm install -g vanity-eth
+
+vanity -i f413 --contract
+
+vanity -n 10 -i DEADbeef -c

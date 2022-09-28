@@ -526,7 +526,7 @@ func (pool *TxPool) ContentFrom(addr common.Address) (types.Transactions, types.
 	return pending, queued
 }
 
-// Pending retrieves all currently processable transactions, grouped by origin
+// Pending retrieves all currently processable transactions, grouped by origin //@remind group of txs
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
 //

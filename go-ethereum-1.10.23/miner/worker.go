@@ -830,17 +830,20 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 	var (
 		err     error
 		receipt *types.Receipt = types.NewReceipt([]byte("Bingo! Enc receipt"), false, 10)
-		sender  common.Address
+		// sender  common.Address
 	)
 
-	if tx.Type() != types.EncryptedTxType { //@remind only execute other txs
-		receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &env.coinbase, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig())
-	} else { //@remind for encrypted tx, update the nonce
-		if sender, err = env.signer.Sender(tx); err != nil {
-			return nil, err
-		}
-		env.state.SetNonce(sender, env.state.GetNonce(sender)+1)
-	}
+	log.Info("$ enter ApplyTransaction")
+
+	receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &env.coinbase, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig())
+	// if tx.Type() != types.EncryptedTxType { //@remind only execute other txs
+	// 	receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &env.coinbase, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig())
+	// } else { //@remind for encrypted tx, update the nonce
+	// 	if sender, err = env.signer.Sender(tx); err != nil {
+	// 		return nil, err
+	// 	}
+	// 	env.state.SetNonce(sender, env.state.GetNonce(sender)+1) //@remind future querying receipt to forbid execution
+	// }
 
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
@@ -1075,7 +1078,7 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 			localTxs[account] = txs
 		}
 	}
-	pendingEncryptedTxs := w.retrievePendingEncryptedTransactions(5) //@remind add execution logic for pending encrypted txs
+	pendingEncryptedTxs := w.retrievePendingEncryptedTransactions(3) //@remind add execution logic for pending encrypted txs
 	if len(pendingEncryptedTxs) > 0 {
 		txs := types.NewEncryptedTxsByConsensus(env.signer, pendingEncryptedTxs)
 		if err := w.commitTransactions(env, txs, interrupt); err != nil {
@@ -1099,8 +1102,7 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 
 func (w *worker) retrievePendingEncryptedTransactions(numbersBack uint64) types.Transactions {
 	encryptedTxs := make(types.Transactions, 0)
-	currentNumber := w.chain.CurrentHeader().Number.Uint64()
-
+	currentNumber := w.chain.CurrentHeader().Number.Uint64() //@remind the recent block that already mined, not the current mining block
 	// regardless of the genesis block
 	if currentNumber <= numbersBack {
 		return encryptedTxs

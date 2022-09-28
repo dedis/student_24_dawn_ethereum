@@ -54,7 +54,7 @@ The state transitioning model does all the necessary work to work out a valid ne
 type StateTransition struct {
 	gp         *GasPool
 	msg        Message
-	gas        uint64
+	gas        uint64 //@audit where is this gas set
 	gasPrice   *big.Int
 	gasFeeCap  *big.Int
 	gasTipCap  *big.Int
@@ -312,16 +312,21 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		if msgNonce := st.msg.Nonce(); stNonce == msgNonce {
 			log.Info(fmt.Sprintf("$ %v: address %v, tx: %d state: %d, ordering the encrypted tx", ErrNonceTooHigh,
 				st.msg.From().Hex(), msgNonce, stNonce))
-			return &ExecutionResult{ //@remind as only set the order, there is no execution result
+			st.state.SetNonce(st.msg.From(), st.state.GetNonce(vm.AccountRef(st.msg.From()).Address())+1) //@remind update the nonce
+			return &ExecutionResult{
 				UsedGas:    st.gasUsed(),
 				Err:        nil,
-				ReturnData: nil,
+				ReturnData: []byte(""),
 			}, nil
 		} else if stNonce < msgNonce { // same as other tx types
 			return nil, fmt.Errorf("%w: address %v, tx: %d state: %d", ErrNonceTooHigh,
 				st.msg.From().Hex(), msgNonce, stNonce)
 		} else {
 			// @remind otherwise, execution follows
+			// buy gas for execution
+			if err := st.buyGas(); err != nil {
+				return nil, err
+			}
 		}
 	} else {
 		// Check clauses 1-3, buy gas if everything is correct
@@ -353,12 +358,10 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		return nil, fmt.Errorf("%w: have %d, want %d", ErrIntrinsicGas, st.gas, gas)
 	}
 	st.gas -= gas
-
 	// Check clause 6
 	if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.From(), msg.Value()) {
 		return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
 	}
-
 	// Set up the initial access list.
 	if rules.IsBerlin {
 		st.state.PrepareAccessList(msg.From(), msg.To(), vm.ActivePrecompiles(rules), msg.AccessList())
@@ -371,8 +374,9 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		ret, _, st.gas, vmerr = st.evm.Create(sender, st.data, st.gas, st.value)
 	} else {
 		// Increment the nonce for the next transaction
-		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
-		log.Info("$ enter execution")
+		if st.msg.Type() != types.EncryptedTxType { //@remind do not need to increase nonce for executing old encrypted tx
+			st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
+		}
 		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
 	}
 

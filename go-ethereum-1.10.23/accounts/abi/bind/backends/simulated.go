@@ -812,6 +812,7 @@ type callMsg struct {
 	ethereum.CallMsg
 }
 
+func (m callMsg) Type() uint8                  { return m.CallMsg.TxType }
 func (m callMsg) From() common.Address         { return m.CallMsg.From }
 func (m callMsg) Nonce() uint64                { return 0 }
 func (m callMsg) IsFake() bool                 { return true }

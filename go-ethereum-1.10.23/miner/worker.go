@@ -606,7 +606,6 @@ func (w *worker) mainLoop() {
 					w.updateSnapshot(w.current)
 				}
 			} else {
-				log.Info("## enter txsCh in clique: else")
 				// Special case, if the consensus engine is 0 period clique(dev mode),
 				// submit sealing work here since all empty submission will be rejected
 				// by clique. Of course the advance sealing(empty submission) is disabled.
@@ -832,8 +831,6 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 		receipt *types.Receipt = types.NewReceipt([]byte("Bingo! Enc receipt"), false, 10)
 		// sender  common.Address
 	)
-
-	log.Info("$ enter ApplyTransaction")
 
 	receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &env.coinbase, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig())
 	// if tx.Type() != types.EncryptedTxType { //@remind only execute other txs

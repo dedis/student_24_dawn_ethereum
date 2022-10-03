@@ -141,8 +141,6 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 		}
 	}
 
-	log.Error("## enter start call signer.Sender")
-
 	addr, err := signer.Sender(tx)
 	if err != nil {
 		return common.Address{}, err

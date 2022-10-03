@@ -113,7 +113,7 @@ func (env *environment) copy() *environment {
 		receipts:  copyReceipts(env.receipts),
 	}
 	if env.gasPool != nil {
-		gasPool := *env.gasPool
+		gasPool := *env.gasPool //@remind why not cpy.gasPool = env.gasPool
 		cpy.gasPool = &gasPool
 	}
 	// The content of txs and uncles are immutable, unnecessary
@@ -202,7 +202,7 @@ type worker struct {
 	chainSideSub event.Subscription
 
 	// Channels
-	newWorkCh          chan *newWorkReq //@audit i need an explanation of the channels
+	newWorkCh          chan *newWorkReq //@audit I need an explanation of the channels
 	getWorkCh          chan *getWorkReq
 	taskCh             chan *task
 	resultCh           chan *types.Block
@@ -841,13 +841,34 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 	// 	}
 	// 	env.state.SetNonce(sender, env.state.GetNonce(sender)+1) //@remind future querying receipt to forbid execution
 	// }
+	// if receipt.Type == types.EncryptedTxType && receipt.CumulativeGasUsed != 0 { //@remind execution of an encrypted tx, mark it as executed
+	// 	newEnc = types.EncryptedTx{
+	// 		ChainID:    env.signer.ChainID(),
+	// 		Nonce:      tx.Nonce(),
+	// 		GasTipCap:  tx.GasTipCap(),
+	// 		GasFeeCap:  tx.GasFeeCap(),
+	// 		Gas:        tx.Gas(),
+	// 		To:         tx.To(),
+	// 		Value:      tx.Value(),
+	// 		Data:       tx.Data(),
+	// 		Key:        []byte("secret key"),
+	// 		AccessList: tx.AccessList(),
+	// 	}
+	// 	newTx := types.NewTx(newEnc)
+
+	// }
 
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
 		return nil, err
 	}
 
-	env.txs = append(env.txs, tx) //@audit append tx to the env probabily for later restore?
+	if receipt.Type == types.EncryptedTxType && receipt.CumulativeGasUsed != 0 {
+		//@remind do not need to add the tx as is already stored before
+	} else {
+		env.txs = append(env.txs, tx)
+	}
+
 	env.receipts = append(env.receipts, receipt)
 
 	return receipt.Logs, nil

@@ -47,7 +47,8 @@ type txJSON struct {
 	AccessList *AccessList  `json:"accessList,omitempty"`
 
 	// Only used for encoding:
-	Hash common.Hash `json:"hash"`
+	Hash common.Hash    `json:"hash"`
+	Key  *hexutil.Bytes `json:"key"`
 }
 
 // MarshalJSON marshals as JSON with a hash.
@@ -107,6 +108,7 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		enc.V = (*hexutil.Big)(tx.V)
 		enc.R = (*hexutil.Big)(tx.R)
 		enc.S = (*hexutil.Big)(tx.S)
+		enc.Key = (*hexutil.Bytes)(&tx.Key)
 	}
 
 	return json.Marshal(&enc)
@@ -326,6 +328,9 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 			return errors.New("missing required field 's' in transaction")
 		}
 		itx.S = (*big.Int)(dec.S)
+		if dec.Key != nil {
+			itx.Key = *dec.Key //@remind add key
+		}
 		// withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0 //@remind tmp disable
 		// if withSignature {
 		// 	if err := sanityCheckSignature(itx.V, itx.R, itx.S, false); err != nil {

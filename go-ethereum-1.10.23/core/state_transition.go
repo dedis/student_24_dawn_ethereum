@@ -81,6 +81,7 @@ type Message interface {
 	IsFake() bool
 	Data() []byte
 	AccessList() types.AccessList
+	Key() []byte
 }
 
 // ExecutionResult includes all output after executing given evm
@@ -313,18 +314,29 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			st.state.SetNonce(st.msg.From(), st.state.GetNonce(vm.AccountRef(st.msg.From()).Address())+1) //@remind update the nonce
 			return &ExecutionResult{
 				UsedGas:    st.gasUsed(),
-				Err:        nil,
+				Err:        fmt.Errorf("ordering"),
 				ReturnData: []byte(""),
 			}, nil
 		} else if stNonce < msgNonce { // same as other tx types
 			return nil, fmt.Errorf("%w: address %v, tx: %d state: %d", ErrNonceTooHigh,
 				st.msg.From().Hex(), msgNonce, stNonce)
 		} else {
+			if st.msg.Key() != nil && len(st.msg.Key()) != 0 { //@remind if the key exist: already executed in n-k
+				log.Info(fmt.Sprintf("$ %v, %v: address %v, tx: %d state: %d, executing the encrypted tx", st.msg.Key(), len(st.msg.Key()),
+					st.msg.From().Hex(), msgNonce, stNonce))
+				return &ExecutionResult{
+					UsedGas:    st.gasUsed(),
+					Err:        fmt.Errorf("stale"),
+					ReturnData: []byte(""),
+				}, fmt.Errorf("stale")
+			}
+			log.Info(fmt.Sprintf("point1"))
 			// @remind otherwise, execution follows
 			// buy gas for execution
 			if err := st.buyGas(); err != nil {
 				return nil, err
 			}
+			log.Info(fmt.Sprintf("point2"))
 		}
 	} else {
 		// Check clauses 1-3, buy gas if everything is correct
@@ -352,14 +364,17 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Info(fmt.Sprintf("point3"))
 	if st.gas < gas {
 		return nil, fmt.Errorf("%w: have %d, want %d", ErrIntrinsicGas, st.gas, gas)
 	}
+	log.Info(fmt.Sprintf("point4"))
 	st.gas -= gas
 	// Check clause 6
 	if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.From(), msg.Value()) {
 		return nil, fmt.Errorf("%w: address %v", ErrInsufficientFundsForTransfer, msg.From().Hex())
 	}
+	log.Info(fmt.Sprintf("point5"))
 	// Set up the initial access list.
 	if rules.IsBerlin {
 		st.state.PrepareAccessList(msg.From(), msg.To(), vm.ActivePrecompiles(rules), msg.AccessList())
@@ -375,7 +390,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		if st.msg.Type() != types.EncryptedTxType { //@remind do not need to increase nonce for executing old encrypted tx
 			st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
 		}
+		if st.msg.Type() == types.EncryptedTxType {
+			log.Error(fmt.Sprintf("execution of encrypted tx"))
+		}
 		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
+		log.Info(fmt.Sprintf("point6"))
 	}
 
 	if !rules.IsLondon {

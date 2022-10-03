@@ -31,6 +31,7 @@ type EncryptedTx struct {
 	To         *common.Address `rlp:"nil"` // nil means contract creation
 	Value      *big.Int
 	Data       []byte
+	Key        []byte //@remind key for decrypt a tx
 	AccessList AccessList
 
 	// Signature values
@@ -45,6 +46,7 @@ func (tx *EncryptedTx) copy() TxData {
 		Nonce: tx.Nonce,
 		To:    copyAddressPtr(tx.To),
 		Data:  common.CopyBytes(tx.Data),
+		Key:   common.CopyBytes(tx.Key),
 		Gas:   tx.Gas,
 		// These are copied below.
 		AccessList: make(AccessList, len(tx.AccessList)),
@@ -93,6 +95,7 @@ func (tx *EncryptedTx) gasPrice() *big.Int     { return tx.GasFeeCap }
 func (tx *EncryptedTx) value() *big.Int        { return tx.Value }
 func (tx *EncryptedTx) nonce() uint64          { return tx.Nonce }
 func (tx *EncryptedTx) to() *common.Address    { return tx.To }
+func (tx *EncryptedTx) key() []byte            { return tx.Key }
 
 func (tx *EncryptedTx) rawSignatureValues() (v, r, s *big.Int) {
 	return tx.V, tx.R, tx.S

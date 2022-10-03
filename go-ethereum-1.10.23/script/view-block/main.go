@@ -48,6 +48,8 @@ func prettyPrintBlock(client *ethclient.Client, num *big.Int) {
 		fmt.Println("tx.Nonce: ", tx.Nonce())
 		fmt.Println("tx.Data: ", string(tx.Data()[:]))
 		fmt.Println("tx.To: ", tx.To().Hex())
+		rc, _ := client.TransactionReceipt(context.Background(), tx.Hash())
+		fmt.Printf("%+v\n", rc)
 	}
 }
 

@@ -1652,6 +1652,47 @@ func (s *TransactionAPI) GetTransactionReceipt(ctx context.Context, hash common.
 	return fields, nil
 }
 
+// GetTransactionReceipt returns the transaction receipt for the given transaction hash.
+func (s *TransactionAPI) GetAllReceipt(ctx context.Context, blockHash common.Hash) (map[string]interface{}, error) {
+	receipts, err := s.b.GetReceipts(ctx, blockHash)
+	if err != nil || len(receipts) == 0 {
+		return nil, err
+	}
+	receipt := receipts[0]
+
+	// Derive the sender.
+	// bigblock := new(big.Int).SetUint64(blockNumber)
+	// signer := types.MakeSigner(s.b.ChainConfig(), bigblock)
+	// from, _ := types.Sender(signer, tx)
+
+	fields := map[string]interface{}{
+		"blockHash":         blockHash,
+		"blockNumber":       receipt.BlockNumber,
+		"transactionHash":   receipt.TxHash,
+		"transactionIndex":  hexutil.Uint64(receipt.TransactionIndex),
+		"from":              receipt.ContractAddress,
+		"to":                receipt.ContractAddress,
+		"gasUsed":           hexutil.Uint64(receipt.GasUsed),
+		"cumulativeGasUsed": hexutil.Uint64(receipt.CumulativeGasUsed),
+		"contractAddress":   nil,
+		"logs":              receipt.Logs,
+		"logsBloom":         receipt.Bloom,
+		"type":              hexutil.Uint(receipt.Type),
+	}
+
+	// Assign receipt status or post state.
+	if len(receipt.PostState) > 0 {
+		fields["root"] = hexutil.Bytes(receipt.PostState)
+	} else {
+		fields["status"] = hexutil.Uint(receipt.Status)
+	}
+	if receipt.Logs == nil {
+		fields["logs"] = []*types.Log{}
+	}
+
+	return fields, nil
+}
+
 // sign is a helper function that signs a transaction with the private key of the given address.
 func (s *TransactionAPI) sign(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
 	// Look up the wallet containing the requested signer

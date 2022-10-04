@@ -48,9 +48,20 @@ func prettyPrintBlock(client *ethclient.Client, num *big.Int) {
 		fmt.Println("tx.Nonce: ", tx.Nonce())
 		fmt.Println("tx.Data: ", string(tx.Data()[:]))
 		fmt.Println("tx.To: ", tx.To().Hex())
+		fmt.Println("tx Key: ", tx.Key())
 		rc, _ := client.TransactionReceipt(context.Background(), tx.Hash())
 		fmt.Printf("%+v\n", rc)
 	}
+}
+
+func prettyPrintReceipt(client *ethclient.Client, num *big.Int) {
+	var block *types.Block
+	var err error
+	if block, err = client.BlockByNumber(context.Background(), num); err != nil {
+		log.Fatal(err)
+	}
+	rc, err := client.GetAllReceipt(context.Background(), block.Hash())
+	fmt.Printf("%+v\n", rc)
 }
 
 // hd, err := client.HeaderByNumber(context.Background(), blockNumber)
@@ -102,5 +113,6 @@ func main() {
 
 	num0 := big.NewInt(*id)
 	fmt.Println("\n# Block number: ", id)
-	prettyPrintBlock(client, num0)
+	// prettyPrintBlock(client, num0)
+	prettyPrintReceipt(client, num0)
 }

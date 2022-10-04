@@ -833,30 +833,6 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 	)
 
 	receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &env.coinbase, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig())
-	// if tx.Type() != types.EncryptedTxType { //@remind only execute other txs
-	// 	receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &env.coinbase, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig())
-	// } else { //@remind for encrypted tx, update the nonce
-	// 	if sender, err = env.signer.Sender(tx); err != nil {
-	// 		return nil, err
-	// 	}
-	// 	env.state.SetNonce(sender, env.state.GetNonce(sender)+1) //@remind future querying receipt to forbid execution
-	// }
-	// if receipt.Type == types.EncryptedTxType && receipt.CumulativeGasUsed != 0 { //@remind execution of an encrypted tx, mark it as executed
-	// 	newEnc = types.EncryptedTx{
-	// 		ChainID:    env.signer.ChainID(),
-	// 		Nonce:      tx.Nonce(),
-	// 		GasTipCap:  tx.GasTipCap(),
-	// 		GasFeeCap:  tx.GasFeeCap(),
-	// 		Gas:        tx.Gas(),
-	// 		To:         tx.To(),
-	// 		Value:      tx.Value(),
-	// 		Data:       tx.Data(),
-	// 		Key:        []byte("secret key"),
-	// 		AccessList: tx.AccessList(),
-	// 	}
-	// 	newTx := types.NewTx(newEnc)
-
-	// }
 
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
@@ -866,10 +842,10 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 	if receipt.Type == types.EncryptedTxType && receipt.CumulativeGasUsed != 0 {
 		//@remind do not need to add the tx as is already stored before
 	} else {
+		//@remind only store tx and receipt if it is not executing encrypted tx
 		env.txs = append(env.txs, tx)
+		env.receipts = append(env.receipts, receipt)
 	}
-
-	env.receipts = append(env.receipts, receipt)
 
 	return receipt.Logs, nil
 }

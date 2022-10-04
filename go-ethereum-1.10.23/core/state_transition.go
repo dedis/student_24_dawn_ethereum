@@ -309,8 +309,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	if st.msg.Type() == types.EncryptedTxType {
 		//@remind currently simply require the nonce is older than current nonce, so it won't be executed when the order is set, but executed upon decryption
 		if msgNonce := st.msg.Nonce(); stNonce == msgNonce {
-			log.Info(fmt.Sprintf("$ %v: address %v, tx: %d state: %d, ordering the encrypted tx", ErrNonceTooHigh,
-				st.msg.From().Hex(), msgNonce, stNonce))
+			log.Info(fmt.Sprintf("$ address %v, tx: %d state: %d, ordering the encrypted tx", st.msg.From().Hex(), msgNonce, stNonce))
 			st.state.SetNonce(st.msg.From(), st.state.GetNonce(vm.AccountRef(st.msg.From()).Address())+1) //@remind update the nonce
 			return &ExecutionResult{
 				UsedGas:    st.gasUsed(),
@@ -321,16 +320,17 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			return nil, fmt.Errorf("%w: address %v, tx: %d state: %d", ErrNonceTooHigh,
 				st.msg.From().Hex(), msgNonce, stNonce)
 		} else {
-			if st.msg.Key() != nil && len(st.msg.Key()) != 0 { //@remind if the key exist: already executed in n-k
-				log.Info(fmt.Sprintf("$ %v, %v: address %v, tx: %d state: %d, executing the encrypted tx", st.msg.Key(), len(st.msg.Key()),
-					st.msg.From().Hex(), msgNonce, stNonce))
-				return &ExecutionResult{
-					UsedGas:    st.gasUsed(),
-					Err:        fmt.Errorf("stale"),
-					ReturnData: []byte(""),
-				}, fmt.Errorf("stale")
-			}
-			log.Info(fmt.Sprintf("point1"))
+			// TODO: uncomment the following if we store the key into the tx
+			// if st.msg.Key() != nil && len(st.msg.Key()) != 0 { //@remind if the key exist: already executed in n-k
+			// 	log.Info(fmt.Sprintf("$ %v, %v: address %v, tx: %d state: %d, executing the encrypted tx", st.msg.Key(), len(st.msg.Key()),
+			// 		st.msg.From().Hex(), msgNonce, stNonce))
+			// 	return &ExecutionResult{
+			// 		UsedGas:    st.gasUsed(),
+			// 		Err:        fmt.Errorf("stale"),
+			// 		ReturnData: []byte(""),
+			// 	}, fmt.Errorf("stale")
+			// }
+			// log.Info(fmt.Sprintf("point1"))
 			// @remind otherwise, execution follows
 			// buy gas for execution
 			if err := st.buyGas(); err != nil {

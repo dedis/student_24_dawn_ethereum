@@ -293,6 +293,19 @@ func (ec *Client) TransactionReceipt(ctx context.Context, txHash common.Hash) (*
 	return r, err
 }
 
+// TransactionReceipt returns the receipt of a transaction by transaction hash.
+// Note that the receipt is not available for pending transactions.
+func (ec *Client) GetAllReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+	var r *types.Receipt
+	err := ec.c.CallContext(ctx, &r, "eth_getAllReceipt", txHash)
+	if err == nil {
+		if r == nil {
+			return nil, ethereum.NotFound
+		}
+	}
+	return r, err
+}
+
 // SyncProgress retrieves the current progress of the sync algorithm. If there's
 // no sync currently running, it returns nil.
 func (ec *Client) SyncProgress(ctx context.Context) (*ethereum.SyncProgress, error) {

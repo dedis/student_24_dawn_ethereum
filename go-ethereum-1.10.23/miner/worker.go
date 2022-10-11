@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -1073,6 +1074,7 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		}
 	}
 	start := time.Now()
+
 	pendingEncryptedTxs := w.retrievePendingEncryptedTransactions(0) //@remind add execution logic for pending encrypted txs
 	if len(pendingEncryptedTxs) > 0 {
 		txs := types.NewEncryptedTxsByConsensus(env.signer, pendingEncryptedTxs)
@@ -1080,8 +1082,18 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 			return err
 		}
 	}
+
 	elapsed := time.Since(start)
-	log.Error(fmt.Sprintf("$$ execution encrypted: %s", elapsed))
+	line := fmt.Sprintf("$$ execution encrypted: %s\n", elapsed)
+	log.Error(line)
+	f, err := os.OpenFile("testlogfile", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		panic("wrong file")
+	}
+
+	f.Write([]byte(line))
+	f.Close()
+
 	if len(localTxs) > 0 {
 		txs := types.NewTransactionsByPriceAndNonce(env.signer, localTxs, env.header.BaseFee)
 		if err := w.commitTransactions(env, txs, interrupt); err != nil {

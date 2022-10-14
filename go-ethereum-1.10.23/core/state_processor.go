@@ -128,6 +128,11 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 		receipt.ContractAddress = crypto.CreateAddress(evm.TxContext.Origin, tx.Nonce())
 	}
 
+	// If this is the execution of an encrypted tx, then add the key to the receipt
+	if result.UsedGas != 0 && tx.Type() == types.EncryptedTxType {
+		receipt.Key = []byte("encryptionkey")
+	}
+
 	// Set the receipt logs and create the bloom filter.
 	receipt.Logs = statedb.GetLogs(tx.Hash(), blockHash)
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})

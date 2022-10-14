@@ -309,7 +309,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	if st.msg.Type() == types.EncryptedTxType {
 		//@remind currently simply require the nonce is older than current nonce, so it won't be executed when the order is set, but executed upon decryption
 		if msgNonce := st.msg.Nonce(); stNonce == msgNonce {
-			log.Info(fmt.Sprintf("$ address %v, tx: %d state: %d, ordering the encrypted tx", st.msg.From().Hex(), msgNonce, stNonce))
+			log.Info(fmt.Sprintf("$ address %v, tx: %d state: %d, used gas: %v, ordering the encrypted tx", st.msg.From().Hex(), msgNonce, stNonce, st.gasUsed()))
 			st.state.SetNonce(st.msg.From(), st.state.GetNonce(vm.AccountRef(st.msg.From()).Address())+1) //@remind update the nonce
 			return &ExecutionResult{
 				UsedGas:    st.gasUsed(),

@@ -50,35 +50,10 @@ func prettyPrintBlock(client *ethclient.Client, num *big.Int) {
 		fmt.Println("tx.To: ", tx.To().Hex())
 		fmt.Println("tx Key: ", tx.Key())
 		rc, _ := client.TransactionReceipt(context.Background(), tx.Hash())
+		fmt.Printf("receipt key: %v", rc.Key)
 		fmt.Printf("%+v\n", rc)
-		fmt.Println("receipt Key: ", rc.Key)
 	}
 }
-
-func prettyPrintReceipt(client *ethclient.Client, num *big.Int) {
-	var block *types.Block
-	var err error
-	if block, err = client.BlockByNumber(context.Background(), num); err != nil {
-		log.Fatal(err)
-	}
-	rc, err := client.GetAllReceipt(context.Background(), block.Hash())
-	fmt.Printf("%+v\n", rc)
-}
-
-// hd, err := client.HeaderByNumber(context.Background(), blockNumber)
-// fmt.Printf("# header: %v, %v, parent: %v, root: %v\n", hd.Number, hd.TxHash, hd.ParentHash, hd.Root)
-// if err != nil {
-// 	log.Fatal(err)
-// }
-
-// txHash := common.HexToHash("0xbd917bdb05d6e174c6fec4e2d54ae4d419b077113c60c78cb51d7eebdca0a425")
-// tx, isPending, err := client.TransactionByHash(context.Background(), txHash)
-// if err != nil {
-// 	log.Fatal(err)
-// }
-
-// fmt.Println(tx.Hash().Hex()) // 0x5d49fcaa394c97ec8a9c3e7bd9e8388d420fb050a52083ca52ff24b3b65bc9c2
-// fmt.Println(isPending)       // false
 
 func main() {
 	var client *ethclient.Client
@@ -115,5 +90,4 @@ func main() {
 	num0 := big.NewInt(*id)
 	fmt.Println("\n# Block number: ", id)
 	prettyPrintBlock(client, num0)
-	// prettyPrintReceipt(client, num0)
 }

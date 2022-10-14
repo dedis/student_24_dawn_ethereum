@@ -842,11 +842,13 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 
 	if receipt.Type == types.EncryptedTxType && receipt.CumulativeGasUsed != 0 {
 		//@remind do not need to add the tx as is already stored before
+		log.Error(fmt.Sprintf("[ENC][EXE] receipt key appended: %v", receipt.Key))
 	} else {
 		//@remind only store tx and receipt if it is not executing encrypted tx
-		env.txs = append(env.txs, tx)
-		env.receipts = append(env.receipts, receipt)
 	}
+
+	env.txs = append(env.txs, tx)
+	env.receipts = append(env.receipts, receipt)
 
 	return receipt.Logs, nil
 }
@@ -1083,16 +1085,18 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		}
 	}
 
-	elapsed := time.Since(start)
-	line := fmt.Sprintf("$$ execution encrypted: %s\n", elapsed)
-	log.Error(line)
-	f, err := os.OpenFile("testlogfile", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		panic("wrong file")
-	}
+	if len(pendingEncryptedTxs) > 0 {
+		elapsed := time.Since(start)
+		line := fmt.Sprintf("[ENC][EXE][Elapse]: %s\n", elapsed)
+		log.Error(line)
+		f, err := os.OpenFile("testlogfile", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			panic("wrong file")
+		}
 
-	f.Write([]byte(line))
-	f.Close()
+		f.Write([]byte(line))
+		f.Close()
+	}
 
 	if len(localTxs) > 0 {
 		txs := types.NewTransactionsByPriceAndNonce(env.signer, localTxs, env.header.BaseFee)
@@ -1120,10 +1124,23 @@ func (w *worker) retrievePendingEncryptedTransactions(numbersBack uint64) types.
 	previousNumber := currentNumber - numbersBack
 	preBlock := w.chain.GetBlockByNumber(previousNumber)
 
+	txs := preBlock.Transactions()
+	receipts := w.chain.GetReceiptsByHash(preBlock.Hash())
+
+	if len(txs) != len(receipts) {
+		panic("unequal length of txs and receipts")
+	}
+	var rc *types.Receipt
+
 	// retrieve all the pending encrypted txs that should be executed in this block
-	for _, tx := range preBlock.Transactions() {
+	for i, tx := range txs {
 		if tx.Type() == types.EncryptedTxType {
-			encryptedTxs = append(encryptedTxs, tx)
+			rc = receipts[i]
+
+			if rc.Key == nil || len(rc.Key) == 0 { // if there is no key attached to the receipt, this encrypted tx must have not been executed
+				log.Info(fmt.Sprintf("[ENC][RETRIEVE] tx hash: %v", tx.Hash().String()))
+				encryptedTxs = append(encryptedTxs, tx)
+			}
 		}
 	}
 

@@ -52,6 +52,8 @@ const (
 	EncryptedTxType
 )
 
+const EncryptedBlockDelay uint64 = 0
+
 // Transaction is an Ethereum transaction.
 type Transaction struct {
 	inner TxData    // Consensus contents of a transaction

@@ -216,6 +216,59 @@ func (st *StateTransition) buyGas() error {
 	return nil
 }
 
+func (st *StateTransition) encryptedPreCheck() (*ExecutionResult, error) {
+	stNonce := st.state.GetNonce(st.msg.From())
+	//@remind currently simply require the nonce is older than current nonce, so it won't be executed when the order is set, but executed upon decryption
+	if msgNonce := st.msg.Nonce(); stNonce == msgNonce {
+		log.Info(fmt.Sprintf("$ address %v, tx: %d state: %d, used gas: %v, ordering the encrypted tx", st.msg.From().Hex(), msgNonce, stNonce, st.gasUsed()))
+		st.state.SetNonce(st.msg.From(), st.state.GetNonce(vm.AccountRef(st.msg.From()).Address())+1) //@remind update the nonce
+
+		return &ExecutionResult{
+			UsedGas:    st.gasUsed(),
+			Err:        fmt.Errorf("ordering"),
+			ReturnData: []byte(""),
+		}, nil
+
+	} else if stNonce < msgNonce { // same as other tx types
+
+		return nil, fmt.Errorf("%w: address %v, tx: %d state: %d", ErrNonceTooHigh, st.msg.From().Hex(), msgNonce, stNonce)
+
+	} else {
+		// @remind otherwise, check following for encrypted exec
+
+		// Make sure the sender is an EOA
+		if codeHash := st.state.GetCodeHash(st.msg.From()); codeHash != emptyCodeHash && codeHash != (common.Hash{}) {
+			return nil, fmt.Errorf("%w: address %v, codehash: %s", ErrSenderNoEOA, st.msg.From().Hex(), codeHash)
+		}
+
+		// Make sure that transaction gasFeeCap is greater than the baseFee (post london)
+		if st.evm.ChainConfig().IsLondon(st.evm.Context.BlockNumber) {
+			// Skip the checks if gas fields are zero and baseFee was explicitly disabled (eth_call)
+			if !st.evm.Config.NoBaseFee || st.gasFeeCap.BitLen() > 0 || st.gasTipCap.BitLen() > 0 {
+				if l := st.gasFeeCap.BitLen(); l > 256 {
+					return nil, fmt.Errorf("%w: address %v, maxFeePerGas bit length: %d", ErrFeeCapVeryHigh, st.msg.From().Hex(), l)
+				}
+				if l := st.gasTipCap.BitLen(); l > 256 {
+					return nil, fmt.Errorf("%w: address %v, maxPriorityFeePerGas bit length: %d", ErrTipVeryHigh, st.msg.From().Hex(), l)
+				}
+				if st.gasFeeCap.Cmp(st.gasTipCap) < 0 {
+					return nil, fmt.Errorf("%w: address %v, maxPriorityFeePerGas: %s, maxFeePerGas: %s", ErrTipAboveFeeCap, st.msg.From().Hex(), st.gasTipCap, st.gasFeeCap)
+				}
+				// This will panic if baseFee is nil, but basefee presence is verified
+				// as part of header validation.
+				if st.gasFeeCap.Cmp(st.evm.Context.BaseFee) < 0 {
+					return nil, fmt.Errorf("%w: address %v, maxFeePerGas: %s baseFee: %s", ErrFeeCapTooLow, st.msg.From().Hex(), st.gasFeeCap, st.evm.Context.BaseFee)
+				}
+			}
+		}
+		// buy gas for execution
+		if err := st.buyGas(); err != nil {
+			return nil, err
+		}
+	}
+	return nil, nil
+}
+
 func (st *StateTransition) preCheck() error { //@remind nonce correction
 	// Only check transactions that are not fake
 	if !st.msg.IsFake() {
@@ -291,37 +344,12 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// 6. caller has enough balance to cover asset transfer for **topmost** call
 
 	// early exit when ordering the encrypted tx
-	stNonce := st.state.GetNonce(st.msg.From())
 	if st.msg.Type() == types.EncryptedTxType {
-		//@remind currently simply require the nonce is older than current nonce, so it won't be executed when the order is set, but executed upon decryption
-		if msgNonce := st.msg.Nonce(); stNonce == msgNonce {
-			log.Info(fmt.Sprintf("$ address %v, tx: %d state: %d, used gas: %v, ordering the encrypted tx", st.msg.From().Hex(), msgNonce, stNonce, st.gasUsed()))
-			st.state.SetNonce(st.msg.From(), st.state.GetNonce(vm.AccountRef(st.msg.From()).Address())+1) //@remind update the nonce
-			return &ExecutionResult{
-				UsedGas:    st.gasUsed(),
-				Err:        fmt.Errorf("ordering"),
-				ReturnData: []byte(""),
-			}, nil
-		} else if stNonce < msgNonce { // same as other tx types
-			return nil, fmt.Errorf("%w: address %v, tx: %d state: %d", ErrNonceTooHigh,
-				st.msg.From().Hex(), msgNonce, stNonce)
+		execResult, err := st.encryptedPreCheck()
+		if execResult != nil || err != nil {
+			return execResult, err
 		} else {
-			// TODO: uncomment the following if we store the key into the tx
-			// if st.msg.Key() != nil && len(st.msg.Key()) != 0 { //@remind if the key exist: already executed in n-k
-			// 	log.Info(fmt.Sprintf("$ %v, %v: address %v, tx: %d state: %d, executing the encrypted tx", st.msg.Key(), len(st.msg.Key()),
-			// 		st.msg.From().Hex(), msgNonce, stNonce))
-			// 	return &ExecutionResult{
-			// 		UsedGas:    st.gasUsed(),
-			// 		Err:        fmt.Errorf("stale"),
-			// 		ReturnData: []byte(""),
-			// 	}, fmt.Errorf("stale")
-			// }
-			// log.Info(fmt.Sprintf("point1"))
-			// @remind otherwise, execution follows
-			// buy gas for execution
-			if err := st.buyGas(); err != nil {
-				return nil, err
-			}
+			//@remind only execution of encrypted tx follows
 		}
 	} else {
 		// Check clauses 1-3, buy gas if everything is correct

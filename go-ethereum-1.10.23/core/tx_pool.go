@@ -613,7 +613,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrTipVeryHigh
 	}
 	// Ensure gasFeeCap is greater than or equal to gasTipCap.
-	if tx.GasFeeCapIntCmp(tx.GasTipCap()) < 0 {
+	if tx.GasFeeCapIntCmp(tx.GasTipCap()) < 0 { // @audit gasFeeCap >= gasTipCap
 		return ErrTipAboveFeeCap
 	}
 	// Make sure the transaction is signed properly.
@@ -623,7 +623,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrInvalidSender
 	}
 	// Drop non-local transactions under our own minimal accepted gas price or tip
-	if !local && tx.GasTipCapIntCmp(pool.gasPrice) < 0 {
+	if !local && tx.GasTipCapIntCmp(pool.gasPrice) < 0 { // @audit gasFeeCap >= gasTipCap
 		return ErrUnderpriced
 	}
 	// Ensure the transaction adheres to nonce ordering

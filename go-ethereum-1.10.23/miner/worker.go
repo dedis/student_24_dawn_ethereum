@@ -824,16 +824,62 @@ func (w *worker) updateSnapshot(env *environment) {
 	w.snapshotState = env.state.Copy()
 }
 
+func (w *worker) isExecuteEncryptedTx(env *environment, tx *types.Transaction) (bool, error) {
+	var (
+		from common.Address
+		err  error
+	)
+	if from, err = types.Sender(types.MakeSigner(w.chainConfig, env.header.Number), tx); err != nil {
+		return false, err
+	}
+	stNonce := env.state.GetNonce(from)
+	// executing encrypted tx from last finalty block
+	if tx.Type() == types.EncryptedTxType && stNonce > tx.Nonce() {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (w *worker) retrieveOrderingCoinbase(numbersBack uint64) common.Address {
+	currentNumber := w.chain.CurrentHeader().Number.Uint64() //@remind the recent block that already mined, not the current mining block
+	// regardless of the genesis block
+	if currentNumber <= numbersBack {
+		panic("try to retrieve genesis block for ordering coinbase")
+	}
+
+	previousNumber := currentNumber - numbersBack
+	preBlock := w.chain.GetBlockByNumber(previousNumber)
+
+	return preBlock.Coinbase()
+}
+
 func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*types.Log, error) {
 	snap := env.state.Snapshot()
 
 	var (
-		err     error
-		receipt *types.Receipt = types.NewReceipt([]byte("Bingo! Enc receipt"), false, 10)
+		err error
+		// receipt *types.Receipt = types.NewReceipt([]byte("Bingo! Enc receipt"), false, 10)
+		receipt *types.Receipt
 		// sender  common.Address
+		isExecEnc bool
+
+		beneficiary common.Address
 	)
 
-	receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &env.coinbase, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig())
+	isExecEnc, err = w.isExecuteEncryptedTx(env, tx)
+	if err != nil {
+		env.state.RevertToSnapshot(snap)
+		return nil, err
+	}
+
+	if isExecEnc {
+		beneficiary = w.retrieveOrderingCoinbase(types.EncryptedBlockDelay)
+	} else {
+		beneficiary = env.coinbase
+	}
+
+	receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &beneficiary, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig())
 
 	if err != nil {
 		env.state.RevertToSnapshot(snap)

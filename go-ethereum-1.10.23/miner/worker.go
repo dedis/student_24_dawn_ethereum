@@ -850,6 +850,7 @@ func (w *worker) retrieveOrderingCoinbase(numbersBack uint64) common.Address {
 
 	previousNumber := currentNumber - numbersBack
 	preBlock := w.chain.GetBlockByNumber(previousNumber)
+	log.Error(fmt.Sprintf("inspect prev block header: %+v", preBlock.Header()))
 
 	return preBlock.Coinbase()
 }
@@ -875,8 +876,10 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 
 	if isExecEnc {
 		beneficiary = w.retrieveOrderingCoinbase(types.EncryptedBlockDelay)
+		log.Error(fmt.Sprintf("use previous coinbase: %v", beneficiary))
 	} else {
-		beneficiary = env.coinbase
+		beneficiary = env.coinbase //TODO: in clique, PoA, it is always 0, need to derive the signer from signature: https://github.com/ethereum/go-ethereum/issues/15651
+		log.Error(fmt.Sprintf("use current coinbase: %v", beneficiary))
 	}
 
 	receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &beneficiary, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig())

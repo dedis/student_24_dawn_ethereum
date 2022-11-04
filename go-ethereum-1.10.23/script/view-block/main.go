@@ -81,9 +81,12 @@ func prettyPrintReceipt(client *ethclient.Client, num *big.Int) {
 // fmt.Println(isPending)       // false
 
 func main() {
+	id := flag.Int64("id", 0, "the block number")
+	who := flag.Int64("who", 1, "the node number")
+	flag.Parse()
 	var client *ethclient.Client
 	var err error
-	if client, err = ethclient.Dial("//./pipe/geth.ipc"); err != nil {
+	if client, err = ethclient.Dial(fmt.Sprintf("//./pipe/geth%v.ipc", *who)); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Connection established")
@@ -109,11 +112,9 @@ func main() {
 
 	// encrypted tx: 7
 	// plain tx: 5
-	id := flag.Int64("id", 0, "the block number")
-	flag.Parse()
 
 	num0 := big.NewInt(*id)
-	fmt.Println("\n# Block number: ", id)
+	fmt.Println("\n# Block number: ", id, " from ", who)
 	prettyPrintBlock(client, num0)
 	// prettyPrintReceipt(client, num0)
 }

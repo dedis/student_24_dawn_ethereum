@@ -824,12 +824,12 @@ func (w *worker) updateSnapshot(env *environment) {
 	w.snapshotState = env.state.Copy()
 }
 
-func (w *worker) isExecuteEncryptedTx(env *environment, tx *types.Transaction) (bool, error) {
+func isExecuteEncryptedTx(env *environment, cf *params.ChainConfig, tx *types.Transaction) (bool, error) {
 	var (
 		from common.Address
 		err  error
 	)
-	if from, err = types.Sender(types.MakeSigner(w.chainConfig, env.header.Number), tx); err != nil {
+	if from, err = types.Sender(types.MakeSigner(cf, env.header.Number), tx); err != nil {
 		return false, err
 	}
 	stNonce := env.state.GetNonce(from)
@@ -868,17 +868,21 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 		beneficiary common.Address
 	)
 
-	isExecEnc, err = w.isExecuteEncryptedTx(env, tx)
+	isExecEnc, err = isExecuteEncryptedTx(env, w.chainConfig, tx)
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
 		return nil, err
 	}
 
-	if isExecEnc {
+	if isExecEnc { //@audit this is always 0
 		beneficiary = w.retrieveOrderingCoinbase(types.EncryptedBlockDelay)
 		log.Error(fmt.Sprintf("use previous coinbase: %v", beneficiary))
 	} else {
-		beneficiary = env.coinbase //TODO: in clique, PoA, it is always 0, need to derive the signer from signature: https://github.com/ethereum/go-ethereum/issues/15651
+		/*
+			TODO: in clique, PoA, the coinbase in blockheader is always 0.
+			need to derive the signer from signature: https://github.com/ethereum/go-ethereum/issues/15651
+		*/
+		beneficiary = env.coinbase //@audit this is the miner who is mining this block
 		log.Error(fmt.Sprintf("use current coinbase: %v", beneficiary))
 	}
 

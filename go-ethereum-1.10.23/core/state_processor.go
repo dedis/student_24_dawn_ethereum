@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -57,6 +58,7 @@ func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consen
 // returns the amount of gas that was used in the process. If any of the
 // transactions failed to execute due to insufficient gas it will return an error.
 func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, error) {
+	log.Info("## Process validation of a received block")
 	var (
 		receipts    types.Receipts
 		usedGas     = new(uint64)
@@ -72,13 +74,17 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	}
 	blockContext := NewEVMBlockContext(header, p.bc, nil)
 	vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, p.config, cfg)
+	// Retrieve previous ordered enc txs
+	// pendingEncryptedTxs := RetrievePendingEncryptedTransactions(p.bc, types.EncryptedBlockDelay)
+	// Append with the plaintext tx
+	// allTx := append(pendingEncryptedTxs, block.Transactions()...)
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		msg, err := tx.AsMessage(types.MakeSigner(p.config, header.Number), header.BaseFee)
 		if err != nil {
 			return nil, nil, 0, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)
 		}
-		statedb.Prepare(tx.Hash(), i)
+		statedb.Prepare(tx.Hash(), i) //@audit who is the beneficiary
 		receipt, err := applyTransaction(msg, p.config, nil, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv)
 		if err != nil {
 			return nil, nil, 0, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)
@@ -90,6 +96,41 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles())
 
 	return receipts, allLogs, *usedGas, nil
+}
+
+func RetrievePendingEncryptedTransactions(wc *BlockChain, numbersBack uint64) types.Transactions {
+	encryptedTxs := make(types.Transactions, 0)
+	currentNumber := wc.CurrentHeader().Number.Uint64() //@remind the recent block that already mined, not the current mining block
+	// regardless of the genesis block
+	if currentNumber <= numbersBack {
+		return encryptedTxs
+	}
+
+	previousNumber := currentNumber - numbersBack
+	preBlock := wc.GetBlockByNumber(previousNumber)
+
+	txs := preBlock.Transactions()
+	receipts := wc.GetReceiptsByHash(preBlock.Hash())
+
+	if len(txs) != len(receipts) {
+		panic("unequal length of txs and receipts")
+	}
+	var rc *types.Receipt
+
+	// retrieve all the pending encrypted txs that should be executed in this block
+	for i, tx := range txs {
+		if tx.Type() == types.EncryptedTxType {
+			rc = receipts[i]
+
+			if rc.Key == nil || len(rc.Key) == 0 { // if there is no key attached to the receipt, this encrypted tx must have not been executed
+				log.Info(fmt.Sprintf("[ENC][RETRIEVE] tx hash: %v", tx.Hash().String()))
+				encryptedTxs = append(encryptedTxs, tx)
+			}
+		}
+	}
+
+	return encryptedTxs
+
 }
 
 func applyTransaction(msg types.Message, config *params.ChainConfig, author *common.Address, gp *GasPool, statedb *state.StateDB, blockNumber *big.Int, blockHash common.Hash, tx *types.Transaction, usedGas *uint64, evm *vm.EVM) (*types.Receipt, error) {

@@ -1126,7 +1126,7 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 	}
 	start := time.Now()
 
-	pendingEncryptedTxs := w.retrievePendingEncryptedTransactions(types.EncryptedBlockDelay) //@remind add execution logic for pending encrypted txs
+	pendingEncryptedTxs := RetrievePendingEncryptedTransactions(w.chain, types.EncryptedBlockDelay) //@remind add execution logic for pending encrypted txs
 	if len(pendingEncryptedTxs) > 0 {
 		txs := types.NewEncryptedTxsByConsensus(env.signer, pendingEncryptedTxs)
 		if err := w.commitTransactions(env, txs, interrupt); err != nil {
@@ -1162,19 +1162,19 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 	return nil
 }
 
-func (w *worker) retrievePendingEncryptedTransactions(numbersBack uint64) types.Transactions {
+func RetrievePendingEncryptedTransactions(wc *core.BlockChain, numbersBack uint64) types.Transactions {
 	encryptedTxs := make(types.Transactions, 0)
-	currentNumber := w.chain.CurrentHeader().Number.Uint64() //@remind the recent block that already mined, not the current mining block
+	currentNumber := wc.CurrentHeader().Number.Uint64() //@remind the recent block that already mined, not the current mining block
 	// regardless of the genesis block
 	if currentNumber <= numbersBack {
 		return encryptedTxs
 	}
 
 	previousNumber := currentNumber - numbersBack
-	preBlock := w.chain.GetBlockByNumber(previousNumber)
+	preBlock := wc.GetBlockByNumber(previousNumber)
 
 	txs := preBlock.Transactions()
-	receipts := w.chain.GetReceiptsByHash(preBlock.Hash())
+	receipts := wc.GetReceiptsByHash(preBlock.Hash())
 
 	if len(txs) != len(receipts) {
 		panic("unequal length of txs and receipts")

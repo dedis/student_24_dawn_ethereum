@@ -72,20 +72,33 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	if p.config.DAOForkSupport && p.config.DAOForkBlock != nil && p.config.DAOForkBlock.Cmp(block.Number()) == 0 {
 		misc.ApplyDAOHardFork(statedb)
 	}
-	blockContext := NewEVMBlockContext(header, p.bc, nil)
-	vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, p.config, cfg)
 	// Retrieve previous ordered enc txs
 	// pendingEncryptedTxs := RetrievePendingEncryptedTransactions(p.bc, types.EncryptedBlockDelay)
 	// Append with the plaintext tx
 	// allTx := append(pendingEncryptedTxs, block.Transactions()...)
 	// Iterate over and process the individual transactions
+	var (
+		beneficiary common.Address
+		receipt     *types.Receipt
+	)
 	for i, tx := range block.Transactions() {
-		msg, err := tx.AsMessage(types.MakeSigner(p.config, header.Number), header.BaseFee)
+		signer := types.MakeSigner(p.config, header.Number)
+		msg, err := tx.AsMessage(signer, header.BaseFee)
 		if err != nil {
 			return nil, nil, 0, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)
 		}
-		statedb.Prepare(tx.Hash(), i) //@audit who is the beneficiary
-		receipt, err := applyTransaction(msg, p.config, nil, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv)
+
+		statedb.Prepare(tx.Hash(), i)
+
+		if ok, _ := isExecuteEncryptedTx(statedb, signer, p.config, tx); ok { //@audit validate executing enc tx, in PoA, coinbase is temporary zero
+			beneficiary = common.BigToAddress(big.NewInt(0))
+		}
+
+		blockContext := NewEVMBlockContext(header, p.bc, &beneficiary)
+		vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, p.config, cfg)
+
+		receipt, err = applyTransaction(msg, p.config, &beneficiary, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv)
+
 		if err != nil {
 			return nil, nil, 0, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)
 		}
@@ -96,6 +109,23 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles())
 
 	return receipts, allLogs, *usedGas, nil
+}
+
+func isExecuteEncryptedTx(statedb *state.StateDB, signer types.Signer, cf *params.ChainConfig, tx *types.Transaction) (bool, error) {
+	var (
+		from common.Address
+		err  error
+	)
+	if from, err = types.Sender(signer, tx); err != nil {
+		return false, err
+	}
+	stNonce := statedb.GetNonce(from)
+	// executing encrypted tx from last finalty block
+	if tx.Type() == types.EncryptedTxType && stNonce > tx.Nonce() {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func RetrievePendingEncryptedTransactions(wc *BlockChain, numbersBack uint64) types.Transactions {
@@ -133,6 +163,7 @@ func RetrievePendingEncryptedTransactions(wc *BlockChain, numbersBack uint64) ty
 
 }
 
+// @audit author is not used in this function, author is set into evm.Context.Coinbase
 func applyTransaction(msg types.Message, config *params.ChainConfig, author *common.Address, gp *GasPool, statedb *state.StateDB, blockNumber *big.Int, blockHash common.Hash, tx *types.Transaction, usedGas *uint64, evm *vm.EVM) (*types.Receipt, error) {
 	// Create a new context to be used in the EVM environment.
 	txContext := NewEVMTxContext(msg)

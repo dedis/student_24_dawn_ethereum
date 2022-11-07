@@ -17,8 +17,11 @@
 package core
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/big"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -163,11 +166,44 @@ func RetrievePendingEncryptedTransactions(wc *BlockChain, numbersBack uint64) ty
 
 }
 
+/*
+Decrypt and get the plaintext msg.data
+
+	 msg.data []byte
+		---> hex(msg.data)
+			---> Enc(hex(msg.data))
+		--->Dec(Enc(hex(msg.data))) = hex(msg.data)
+	 hexToBytes
+*/
+func decryptMsgData(encMsgData []byte) []byte {
+	node := filepath.Dir("D:/EPFL/master_thesis/dela/dkg/pedersen/dkgcli/tmp/node1/")
+
+	args_dec := []string{"dkgcli", "--config", node, "dkg", "verifiableDecrypt",
+		"--GBar", types.GBar, "--ciphertexts", string(encMsgData)}
+
+	decrypted_data, err := exec.Command(args_dec[0], args_dec[1:]...).Output()
+
+	if err != nil {
+		panic("decryptMsgData: fail on decryption")
+	}
+
+	plaintextMsgData, err := hex.DecodeString(string(decrypted_data))
+
+	if err != nil {
+		panic("decryptMsgData: fail on decoding")
+	}
+
+	return plaintextMsgData
+}
+
 // @audit author is not used in this function, author is set into evm.Context.Coinbase
 func applyTransaction(msg types.Message, config *params.ChainConfig, author *common.Address, gp *GasPool, statedb *state.StateDB, blockNumber *big.Int, blockHash common.Hash, tx *types.Transaction, usedGas *uint64, evm *vm.EVM) (*types.Receipt, error) {
 	// Create a new context to be used in the EVM environment.
 	txContext := NewEVMTxContext(msg)
 	evm.Reset(txContext, statedb)
+
+	// TODO: modify new state transition and transition db to set the msg.data from ciphertext to plaintext
+	plaintextMsgData := decryptMsgData(msg.Data())
 
 	// Apply the transaction to the current state (included in the env).
 	result, err := ApplyMessage(evm, msg, gp)
@@ -200,6 +236,7 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 		receipt.ContractAddress = crypto.CreateAddress(evm.TxContext.Origin, tx.Nonce())
 	}
 
+	// TODO: key written into receipt
 	// If this is the execution of an encrypted tx, then add the key to the receipt
 	if result.UsedGas != 0 && tx.Type() == types.EncryptedTxType {
 		receipt.Key = []byte("encryptionkey")

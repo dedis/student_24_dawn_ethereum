@@ -52,7 +52,10 @@ const (
 	EncryptedTxType
 )
 
+// ################ For encrypted transaction #######################
 const EncryptedBlockDelay uint64 = 0
+
+const GBar string = "1d0194fdc2fa2ffcc041d3ff12045b73c86e4ff95ff662a5eee82abdf44a53c7"
 
 // Transaction is an Ethereum transaction.
 type Transaction struct {

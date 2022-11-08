@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"log"
@@ -197,7 +198,9 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, ks *keystore.KeyStore, fr
 
 	// cmd := strings.Join(args[:], " ")
 
-	plaintext := "dddddddd"
+	str := "Hello from ADMFactory.com"
+
+	plaintext := hex.EncodeToString([]byte(str))
 
 	gBar := "1d0194fdc2fa2ffcc041d3ff12045b73c86e4ff95ff662a5eee82abdf44a53c7"
 

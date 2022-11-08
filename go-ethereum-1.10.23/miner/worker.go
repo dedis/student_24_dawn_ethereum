@@ -886,7 +886,7 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 		log.Error(fmt.Sprintf("use current coinbase: %v", beneficiary))
 	}
 
-	receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &beneficiary, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig())
+	receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &beneficiary, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig(), isExecEnc)
 
 	if err != nil {
 		env.state.RevertToSnapshot(snap)

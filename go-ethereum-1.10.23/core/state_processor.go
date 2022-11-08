@@ -188,8 +188,12 @@ func decryptMsgData(encMsgData []byte) []byte {
 		panic("decryptMsgData: fail on decryption")
 	}
 
+	log.Error(fmt.Sprintf("## Decrypted hex (%v): %v", len(decrypted_data), string(decrypted_data)))
+
 	// remove the bracket around the decrypted plaintext
-	plaintextMsgData, err := hex.DecodeString(string(decrypted_data)[1 : len(decrypted_data)-1])
+	plaintextMsgData, err := hex.DecodeString(string(decrypted_data)[1 : len(decrypted_data)-2])
+
+	log.Error(fmt.Sprintf("## Decrypted bytes (%v): %v", len(plaintextMsgData), string(plaintextMsgData)))
 
 	if err != nil {
 		panic("decryptMsgData: fail on decoding")
@@ -246,8 +250,8 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 
 	// TODO: key written into receipt
 	// If this is the execution of an encrypted tx, then add the key to the receipt
-	if result.UsedGas != 0 && tx.Type() == types.EncryptedTxType {
-		receipt.Key = []byte("encryptionkey")
+	if isExecEncrypted {
+		receipt.Key = plaintextMsgData
 	}
 
 	// Set the receipt logs and create the bloom filter.

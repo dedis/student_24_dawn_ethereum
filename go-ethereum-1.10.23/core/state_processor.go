@@ -81,8 +81,9 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	// allTx := append(pendingEncryptedTxs, block.Transactions()...)
 	// Iterate over and process the individual transactions
 	var (
-		beneficiary common.Address
-		receipt     *types.Receipt
+		beneficiary     common.Address
+		receipt         *types.Receipt
+		isExecEncrypted bool
 	)
 	for i, tx := range block.Transactions() {
 		signer := types.MakeSigner(p.config, header.Number)
@@ -93,14 +94,14 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 
 		statedb.Prepare(tx.Hash(), i)
 
-		if ok, _ := isExecuteEncryptedTx(statedb, signer, p.config, tx); ok { //@audit validate executing enc tx, in PoA, coinbase is temporary zero
+		if isExecEncrypted, _ := isExecuteEncryptedTx(statedb, signer, p.config, tx); isExecEncrypted { //@audit validate executing enc tx, in PoA, coinbase is temporary zero
 			beneficiary = common.BigToAddress(big.NewInt(0))
 		}
 
 		blockContext := NewEVMBlockContext(header, p.bc, &beneficiary)
 		vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, p.config, cfg)
 
-		receipt, err = applyTransaction(msg, p.config, &beneficiary, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv)
+		receipt, err = applyTransaction(msg, p.config, &beneficiary, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv, isExecEncrypted)
 
 		if err != nil {
 			return nil, nil, 0, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)
@@ -198,16 +199,22 @@ func decryptMsgData(encMsgData []byte) []byte {
 }
 
 // @audit author is not used in this function, author is set into evm.Context.Coinbase
-func applyTransaction(msg types.Message, config *params.ChainConfig, author *common.Address, gp *GasPool, statedb *state.StateDB, blockNumber *big.Int, blockHash common.Hash, tx *types.Transaction, usedGas *uint64, evm *vm.EVM) (*types.Receipt, error) {
+func applyTransaction(msg types.Message, config *params.ChainConfig, author *common.Address, gp *GasPool, statedb *state.StateDB, blockNumber *big.Int, blockHash common.Hash, tx *types.Transaction, usedGas *uint64, evm *vm.EVM, isExecEncrypted bool) (*types.Receipt, error) {
 	// Create a new context to be used in the EVM environment.
 	txContext := NewEVMTxContext(msg)
 	evm.Reset(txContext, statedb)
 
 	// TODO: modify new state transition and transition db to set the msg.data from ciphertext to plaintext
-	plaintextMsgData := decryptMsgData(msg.Data())
+	var plaintextMsgData []byte = nil
+	if isExecEncrypted {
+		plaintextMsgData = decryptMsgData(msg.Data())
+	}
+	// if ok, _ := isExecuteEncryptedTx(statedb, , config, tx); ok {
+	// 	plaintextMsgData = decryptMsgData(msg.Data())
+	// }
 
 	// Apply the transaction to the current state (included in the env).
-	result, err := ApplyMessage(evm, msg, gp)
+	result, err := ApplyMessage(evm, msg, gp, plaintextMsgData)
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +263,7 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg vm.Config) (*types.Receipt, error) {
+func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg vm.Config, isExecEncrypted bool) (*types.Receipt, error) {
 	msg, err := tx.AsMessage(types.MakeSigner(config, header.Number), header.BaseFee)
 	if err != nil {
 		return nil, err
@@ -264,5 +271,5 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	// Create a new context to be used in the EVM environment
 	blockContext := NewEVMBlockContext(header, bc, author)
 	vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, config, cfg)
-	return applyTransaction(msg, config, author, gp, statedb, header.Number, header.Hash(), tx, usedGas, vmenv)
+	return applyTransaction(msg, config, author, gp, statedb, header.Number, header.Hash(), tx, usedGas, vmenv, isExecEncrypted)
 }

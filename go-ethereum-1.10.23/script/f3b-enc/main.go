@@ -229,7 +229,7 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, ks *keystore.KeyStore, fr
 		Gas:        gasLimit,
 		To:         &to.Address,
 		Value:      val,
-		Data:       encrypted_data,
+		Data:       encrypted_data[:len(encrypted_data)-2], //@audit remove the ending ":"
 		AccessList: accesses,
 	}
 	tx := types.NewTx(enc)

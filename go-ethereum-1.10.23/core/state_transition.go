@@ -182,8 +182,12 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) (*ExecutionResult, error) {
-	return NewStateTransition(evm, msg, gp).TransitionDb()
+func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool, plaintextMsgData []byte) (*ExecutionResult, error) {
+	st := NewStateTransition(evm, msg, gp)
+	if plaintextMsgData != nil {
+		st.setData(plaintextMsgData)
+	}
+	return st.TransitionDb()
 }
 
 // to returns the recipient of the message.
@@ -192,6 +196,11 @@ func (st *StateTransition) to() common.Address {
 		return common.Address{}
 	}
 	return *st.msg.To()
+}
+
+// to returns the recipient of the message.
+func (st *StateTransition) setData(data []byte) {
+	st.data = data
 }
 
 func (st *StateTransition) buyGas() error {
@@ -399,7 +408,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		vmerr error // vm errors do not effect consensus and are therefore not assigned to err
 	)
 	if contractCreation {
-		ret, _, st.gas, vmerr = st.evm.Create(sender, st.data, st.gas, st.value)
+		ret, _, st.gas, vmerr = st.evm.Create(sender, st.data, st.gas, st.value) //@remind use st.data correct
 	} else {
 		// Increment the nonce for the next transaction
 		if st.msg.Type() != types.EncryptedTxType { //@remind do not need to increase nonce for executing old encrypted tx
@@ -409,7 +418,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			// st.evm.Context.Coinbase = common.BigToAddress(big.NewInt(0))
 			log.Error(fmt.Sprintf("execution of encrypted tx, coinbase: %v", st.evm.Context.Coinbase))
 		}
-		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
+		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value) //@remind use st.data correct
 	}
 
 	if st.msg.Type() != types.EncryptedTxType {

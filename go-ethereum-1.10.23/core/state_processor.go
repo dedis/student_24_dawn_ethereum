@@ -187,7 +187,8 @@ func decryptMsgData(encMsgData []byte) []byte {
 		panic("decryptMsgData: fail on decryption")
 	}
 
-	plaintextMsgData, err := hex.DecodeString(string(decrypted_data))
+	// remove the bracket around the decrypted plaintext
+	plaintextMsgData, err := hex.DecodeString(string(decrypted_data)[1 : len(decrypted_data)-1])
 
 	if err != nil {
 		panic("decryptMsgData: fail on decoding")

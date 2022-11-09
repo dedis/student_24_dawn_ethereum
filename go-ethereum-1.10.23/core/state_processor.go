@@ -94,7 +94,8 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 
 		statedb.Prepare(tx.Hash(), i)
 
-		if isExecEncrypted, _ := isExecuteEncryptedTx(statedb, signer, p.config, tx); isExecEncrypted { //@audit validate executing enc tx, in PoA, coinbase is temporary zero
+		if isExecEncrypted, _ = isExecuteEncryptedTx(statedb, signer, p.config, tx); isExecEncrypted { //@audit validate executing enc tx, in PoA, coinbase is temporary zero
+			log.Error("[VERIFY][ENC][Start]]")
 			beneficiary = common.BigToAddress(big.NewInt(0))
 		}
 
@@ -102,6 +103,8 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, p.config, cfg)
 
 		receipt, err = applyTransaction(msg, p.config, &beneficiary, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv, isExecEncrypted)
+
+		log.Error(fmt.Sprintf("[VERIFY][ENC][RC]] receipt key appended: %v", receipt.Key))
 
 		if err != nil {
 			return nil, nil, 0, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)

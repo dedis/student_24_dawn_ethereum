@@ -22,6 +22,7 @@ import (
 	"math/big"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -179,30 +180,57 @@ Decrypt and get the plaintext msg.data
 		--->Dec(Enc(hex(msg.data))) = hex(msg.data)
 	 hexToBytes
 */
-func decryptMsgData(encMsgData []byte) []byte {
+func decryptMsgData(encMsgData []byte) ([]byte, []byte) {
 	node := filepath.Dir("D:/EPFL/master_thesis/dela/dkg/pedersen/dkgcli/tmp/node1/")
 
 	args_dec := []string{"dkgcli", "--config", node, "dkg", "verifiableDecrypt",
 		"--GBar", types.GBar, "--ciphertexts", string(encMsgData)}
 
+	// first line of decrypted: plaintext data
+	// second line of decrypted: shares with proof
 	decrypted_data, err := exec.Command(args_dec[0], args_dec[1:]...).Output()
-
 	if err != nil {
 		panic("decryptMsgData: fail on decryption")
 	}
 
+	plaintextMsgData, ShareWithProof := SplitPlaintextWithShares(decrypted_data)
+	// tmp := strings.Split(string(decrypted_data), "\n")
+
+	// plaintext_data, share_with_proof := tmp[0], tmp[1]
+
 	log.Error(fmt.Sprintf("## Decrypted hex (%v): %v", len(decrypted_data), string(decrypted_data)))
 
 	// remove the bracket around the decrypted plaintext
-	plaintextMsgData, err := hex.DecodeString(string(decrypted_data)[1 : len(decrypted_data)-2])
+	// plaintextMsgData, err := hex.DecodeString(string(decrypted_data)[1 : len(decrypted_data)-2])
 
-	log.Error(fmt.Sprintf("## Decrypted bytes (%v): %v", len(plaintextMsgData), string(plaintextMsgData)))
+	log.Error(fmt.Sprintf("## Decrypted bytes plaintext (%v): %v", len(plaintextMsgData), string(plaintextMsgData)))
+	log.Error(fmt.Sprintf("## Decrypted bytes shares (%v): %v", len(ShareWithProof), string(ShareWithProof)))
 
 	if err != nil {
 		panic("decryptMsgData: fail on decoding")
 	}
 
-	return plaintextMsgData
+	return plaintextMsgData, ShareWithProof
+}
+
+func SplitPlaintextWithShares(raw []byte) ([]byte, []byte) {
+	// split two return data
+	tmp := strings.Split(string(raw), "\n")
+	plaintext_data, share_with_proof := tmp[0], tmp[1]
+
+	// trim the left and right []
+	plaintext_data = strings.Trim(plaintext_data, "[]")
+	plaintext_data_bytes, err := hex.DecodeString(plaintext_data)
+
+	// share_with_proof to matrix of byte
+	// share_with_proof = strings.Trim(share_with_proof, "{}[]")
+	// each = strings.Split(share_with_proof, "}]} {[{")
+	share_with_proof_bytes, err := hex.DecodeString(share_with_proof)
+	if err != nil {
+		panic("SplitPlaintextWithShares: fail on decoding share with proof")
+	}
+
+	return plaintext_data_bytes, share_with_proof_bytes
 }
 
 // @audit author is not used in this function, author is set into evm.Context.Coinbase
@@ -213,8 +241,10 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 
 	// TODO: modify new state transition and transition db to set the msg.data from ciphertext to plaintext
 	var plaintextMsgData []byte = nil
+	var shareWithProof []byte = nil
+
 	if isExecEncrypted {
-		plaintextMsgData = decryptMsgData(msg.Data())
+		plaintextMsgData, shareWithProof = decryptMsgData(msg.Data())
 	}
 	// if ok, _ := isExecuteEncryptedTx(statedb, , config, tx); ok {
 	// 	plaintextMsgData = decryptMsgData(msg.Data())
@@ -254,7 +284,7 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 	// TODO: key written into receipt
 	// If this is the execution of an encrypted tx, then add the key to the receipt
 	if isExecEncrypted {
-		receipt.Key = plaintextMsgData
+		receipt.Key = shareWithProof
 	}
 
 	// Set the receipt logs and create the bloom filter.

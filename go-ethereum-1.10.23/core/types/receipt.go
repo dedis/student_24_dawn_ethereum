@@ -332,7 +332,7 @@ func decodeStoredReceiptRLP(r *ReceiptForStorage, blob []byte) error {
 	}
 	r.Bloom = CreateBloom(Receipts{(*Receipt)(r)})
 	r.Key = stored.Key
-	log.Error(fmt.Sprintf("decode v0 called: %v", len(stored.Key)))
+	// log.Error(fmt.Sprintf("decode v0 called: %v", len(stored.Key)))
 
 	return nil
 }

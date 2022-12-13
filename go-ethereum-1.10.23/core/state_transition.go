@@ -416,7 +416,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		}
 		if st.msg.Type() == types.EncryptedTxType {
 			// st.evm.Context.Coinbase = common.BigToAddress(big.NewInt(0))
-			log.Error(fmt.Sprintf("execution of encrypted tx, coinbase: %v", st.evm.Context.Coinbase))
+			log.Info(fmt.Sprintf("execution of encrypted tx, coinbase: %v", st.evm.Context.Coinbase))
 		}
 		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value) //@remind use st.data correct
 	}

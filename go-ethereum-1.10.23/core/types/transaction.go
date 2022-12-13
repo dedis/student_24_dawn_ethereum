@@ -196,7 +196,7 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 		err := rlp.DecodeBytes(b[1:], &inner)
 		return &inner, err
 	case EncryptedTxType: //@remind add enc tx case
-		log.Error("#### Encrypted tx catched")
+		log.Info("#### Encrypted tx catched")
 		var inner EncryptedTx
 		err := rlp.DecodeBytes(b[1:], &inner)
 		return &inner, err
@@ -407,16 +407,16 @@ func (tx *Transaction) Size() common.StorageSize {
 // WithSignature returns a new transaction with the given signature.
 // This signature needs to be in the [R || S || V] format where V is 0 or 1.
 func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, error) {
-	fmt.Println("w sign 0")
+	// fmt.Println("w sign 0")
 	r, s, v, err := signer.SignatureValues(tx, sig)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("w sign 1")
+	// fmt.Println("w sign 1")
 	cpy := tx.inner.copy()
-	fmt.Println("w sign 2")
+	// fmt.Println("w sign 2")
 	cpy.setSignatureValues(signer.ChainID(), v, r, s)
-	fmt.Println("w sign 3")
+	// fmt.Println("w sign 3")
 	return &Transaction{inner: cpy, time: tx.time}, nil
 }
 

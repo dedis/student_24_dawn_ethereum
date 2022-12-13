@@ -198,7 +198,7 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, ks *keystore.KeyStore, fr
 
 	// cmd := strings.Join(args[:], " ")
 
-	str := "Hello from ADMFactory.com"
+	str := "Merry Christmas 2022"
 
 	plaintext := hex.EncodeToString([]byte(str))
 
@@ -302,9 +302,10 @@ func main() {
 	}
 
 	// print accounts
-	for i, item := range ks.Accounts() {
-		fmt.Printf("Accounts[%v]: %v\n", i, item.Address.Hex())
-	}
+	// fmt.Println("Existing accoutns:")
+	// for i, item := range ks.Accounts() {
+	// 	fmt.Printf("Accounts[%v]: %v\n", i, item.Address.Hex())
+	// }
 
 	authority := ks.Accounts()[0].Address
 	user := ks.Accounts()[1].Address
@@ -312,10 +313,10 @@ func main() {
 	user_acc := accounts.Account{Address: user}
 	auth_acc := accounts.Account{Address: authority}
 
-	wei_user, eth_user := get_balance(client, user)
-	wei_auth, eth_auth := get_balance(client, authority)
+	_, eth_user := get_balance(client, user)
+	_, eth_auth := get_balance(client, authority)
 
-	fmt.Printf("Before User: %s, %s\nAuthority: %s, %s\n", wei_user.String(), eth_user.String(), wei_auth.String(), eth_auth.String())
+	fmt.Printf("[Before sendTx] User: %s\n[Before sendTx] Authority: %s\n", eth_user.String(), eth_auth.String())
 
 	gasLimit := uint64(210000)
 	val := big.NewInt(1e18)
@@ -328,9 +329,9 @@ func main() {
 		sendEtherF3bVerifiedEnc(client, ks, user_acc, auth_acc, val, gasLimit)
 	}
 
-	wei_user, eth_user = get_balance(client, user)
-	wei_auth, eth_auth = get_balance(client, authority)
+	_, eth_user = get_balance(client, user)
+	_, eth_auth = get_balance(client, authority)
 
-	fmt.Printf("After User: %s, %s\nAuthority: %s, %s\n", wei_user.String(), eth_user.String(), wei_auth.String(), eth_auth.String())
+	fmt.Printf("[After sendTx] %s\n[After sendTx] Authority: %s\n", eth_user.String(), eth_auth.String())
 
 }

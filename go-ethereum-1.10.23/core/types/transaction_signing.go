@@ -373,7 +373,7 @@ func (s EIP155Signer) Equal(s2 Signer) bool {
 var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
-	log.Error("### eip155 sender")
+	log.Info("### eip155 sender")
 	// if tx.Type() != LegacyTxType {
 	// 	log.Error("### eip155 signer 1")
 	// 	return common.Address{}, ErrTxTypeNotSupported
@@ -385,7 +385,7 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	if tx.ChainId().Cmp(s.chainId) != 0 {
 		return common.Address{}, ErrInvalidChainId
 	}
-	log.Error("#### eip155 signer 3")
+	log.Info("#### eip155 signer 3")
 	V, R, S := tx.RawSignatureValues()
 	V = new(big.Int).Sub(V, s.chainIdMul)
 	V.Sub(V, big8)
@@ -395,7 +395,7 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 // SignatureValues returns signature values. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	fmt.Println("### eip155 signature")
+	// fmt.Println("### eip155 signature")
 	// if tx.Type() != LegacyTxType { //@remind removed unsupported
 	// 	return nil, nil, nil, ErrTxTypeNotSupported
 	// }

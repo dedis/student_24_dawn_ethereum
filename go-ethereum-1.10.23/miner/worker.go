@@ -882,7 +882,8 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 			TODO: in clique, PoA, the coinbase in blockheader is always 0.
 			need to derive the signer from signature: https://github.com/ethereum/go-ethereum/issues/15651
 		*/
-		beneficiary = env.coinbase //@audit this is the miner who is mining this block
+		// beneficiary = env.coinbase //@audit this is the miner who is mining this block
+		// beneficiary = *&common.Address{}
 		log.Info(fmt.Sprintf("use current coinbase: %v", beneficiary))
 	}
 

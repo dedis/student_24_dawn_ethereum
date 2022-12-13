@@ -199,6 +199,7 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, ks *keystore.KeyStore, fr
 	// cmd := strings.Join(args[:], " ")
 
 	str := "Merry Christmas 2022"
+	fmt.Println("## Plaintext message: ", str)
 
 	plaintext := hex.EncodeToString([]byte(str))
 
@@ -214,15 +215,16 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, ks *keystore.KeyStore, fr
 
 	fmt.Println("## Encrypted data: ", string(encrypted_data[:len(encrypted_data)-2]))
 
-	args_dec := []string{"dkgcli", "--config", node, "dkg", "verifiableDecrypt", "--GBar", gBar, "--ciphertexts", string(encrypted_data)[:len(encrypted_data)-2]}
+	// TODO: uncomment following to display decryption result
+	// args_dec := []string{"dkgcli", "--config", node, "dkg", "verifiableDecrypt", "--GBar", gBar, "--ciphertexts", string(encrypted_data)[:len(encrypted_data)-2]}
 
-	decrypted_data, err := exec.Command(args_enc[0], args_dec[1:]...).Output()
+	// decrypted_data, err := exec.Command(args_enc[0], args_dec[1:]...).Output()
 
-	if err != nil {
-		fmt.Println(err.Error())
-	}
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// }
 
-	fmt.Println("## Decrypted data: ", string(decrypted_data))
+	// fmt.Println("## Decrypted data: ", string(decrypted_data))
 
 	enc := &types.EncryptedTx{
 		ChainID:    chainID,

@@ -86,6 +86,10 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		receipt         *types.Receipt
 		isExecEncrypted bool
 	)
+	tmp_rcs := p.bc.GetReceiptsByHash(block.Hash())
+	if len(tmp_rcs) != block.Transactions().Len() {
+		panic("unequal transaction length and receipts")
+	}
 	for i, tx := range block.Transactions() {
 		signer := types.MakeSigner(p.config, header.Number)
 		msg, err := tx.AsMessage(signer, header.BaseFee)
@@ -103,7 +107,12 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		blockContext := NewEVMBlockContext(header, p.bc, &beneficiary)
 		vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, p.config, cfg)
 
-		receipt, err = applyTransaction(msg, p.config, &beneficiary, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv, isExecEncrypted)
+		if isExecEncrypted {
+			receipt, err = verifyDecryptionAndApplyTransaction(msg, p.config, &beneficiary, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv, tmp_rcs[i])
+		} else {
+			receipt, err = applyTransaction(msg, p.config, &beneficiary, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv, isExecEncrypted)
+
+		}
 
 		log.Error(fmt.Sprintf("[VERIFY][ENC][RC]] receipt key appended: %v", receipt.Key))
 
@@ -213,6 +222,35 @@ func decryptMsgData(encMsgData []byte) ([]byte, []byte) {
 	return plaintextMsgData, ShareWithProof
 }
 
+func verifyProof(encMsgData []byte, rcKey []byte) []byte {
+	node := filepath.Dir("D:/EPFL/master_thesis/dela/dkg/pedersen/dkgcli/tmp/node1/")
+
+	args_dec := []string{"dkgcli", "--config", node, "dkg", "validateDecrypt",
+		"--GBar", types.GBar, "--ciphertexts", string(encMsgData), "--shares", string(rcKey)}
+
+	// first line of decrypted: plaintext data
+	// second line of decrypted: shares with proof
+	raw, err := exec.Command(args_dec[0], args_dec[1:]...).Output()
+	if err != nil {
+		panic("decryptMsgData: fail on decryption")
+	}
+
+	// split two return data
+	tmp := strings.Split(string(raw), "\n")
+	plaintext_data := tmp[0]
+
+	// trim the left and right []
+	plaintext_data = strings.Trim(plaintext_data, "[]")
+	plaintext_data_bytes, err := hex.DecodeString(plaintext_data)
+
+	log.Error(fmt.Sprintf("## Decrypted bytes plaintext (%v): %v", len(plaintext_data_bytes), string(plaintext_data_bytes)))
+	if err != nil {
+		panic("decryptMsgData: fail on decoding")
+	}
+
+	return plaintext_data_bytes
+}
+
 func SplitPlaintextWithShares(raw []byte) ([]byte, []byte) {
 	// split two return data
 	tmp := strings.Split(string(raw), "\n")
@@ -225,7 +263,8 @@ func SplitPlaintextWithShares(raw []byte) ([]byte, []byte) {
 	// share_with_proof to matrix of byte
 	// share_with_proof = strings.Trim(share_with_proof, "{}[]")
 	// each = strings.Split(share_with_proof, "}]} {[{")
-	share_with_proof_bytes, err := hex.DecodeString(share_with_proof)
+	share_with_proof_bytes := []byte(share_with_proof)
+	// share_with_proof_bytes, err := hex.DecodeString(share_with_proof)
 	if err != nil {
 		panic("SplitPlaintextWithShares: fail on decoding share with proof")
 	}
@@ -286,6 +325,60 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 	if isExecEncrypted {
 		receipt.Key = shareWithProof
 	}
+
+	// Set the receipt logs and create the bloom filter.
+	receipt.Logs = statedb.GetLogs(tx.Hash(), blockHash)
+	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
+	receipt.BlockHash = blockHash
+	receipt.BlockNumber = blockNumber
+	receipt.TransactionIndex = uint(statedb.TxIndex())
+	return receipt, err
+}
+
+func verifyDecryptionAndApplyTransaction(msg types.Message, config *params.ChainConfig, author *common.Address, gp *GasPool, statedb *state.StateDB, blockNumber *big.Int, blockHash common.Hash, tx *types.Transaction, usedGas *uint64, evm *vm.EVM, rc *types.Receipt) (*types.Receipt, error) {
+	// Create a new context to be used in the EVM environment.
+	txContext := NewEVMTxContext(msg)
+	evm.Reset(txContext, statedb)
+
+	// TODO: modify new state transition and transition db to set the msg.data from ciphertext to plaintext
+	var plaintextMsgData []byte = nil
+
+	plaintextMsgData = verifyProof(msg.Data(), rc.Key)
+
+	// Apply the transaction to the current state (included in the env).
+	result, err := ApplyMessage(evm, msg, gp, plaintextMsgData)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update the state with pending changes.
+	var root []byte
+	if config.IsByzantium(blockNumber) {
+		statedb.Finalise(true)
+	} else {
+		root = statedb.IntermediateRoot(config.IsEIP158(blockNumber)).Bytes()
+	}
+	*usedGas += result.UsedGas
+
+	// Create a new receipt for the transaction, storing the intermediate root and gas used
+	// by the tx.
+	receipt := &types.Receipt{Type: tx.Type(), PostState: root, CumulativeGasUsed: *usedGas}
+	if result.Failed() {
+		receipt.Status = types.ReceiptStatusFailed
+	} else {
+		receipt.Status = types.ReceiptStatusSuccessful
+	}
+	receipt.TxHash = tx.Hash()
+	receipt.GasUsed = result.UsedGas
+
+	// If the transaction created a contract, store the creation address in the receipt.
+	if msg.To() == nil {
+		receipt.ContractAddress = crypto.CreateAddress(evm.TxContext.Origin, tx.Nonce())
+	}
+
+	// TODO: set key the same as remote block
+	// If this is the execution of an encrypted tx, then add the key to the receipt
+	receipt.Key = rc.Key
 
 	// Set the receipt logs and create the bloom filter.
 	receipt.Logs = statedb.GetLogs(tx.Hash(), blockHash)

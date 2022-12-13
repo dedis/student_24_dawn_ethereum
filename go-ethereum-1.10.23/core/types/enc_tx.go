@@ -30,8 +30,8 @@ type EncryptedTx struct {
 	Gas        uint64
 	To         *common.Address `rlp:"nil"` // nil means contract creation
 	Value      *big.Int
-	Data       []byte
-	Key        []byte //@remind key for decrypt a tx
+	Data       []byte // Enc_k(data) symmetric encryption
+	Key        []byte // Enc_smc(k)
 	AccessList AccessList
 
 	// Signature values

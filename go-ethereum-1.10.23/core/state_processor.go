@@ -86,10 +86,10 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		receipt         *types.Receipt
 		isExecEncrypted bool
 	)
-	tmp_rcs := p.bc.GetReceiptsByHash(block.Hash())
-	if len(tmp_rcs) != block.Transactions().Len() {
-		panic("unequal transaction length and receipts")
-	}
+	// tmp_rcs := p.bc.GetReceiptsByHash(block.Hash())
+	// if len(tmp_rcs) != block.Transactions().Len() {
+	// 	panic("unequal transaction length and receipts")
+	// }
 	for i, tx := range block.Transactions() {
 		signer := types.MakeSigner(p.config, header.Number)
 		msg, err := tx.AsMessage(signer, header.BaseFee)
@@ -100,21 +100,23 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		statedb.Prepare(tx.Hash(), i)
 
 		if isExecEncrypted, _ = isExecuteEncryptedTx(statedb, signer, p.config, tx); isExecEncrypted { //@audit validate executing enc tx, in PoA, coinbase is temporary zero
-			log.Error("[VERIFY][ENC][Start]]")
+			log.Info("[VERIFY][ENC][Start]]")
 			beneficiary = common.BigToAddress(big.NewInt(0))
 		}
 
 		blockContext := NewEVMBlockContext(header, p.bc, &beneficiary)
 		vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, p.config, cfg)
 
-		if isExecEncrypted {
-			receipt, err = verifyDecryptionAndApplyTransaction(msg, p.config, &beneficiary, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv, tmp_rcs[i])
-		} else {
-			receipt, err = applyTransaction(msg, p.config, &beneficiary, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv, isExecEncrypted)
+		receipt, err = applyTransaction(msg, p.config, &beneficiary, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv, isExecEncrypted)
 
-		}
+		// if isExecEncrypted {
+		// 	receipt, err = verifyDecryptionAndApplyTransaction(msg, p.config, &beneficiary, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv, tmp_rcs[i])
+		// } else {
+		// 	receipt, err = applyTransaction(msg, p.config, &beneficiary, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv, isExecEncrypted)
 
-		log.Error(fmt.Sprintf("[VERIFY][ENC][RC]] receipt key appended: %v", receipt.Key))
+		// }
+
+		log.Info(fmt.Sprintf("[VERIFY][ENC][RC]] receipt key appended: %v", receipt.Key))
 
 		if err != nil {
 			return nil, nil, 0, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)
@@ -207,13 +209,13 @@ func decryptMsgData(encMsgData []byte) ([]byte, []byte) {
 
 	// plaintext_data, share_with_proof := tmp[0], tmp[1]
 
-	log.Error(fmt.Sprintf("## Decrypted hex (%v): %v", len(decrypted_data), string(decrypted_data)))
+	// log.Info(fmt.Sprintf("## Decrypted hex (%v): %v", len(decrypted_data), string(decrypted_data)))
 
 	// remove the bracket around the decrypted plaintext
 	// plaintextMsgData, err := hex.DecodeString(string(decrypted_data)[1 : len(decrypted_data)-2])
 
-	log.Error(fmt.Sprintf("## Decrypted bytes plaintext (%v): %v", len(plaintextMsgData), string(plaintextMsgData)))
-	log.Error(fmt.Sprintf("## Decrypted bytes shares (%v): %v", len(ShareWithProof), string(ShareWithProof)))
+	log.Info(fmt.Sprintf("## Decrypted bytes plaintext (%v): %v", len(plaintextMsgData), string(plaintextMsgData)))
+	log.Info(fmt.Sprintf("## Decrypted bytes shares (%v): %v", len(ShareWithProof), string(ShareWithProof)))
 
 	if err != nil {
 		panic("decryptMsgData: fail on decoding")
@@ -243,7 +245,7 @@ func verifyProof(encMsgData []byte, rcKey []byte) []byte {
 	plaintext_data = strings.Trim(plaintext_data, "[]")
 	plaintext_data_bytes, err := hex.DecodeString(plaintext_data)
 
-	log.Error(fmt.Sprintf("## Decrypted bytes plaintext (%v): %v", len(plaintext_data_bytes), string(plaintext_data_bytes)))
+	log.Info(fmt.Sprintf("## Decrypted bytes plaintext (%v): %v", len(plaintext_data_bytes), string(plaintext_data_bytes)))
 	if err != nil {
 		panic("decryptMsgData: fail on decoding")
 	}
@@ -280,10 +282,10 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 
 	// TODO: modify new state transition and transition db to set the msg.data from ciphertext to plaintext
 	var plaintextMsgData []byte = nil
-	var shareWithProof []byte = nil
+	// var shareWithProof []byte = nil
 
 	if isExecEncrypted {
-		plaintextMsgData, shareWithProof = decryptMsgData(msg.Data())
+		plaintextMsgData, _ = decryptMsgData(msg.Data())
 	}
 	// if ok, _ := isExecuteEncryptedTx(statedb, , config, tx); ok {
 	// 	plaintextMsgData = decryptMsgData(msg.Data())
@@ -323,7 +325,7 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 	// TODO: key written into receipt
 	// If this is the execution of an encrypted tx, then add the key to the receipt
 	if isExecEncrypted {
-		receipt.Key = shareWithProof
+		receipt.Key = plaintextMsgData
 	}
 
 	// Set the receipt logs and create the bloom filter.

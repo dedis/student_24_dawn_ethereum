@@ -850,7 +850,7 @@ func (w *worker) retrieveOrderingCoinbase(numbersBack uint64) common.Address {
 
 	previousNumber := currentNumber - numbersBack
 	preBlock := w.chain.GetBlockByNumber(previousNumber)
-	log.Error(fmt.Sprintf("inspect prev block header: %+v", preBlock.Header()))
+	// log.Error(fmt.Sprintf("inspect prev block header: %+v", preBlock.Header()))
 
 	return preBlock.Coinbase()
 }
@@ -876,14 +876,14 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 
 	if isExecEnc { //@audit this is always 0
 		beneficiary = w.retrieveOrderingCoinbase(types.EncryptedBlockDelay)
-		log.Error(fmt.Sprintf("use previous coinbase: %v", beneficiary))
+		log.Info(fmt.Sprintf("use previous coinbase: %v", beneficiary))
 	} else {
 		/*
 			TODO: in clique, PoA, the coinbase in blockheader is always 0.
 			need to derive the signer from signature: https://github.com/ethereum/go-ethereum/issues/15651
 		*/
 		beneficiary = env.coinbase //@audit this is the miner who is mining this block
-		log.Error(fmt.Sprintf("use current coinbase: %v", beneficiary))
+		log.Info(fmt.Sprintf("use current coinbase: %v", beneficiary))
 	}
 
 	receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &beneficiary, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig(), isExecEnc)
@@ -895,7 +895,7 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 
 	if receipt.Type == types.EncryptedTxType && receipt.CumulativeGasUsed != 0 {
 		//@remind do not need to add the tx as is already stored before
-		log.Error(fmt.Sprintf("[ENC][EXE] receipt key appended: %v", receipt.Key))
+		log.Info(fmt.Sprintf("[ENC][EXE] receipt key appended: %v", receipt.Key))
 	} else {
 		//@remind only store tx and receipt if it is not executing encrypted tx
 	}
@@ -1141,7 +1141,7 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 	if len(pendingEncryptedTxs) > 0 {
 		elapsed := time.Since(start)
 		line := fmt.Sprintf("[ENC][EXE][Elapse]: %s\n", elapsed)
-		log.Error(line)
+		log.Info(line)
 		f, err := os.OpenFile("testlogfile", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
 			panic("wrong file")

@@ -205,6 +205,17 @@ func decryptMsgData(encMsgData []byte) ([]byte, []byte) {
 	}
 
 	plaintextMsgData, ShareWithProof := SplitPlaintextWithShares(decrypted_data)
+	log.Info(fmt.Sprintf("length of shares&proof: %v", len(ShareWithProof)))
+	// csvFile, feer := os.Create("shares_size.csv")
+	// if feer != nil {
+	// 	panic(fmt.Sprintf("failed to open shares size measure csv %v", feer))
+	// }
+	// defer csvFile.Close()
+
+	// csvWriter := csv.NewWriter(csvFile)
+	// _ = csvWriter.Write([]string{fmt.Sprintf("%v", len(ShareWithProof))})
+	// csvWriter.Flush()
+
 	// tmp := strings.Split(string(decrypted_data), "\n")
 
 	// plaintext_data, share_with_proof := tmp[0], tmp[1]

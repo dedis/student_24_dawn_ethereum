@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -198,14 +200,22 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, ks *keystore.KeyStore, fr
 
 	// cmd := strings.Join(args[:], " ")
 
-	str := "Merry Christmas 2022"
-	fmt.Println("## Plaintext message: ", str)
+	msg := "Merry Christmas 2022"
+	fmt.Println("## Plaintext message: ", msg)
+	symKey := make([]byte, 32)
+	_, err = rand.Read(symKey)
+	if err != nil {
+		panic(fmt.Sprintf("failed on load random key: %v", err))
+	}
 
-	plaintext := hex.EncodeToString([]byte(str))
+	symKeyStr := hex.EncodeToString(symKey)
+	// msgStr := hex.EncodeToString([]byte(msg))
+
+	encryptedMsg := crypto.EncryptAES(symKey, []byte(msg))
 
 	gBar := "1d0194fdc2fa2ffcc041d3ff12045b73c86e4ff95ff662a5eee82abdf44a53c7"
 
-	args_enc := []string{"dkgcli", "--config", node, "dkg", "verifiableEncrypt", "--GBar", gBar, "--message", plaintext}
+	args_enc := []string{"dkgcli", "--config", node, "dkg", "verifiableEncrypt", "--GBar", gBar, "--message", symKeyStr}
 
 	encrypted_data, err := exec.Command(args_enc[0], args_enc[1:]...).Output()
 
@@ -213,7 +223,8 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, ks *keystore.KeyStore, fr
 		fmt.Println(err.Error())
 	}
 
-	fmt.Println("## Encrypted data: ", string(encrypted_data[:len(encrypted_data)-2]))
+	fmt.Println("## Random generated msg.Key: ", symKeyStr)
+	fmt.Println("## Encrypted Key: ", string(encrypted_data[:len(encrypted_data)-2]))
 
 	// TODO: uncomment following to display decryption result
 	// args_dec := []string{"dkgcli", "--config", node, "dkg", "verifiableDecrypt", "--GBar", gBar, "--ciphertexts", string(encrypted_data)[:len(encrypted_data)-2]}
@@ -234,7 +245,8 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, ks *keystore.KeyStore, fr
 		Gas:        gasLimit,
 		To:         &to.Address,
 		Value:      val,
-		Data:       encrypted_data[:len(encrypted_data)-2], //@audit remove the ending ":"
+		Key:        encrypted_data[:len(encrypted_data)-2], //@audit remove the ending ":"
+		Data:       encryptedMsg,
 		AccessList: accesses,
 	}
 	tx := types.NewTx(enc)
@@ -292,7 +304,7 @@ func prettyPrintBlock(client *ethclient.Client, num *big.Int) {
 func main() {
 	var client *ethclient.Client
 	var err error
-	if client, err = ethclient.Dial("//./pipe/geth1.ipc"); err != nil {
+	if client, err = ethclient.Dial("//./pipe/geth.ipc"); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Connection established")

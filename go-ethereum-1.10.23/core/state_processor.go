@@ -191,11 +191,11 @@ Decrypt and get the plaintext msg.data
 		--->Dec(Enc(hex(msg.data))) = hex(msg.data)
 	 hexToBytes
 */
-func decryptMsgData(encMsgData []byte) ([]byte, []byte) {
+func decryptMsgData(encSymKey []byte, encMsgData []byte) ([]byte, []byte, []byte) {
 	node := filepath.Dir("D:/EPFL/master_thesis/dela/dkg/pedersen/dkgcli/tmp/node1/")
 
 	args_dec := []string{"dkgcli", "--config", node, "dkg", "verifiableDecrypt",
-		"--GBar", types.GBar, "--ciphertexts", string(encMsgData)}
+		"--GBar", types.GBar, "--ciphertexts", string(encSymKey)}
 
 	// first line of decrypted: plaintext data
 	// second line of decrypted: shares with proof
@@ -204,7 +204,9 @@ func decryptMsgData(encMsgData []byte) ([]byte, []byte) {
 		panic("decryptMsgData: fail on decryption")
 	}
 
-	plaintextMsgData, ShareWithProof := SplitPlaintextWithShares(decrypted_data)
+	// plaintextMsgData, ShareWithProof := SplitPlaintextWithShares(decrypted_data)
+	plaintextKey, ShareWithProof := SplitPlaintextWithShares(decrypted_data)
+	plaintextMsgData := crypto.DecryptAES(plaintextKey, encMsgData)
 	log.Info(fmt.Sprintf("length of shares&proof: %v", len(ShareWithProof)))
 	// csvFile, feer := os.Create("shares_size.csv")
 	// if feer != nil {
@@ -224,15 +226,15 @@ func decryptMsgData(encMsgData []byte) ([]byte, []byte) {
 
 	// remove the bracket around the decrypted plaintext
 	// plaintextMsgData, err := hex.DecodeString(string(decrypted_data)[1 : len(decrypted_data)-2])
-
-	log.Info(fmt.Sprintf("## Decrypted bytes plaintext (%v): %v", len(plaintextMsgData), string(plaintextMsgData)))
+	log.Info(fmt.Sprintf("## Decrypted msg.Key (%v): %v", len(plaintextKey), hex.EncodeToString(plaintextKey)))
+	log.Info(fmt.Sprintf("## Decrypted msg.data (%v): %v", len(plaintextMsgData), string(plaintextMsgData)))
 	log.Info(fmt.Sprintf("## Decrypted bytes shares (%v): %v", len(ShareWithProof), string(ShareWithProof)))
 
 	if err != nil {
 		panic("decryptMsgData: fail on decoding")
 	}
 
-	return plaintextMsgData, ShareWithProof
+	return plaintextKey, plaintextMsgData, ShareWithProof
 }
 
 func verifyProof(encMsgData []byte, rcKey []byte) []byte {
@@ -296,7 +298,7 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 	// var shareWithProof []byte = nil
 
 	if isExecEncrypted {
-		plaintextMsgData, _ = decryptMsgData(msg.Data())
+		_, plaintextMsgData, _ = decryptMsgData(msg.Key(), msg.Data())
 	}
 	// if ok, _ := isExecuteEncryptedTx(statedb, , config, tx); ok {
 	// 	plaintextMsgData = decryptMsgData(msg.Data())

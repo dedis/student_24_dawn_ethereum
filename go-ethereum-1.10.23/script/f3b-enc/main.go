@@ -200,9 +200,9 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, ks *keystore.KeyStore, fr
 
 	// cmd := strings.Join(args[:], " ")
 
-	msg := "Merry Christmas 2022"
+	msg := "Merry Christmas!"
 	fmt.Println("## Plaintext message: ", msg)
-	symKey := make([]byte, 32)
+	symKey := make([]byte, 16)
 	_, err = rand.Read(symKey)
 	if err != nil {
 		panic(fmt.Sprintf("failed on load random key: %v", err))
@@ -224,18 +224,18 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, ks *keystore.KeyStore, fr
 	}
 
 	fmt.Println("## Random generated msg.Key: ", symKeyStr)
-	fmt.Println("## Encrypted Key: ", string(encrypted_data[:len(encrypted_data)-2]))
+	fmt.Println("## Encrypted Key: ", string(encrypted_data))
 
 	// TODO: uncomment following to display decryption result
-	// args_dec := []string{"dkgcli", "--config", node, "dkg", "verifiableDecrypt", "--GBar", gBar, "--ciphertexts", string(encrypted_data)[:len(encrypted_data)-2]}
+	args_dec := []string{"dkgcli", "--config", node, "dkg", "verifiableDecrypt", "--GBar", gBar, "--ciphertexts", string(encrypted_data)[:len(encrypted_data)-2]}
 
-	// decrypted_data, err := exec.Command(args_enc[0], args_dec[1:]...).Output()
+	decrypted_data, err := exec.Command(args_enc[0], args_dec[1:]...).Output()
 
-	// if err != nil {
-	// 	fmt.Println(err.Error())
-	// }
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 
-	// fmt.Println("## Decrypted data: ", string(decrypted_data))
+	fmt.Println("## Decrypted data: ", string(decrypted_data))
 
 	enc := &types.EncryptedTx{
 		ChainID:    chainID,

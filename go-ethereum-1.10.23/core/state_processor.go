@@ -295,10 +295,10 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 
 	// TODO: modify new state transition and transition db to set the msg.data from ciphertext to plaintext
 	var plaintextMsgData []byte = nil
-	// var shareWithProof []byte = nil
+	var plaintextSymKey []byte = nil
 
 	if isExecEncrypted {
-		_, plaintextMsgData, _ = decryptMsgData(msg.Key(), msg.Data())
+		plaintextSymKey, plaintextMsgData, _ = decryptMsgData(msg.Key(), msg.Data())
 	}
 	// if ok, _ := isExecuteEncryptedTx(statedb, , config, tx); ok {
 	// 	plaintextMsgData = decryptMsgData(msg.Data())
@@ -338,7 +338,7 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 	// TODO: key written into receipt
 	// If this is the execution of an encrypted tx, then add the key to the receipt
 	if isExecEncrypted {
-		receipt.Key = plaintextMsgData
+		receipt.Key = plaintextSymKey
 	}
 
 	// Set the receipt logs and create the bloom filter.

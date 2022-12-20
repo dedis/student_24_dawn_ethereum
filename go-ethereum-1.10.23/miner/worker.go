@@ -866,6 +866,7 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 		isExecEnc bool
 
 		beneficiary common.Address
+		start       time.Time
 	)
 
 	isExecEnc, err = isExecuteEncryptedTx(env, w.chainConfig, tx)
@@ -887,6 +888,11 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 		log.Info(fmt.Sprintf("use current coinbase: %v", beneficiary))
 	}
 
+	if tx.Type() == types.EncryptedTxType && !isExecEnc {
+		// measuring ordering time
+		start = time.Now()
+	}
+
 	receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &beneficiary, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig(), isExecEnc)
 
 	if err != nil {
@@ -903,6 +909,21 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 
 	env.txs = append(env.txs, tx)
 	env.receipts = append(env.receipts, receipt)
+
+	if tx.Type() == types.EncryptedTxType && !isExecEnc {
+		// measuring ordering time
+		start = time.Now()
+		elapsed := time.Since(start)
+		line := fmt.Sprintf("[ENC][EXE][Ordering single]: %s\n", elapsed)
+		log.Info(line)
+		f, err := os.OpenFile("ordlogfile", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			panic("wrong file")
+		}
+
+		f.Write([]byte(line))
+		f.Close()
+	}
 
 	return receipt.Logs, nil
 }
@@ -1143,7 +1164,7 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		elapsed := time.Since(start)
 		line := fmt.Sprintf("[ENC][EXE][Elapse]: %s\n", elapsed)
 		log.Info(line)
-		f, err := os.OpenFile("testlogfile", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		f, err := os.OpenFile("exelogfile", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
 			panic("wrong file")
 		}

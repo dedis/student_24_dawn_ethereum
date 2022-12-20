@@ -34,16 +34,11 @@ func get_balance(client *ethclient.Client, addr common.Address) (*big.Int, *big.
 	return weiValue, ethValue
 }
 
-func sendEtherPlaintext(client *ethclient.Client, ks *keystore.KeyStore, from, to accounts.Account, val *big.Int, gasLimit uint64) {
-	var nonce uint64
+func sendEtherPlaintext(client *ethclient.Client, nonce uint64, ks *keystore.KeyStore, from, to accounts.Account, val *big.Int, gasLimit uint64) {
 	var err error
 	var gasPrice, chainID *big.Int
 	var signedTx *types.Transaction
 
-	// get nonce
-	if nonce, err = client.PendingNonceAt(context.Background(), from.Address); err != nil {
-		log.Fatal(err)
-	}
 	// get gas price
 	if gasPrice, err = client.SuggestGasPrice(context.Background()); err != nil {
 		log.Fatal(err)
@@ -157,16 +152,11 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from, to a
 	fmt.Printf("Encrypted Transaction send: %v\n", signedTx.Hash().Hex())
 }
 
-func sendEtherF3bVerifiedEnc(client *ethclient.Client, ks *keystore.KeyStore, from, to accounts.Account, val *big.Int, gasLimit uint64) {
-	var nonce uint64
+func sendEtherF3bVerifiedEnc(client *ethclient.Client, nonce uint64, ks *keystore.KeyStore, from, to accounts.Account, val *big.Int, gasLimit uint64) {
 	var err error
 	var gasPrice, chainID *big.Int
 	var signedTx *types.Transaction
 
-	// get nonce
-	if nonce, err = client.PendingNonceAt(context.Background(), from.Address); err != nil {
-		log.Fatal(err)
-	}
 	// get gas price
 	if gasPrice, err = client.SuggestGasPrice(context.Background()); err != nil {
 		log.Fatal(err)
@@ -202,7 +192,7 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, ks *keystore.KeyStore, fr
 
 	msg := "Merry Christmas!"
 	fmt.Println("## Plaintext message: ", msg)
-	symKey := make([]byte, 16)
+	symKey := make([]byte, 32)
 	_, err = rand.Read(symKey)
 	if err != nil {
 		panic(fmt.Sprintf("failed on load random key: %v", err))
@@ -227,15 +217,15 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, ks *keystore.KeyStore, fr
 	fmt.Println("## Encrypted Key: ", string(encrypted_data))
 
 	// TODO: uncomment following to display decryption result
-	args_dec := []string{"dkgcli", "--config", node, "dkg", "verifiableDecrypt", "--GBar", gBar, "--ciphertexts", string(encrypted_data)[:len(encrypted_data)-2]}
+	// args_dec := []string{"dkgcli", "--config", node, "dkg", "verifiableDecrypt", "--GBar", gBar, "--ciphertexts", string(encrypted_data)[:len(encrypted_data)-2]}
 
-	decrypted_data, err := exec.Command(args_enc[0], args_dec[1:]...).Output()
+	// decrypted_data, err := exec.Command(args_enc[0], args_dec[1:]...).Output()
 
-	if err != nil {
-		fmt.Println(err.Error())
-	}
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// }
 
-	fmt.Println("## Decrypted data: ", string(decrypted_data))
+	// fmt.Println("## Decrypted data: ", string(decrypted_data))
 
 	enc := &types.EncryptedTx{
 		ChainID:    chainID,
@@ -335,12 +325,22 @@ func main() {
 	gasLimit := uint64(210000)
 	val := big.NewInt(1e18)
 	encrypted := flag.Bool("encrypted", false, "if send an encrypted transaction")
+	num := flag.Int("num", 1, "number of transactions")
 	flag.Parse()
 
-	if !*encrypted {
-		sendEtherPlaintext(client, ks, user_acc, auth_acc, val, gasLimit)
-	} else {
-		sendEtherF3bVerifiedEnc(client, ks, user_acc, auth_acc, val, gasLimit)
+	var nonce uint64
+
+	// get nonce
+	if nonce, err = client.PendingNonceAt(context.Background(), user_acc.Address); err != nil {
+		log.Fatal(err)
+	}
+
+	for i := 0; i < *num; i++ {
+		if !*encrypted {
+			sendEtherPlaintext(client, nonce+uint64(i), ks, user_acc, auth_acc, val, gasLimit)
+		} else {
+			sendEtherF3bVerifiedEnc(client, nonce+uint64(i), ks, user_acc, auth_acc, val, gasLimit)
+		}
 	}
 
 	_, eth_user = get_balance(client, user)

@@ -12,7 +12,9 @@ def initialize_datadir(num: int):
     
 def delete(id: int):
     if os.path.exists(".\\ethereum{}\\geth".format(id)):
-        os.system("rd /s /q .\\.ethereum{}\\geth".format(id))
+        cmd = "rd /s /q .\\.ethereum{}\\geth".format(id)
+        print(subprocess.check_output(cmd.split(" ")))
+        # os.system("rd /s /q .\\.ethereum{}\\geth".format(id))
     
 
 def main(num: int):

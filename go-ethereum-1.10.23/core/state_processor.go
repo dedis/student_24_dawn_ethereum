@@ -17,6 +17,8 @@
 package core
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"math/big"
@@ -85,11 +87,21 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		beneficiary     common.Address
 		receipt         *types.Receipt
 		isExecEncrypted bool
+		rcAuth          common.Address
+		err             error
 	)
 	// tmp_rcs := p.bc.GetReceiptsByHash(block.Hash())
 	// if len(tmp_rcs) != block.Transactions().Len() {
 	// 	panic("unequal transaction length and receipts")
 	// }
+	orderBlock := RetrieveOrderBlock(p.bc, types.EncryptedBlockDelay)
+	if orderBlock != nil {
+		rcAuth, err = p.bc.engine.Author(orderBlock.Header())
+		if err != nil {
+			panic(fmt.Sprintf("fail to retrieve author: %s", err))
+		}
+		log.Error(fmt.Sprintf("last block signer: %s", rcAuth))
+	}
 	for i, tx := range block.Transactions() {
 		signer := types.MakeSigner(p.config, header.Number)
 		msg, err := tx.AsMessage(signer, header.BaseFee)
@@ -100,8 +112,11 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		statedb.Prepare(tx.Hash(), i)
 
 		if isExecEncrypted, _ = isExecuteEncryptedTx(statedb, signer, p.config, tx); isExecEncrypted { //@audit validate executing enc tx, in PoA, coinbase is temporary zero
-			log.Info("[VERIFY][ENC][Start]]")
-			beneficiary = common.BigToAddress(big.NewInt(0))
+			beneficiary = rcAuth
+			log.Info(fmt.Sprintf("[VERIFY][ENC EXE][beneficiary]: %s", beneficiary))
+		} else {
+			beneficiary, _ = p.bc.engine.Author(block.Header())
+			log.Info(fmt.Sprintf("[VERIFY][Normal][beneficiary]: %s", beneficiary))
 		}
 
 		blockContext := NewEVMBlockContext(header, p.bc, &beneficiary)
@@ -145,6 +160,18 @@ func isExecuteEncryptedTx(statedb *state.StateDB, signer types.Signer, cf *param
 	}
 
 	return false, nil
+}
+
+func RetrieveOrderBlock(wc *BlockChain, numbersBack uint64) *types.Block {
+	currentNumber := wc.CurrentHeader().Number.Uint64() //@remind the recent block that already mined, not the current mining block
+	// regardless of the genesis block
+	if currentNumber <= numbersBack {
+		return nil
+	}
+
+	previousNumber := currentNumber - numbersBack
+	preBlock := wc.GetBlockByNumber(previousNumber)
+	return preBlock
 }
 
 func RetrievePendingEncryptedTransactions(wc *BlockChain, numbersBack uint64) types.Transactions {
@@ -191,11 +218,21 @@ Decrypt and get the plaintext msg.data
 		--->Dec(Enc(hex(msg.data))) = hex(msg.data)
 	 hexToBytes
 */
-func decryptMsgData(encSymKey []byte, encMsgData []byte) ([]byte, []byte, []byte) {
+func decryptMsgData(hashWithEncSymKey []byte, encMsgData []byte) ([]byte, []byte, []byte) {
 	node := filepath.Dir("D:/EPFL/master_thesis/dela/dkg/pedersen/dkgcli/tmp/node1/")
+
+	hashLen := 32
+
+	hash, encSymKey := hashWithEncSymKey[:hashLen], hashWithEncSymKey[hashLen:]
+
+	// hash := append([]byte(nil), hashWithEncSymKey[:32]...)
+	// encSymKey := append([]byte(nil), hashWithEncSymKey[32:]...)
 
 	args_dec := []string{"dkgcli", "--config", node, "dkg", "verifiableDecrypt",
 		"--GBar", types.GBar, "--ciphertexts", string(encSymKey)}
+
+	// log.Info(fmt.Sprintf("args to decrypt: %v", args_dec))
+	// log.Info(fmt.Sprintf("input: %v", string(hashWithEncSymKey)))
 
 	// first line of decrypted: plaintext data
 	// second line of decrypted: shares with proof
@@ -203,6 +240,8 @@ func decryptMsgData(encSymKey []byte, encMsgData []byte) ([]byte, []byte, []byte
 	if err != nil {
 		panic("decryptMsgData: fail on decryption")
 	}
+
+	log.Info(fmt.Sprintf("decrypted data: %s", string(decrypted_data)))
 
 	// plaintextMsgData, ShareWithProof := SplitPlaintextWithShares(decrypted_data)
 	plaintextKey, ShareWithProof := SplitPlaintextWithShares(decrypted_data)
@@ -232,6 +271,14 @@ func decryptMsgData(encSymKey []byte, encMsgData []byte) ([]byte, []byte, []byte
 
 	if err != nil {
 		panic("decryptMsgData: fail on decoding")
+	}
+
+	localComputedKeyHash := sha256.Sum256(plaintextKey)
+	if bytes.Compare(hash, localComputedKeyHash[:]) != 0 {
+		log.Error(fmt.Sprintf("Unequal Key Hash: local [%v], remote [%v]",
+			hex.EncodeToString(localComputedKeyHash[:]),
+			hex.EncodeToString(hash)),
+		)
 	}
 
 	return plaintextKey, plaintextMsgData, ShareWithProof
@@ -339,6 +386,7 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 	// If this is the execution of an encrypted tx, then add the key to the receipt
 	if isExecEncrypted {
 		receipt.Key = plaintextSymKey
+
 	}
 
 	// Set the receipt logs and create the bloom filter.

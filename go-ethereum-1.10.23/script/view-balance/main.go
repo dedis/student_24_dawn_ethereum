@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
+	"flag"
 	"fmt"
 	"log"
 	"math"
@@ -29,10 +31,12 @@ func get_balance(client *ethclient.Client, addr common.Address) (*big.Int, *big.
 func main() {
 	var client *ethclient.Client
 	var err error
-	if client, err = ethclient.Dial("//./pipe/geth1.ipc"); err != nil {
+	cid := flag.String("id", "", "id of geth client")
+	flag.Parse()
+	if client, err = ethclient.Dial(fmt.Sprintf("//./pipe/geth%s.ipc", *cid)); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Connection established")
+	// fmt.Println("Connection established")
 
 	// unlock the pre fund user account
 	ks := keystore.NewKeyStore("../.ethereum/keystore", keystore.StandardScryptN, keystore.StandardScryptP)
@@ -40,18 +44,23 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// print accounts
-	// for i, item := range ks.Accounts() {
-	// 	fmt.Printf("Accounts[%v]: %v\n", i, item.Address.Hex())
-	// }
+	// create receiver account
+	rcv := "be76d61cd0a253d6ce6d363966abbde3b7b5a6a7"
+	rcvHex, err := hex.DecodeString(rcv)
+	if err != nil {
+		panic(err)
+	}
+	rcvAddr := common.BytesToAddress(rcvHex)
 
-	authority := ks.Accounts()[0].Address
+	auth1 := ks.Accounts()[0].Address
 	user := ks.Accounts()[1].Address
+	auth2 := ks.Accounts()[2].Address
 
 	_, eth_user := get_balance(client, user)
-	_, eth_auth := get_balance(client, authority)
+	_, eth_rcv := get_balance(client, rcvAddr)
+	_, eth_auth1 := get_balance(client, auth1)
+	_, eth_auth2 := get_balance(client, auth2)
 
-	fmt.Printf("[Balance] User: %s\n", eth_user.String())
-
-	fmt.Printf("[Balance] Authority: %s\n", eth_auth.String())
+	fmt.Printf("[Balance] User: %s, Receiver: %s, Auth1: %s, Auth2: %s\n",
+		eth_user.String(), eth_rcv.String(), eth_auth1.String(), eth_auth2.String())
 }

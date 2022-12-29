@@ -31,7 +31,7 @@ type EncryptedTx struct {
 	To         *common.Address `rlp:"nil"` // nil means contract creation
 	Value      *big.Int
 	Data       []byte // Enc_k(data) symmetric encryption
-	Key        []byte // Enc_smc(k)
+	Key        []byte // hash(k) | Enc_smc(k)
 	AccessList AccessList
 
 	// Signature values

@@ -876,8 +876,13 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 	}
 
 	if isExecEnc { //@audit this is always 0
-		beneficiary = w.retrieveOrderingCoinbase(types.EncryptedBlockDelay)
-		log.Info(fmt.Sprintf("use previous coinbase: %v", beneficiary))
+		orderBlock := core.RetrieveOrderBlock(w.chain, types.EncryptedBlockDelay)
+		rcAuth, err := w.engine.Author(orderBlock.Header())
+		if err != nil {
+			panic(fmt.Sprintf("fail to retrieve author: %s", err))
+		}
+		beneficiary = rcAuth
+		log.Info(fmt.Sprintf("[ENC EXEC]use previous coinbase (order block signer): %v", beneficiary))
 	} else {
 		/*
 			TODO: in clique, PoA, the coinbase in blockheader is always 0.
@@ -885,7 +890,9 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 		*/
 		// beneficiary = env.coinbase //@audit this is the miner who is mining this block
 		// beneficiary = *&common.Address{}
-		log.Info(fmt.Sprintf("use current coinbase: %v", beneficiary))
+		// beneficiary, _ = w.engine.Author(env.header)
+		beneficiary = env.coinbase
+		log.Info(fmt.Sprintf("[Other] use current coinbase: %v", beneficiary))
 	}
 
 	if tx.Type() == types.EncryptedTxType && !isExecEnc {
@@ -1173,6 +1180,8 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		f.Close()
 	}
 
+	start = time.Now()
+
 	if len(localTxs) > 0 {
 		txs := types.NewTransactionsByPriceAndNonce(env.signer, localTxs, env.header.BaseFee)
 		if err := w.commitTransactions(env, txs, interrupt); err != nil {
@@ -1185,6 +1194,20 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 			return err
 		}
 	}
+
+	if len(localTxs)+len(remoteTxs) > 0 {
+		elapsed := time.Since(start)
+		line := fmt.Sprintf("[PLN][EXE][Elapse]: %v\n", elapsed.Seconds())
+		log.Info(line)
+		f, err := os.OpenFile("plnlogfile", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			panic("wrong file")
+		}
+
+		f.Write([]byte(line))
+		f.Close()
+	}
+
 	return nil
 }
 

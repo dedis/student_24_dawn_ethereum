@@ -219,7 +219,7 @@ Decrypt and get the plaintext msg.data
 	 hexToBytes
 */
 func decryptMsgData(hashWithEncSymKey []byte, encMsgData []byte) ([]byte, []byte, []byte) {
-	node := filepath.Dir("D:/EPFL/master_thesis/dela/dkg/pedersen/dkgcli/tmp/node1/")
+	node := filepath.Dir(types.NodePath)
 
 	hashLen := 32
 

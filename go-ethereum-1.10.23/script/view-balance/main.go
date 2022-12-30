@@ -17,8 +17,8 @@ import (
 const authority_file = "../.ethereum/keystore/UTC--2022-09-13T11-34-29.303731400Z--280f6b48e4d9aee0efdb04eebe882023357f6434"
 const user_file = "../.ethereum/keystore/UTC--2022-09-13T11-35-11.765870700Z--f5f341cd21350259a8666b3a5fe47132eff57838"
 
-func get_balance(client *ethclient.Client, addr common.Address) (*big.Int, *big.Float) {
-	weiValue, err := client.BalanceAt(context.Background(), addr, nil)
+func get_balance(client *ethclient.Client, addr common.Address, bn *big.Int) (*big.Int, *big.Float) {
+	weiValue, err := client.BalanceAt(context.Background(), addr, bn)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -32,6 +32,7 @@ func main() {
 	var client *ethclient.Client
 	var err error
 	cid := flag.String("id", "", "id of geth client")
+	bn := flag.Int64("bn", 0, "block number") // 0 as default to query latest block
 	flag.Parse()
 	if client, err = ethclient.Dial(fmt.Sprintf("//./pipe/geth%s.ipc", *cid)); err != nil {
 		log.Fatal(err)
@@ -56,11 +57,16 @@ func main() {
 	user := ks.Accounts()[1].Address
 	auth2 := ks.Accounts()[2].Address
 
-	_, eth_user := get_balance(client, user)
-	_, eth_rcv := get_balance(client, rcvAddr)
-	_, eth_auth1 := get_balance(client, auth1)
-	_, eth_auth2 := get_balance(client, auth2)
+	var num *big.Int
+	if *bn != 0 {
+		num = big.NewInt(*bn)
+	}
 
-	fmt.Printf("[Balance] User: %s, Receiver: %s, Auth1: %s, Auth2: %s\n",
-		eth_user.String(), eth_rcv.String(), eth_auth1.String(), eth_auth2.String())
+	_, eth_user := get_balance(client, user, num)
+	_, eth_rcv := get_balance(client, rcvAddr, num)
+	_, eth_auth1 := get_balance(client, auth1, num)
+	_, eth_auth2 := get_balance(client, auth2, num)
+
+	fmt.Printf("[Balance at block %v] User: %s, Receiver: %s, Auth1: %s, Auth2: %s\n",
+		*bn, eth_user.String(), eth_rcv.String(), eth_auth1.String(), eth_auth2.String())
 }

@@ -285,8 +285,6 @@ func zeroBytes(bytes []byte) {
 }
 
 func EncryptAES(key []byte, plaintext []byte) []byte {
-	// TODO: this only return one block, which has a limited size for plaintext.
-	// TODO: for unlimited plaintext, call NewCipher in a loop.
 	c, err := aes.NewCipher(key)
 	CheckError(err)
 
@@ -299,7 +297,6 @@ func EncryptAES(key []byte, plaintext []byte) []byte {
 }
 
 func DecryptAES(key []byte, ciphertext []byte) []byte {
-	// TODO: same refer to EncryptAES
 	// ciphertext, _ := hex.DecodeString(ct)
 	c, err := aes.NewCipher(key)
 	CheckError(err)

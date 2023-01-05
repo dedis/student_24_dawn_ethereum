@@ -1266,7 +1266,7 @@ type RPCTransaction struct {
 // newRPCTransaction returns a transaction that will serialize to the RPC
 // representation, with the given location metadata set (if available).
 func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, baseFee *big.Int, config *params.ChainConfig) *RPCTransaction {
-	signer := types.NewEIP155Signer(config.ChainID) //@remind hard set signer
+	signer := types.NewEIP155Signer(config.ChainID)
 	from, _ := types.Sender(signer, tx)
 	v, r, s := tx.RawSignatureValues()
 	result := &RPCTransaction{
@@ -1312,7 +1312,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		} else {
 			result.GasPrice = (*hexutil.Big)(tx.GasFeeCap())
 		}
-	case types.EncryptedTxType: //@remind add extra logic
+	case types.EncryptedTxType:
 		al := tx.AccessList()
 		result.Accesses = &al
 		result.ChainID = (*hexutil.Big)(tx.ChainId())
@@ -1611,7 +1611,7 @@ func (s *TransactionAPI) GetTransactionReceipt(ctx context.Context, hash common.
 	signer := types.MakeSigner(s.b.ChainConfig(), bigblock)
 	from, _ := types.Sender(signer, tx)
 
-	log.Error(fmt.Sprintf("$$ len of key in receipt: %v", len(receipt.Key)))
+	// log.Error(fmt.Sprintf("$$ len of key in receipt: %v", len(receipt.Key)))
 
 	fields := map[string]interface{}{
 		"blockHash":         blockHash,
@@ -1654,7 +1654,7 @@ func (s *TransactionAPI) GetTransactionReceipt(ctx context.Context, hash common.
 	if receipt.Key != nil && len(receipt.Key) > 0 {
 		fields["key"] = receipt.Key
 	}
-	log.Error(fmt.Sprintf("$$ len of key in fields: %v", fields["key"]))
+	// log.Error(fmt.Sprintf("$$ len of key in fields: %v", fields["key"]))
 	return fields, nil
 }
 

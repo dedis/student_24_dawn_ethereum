@@ -213,7 +213,7 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, nonce uint64, ks *keystor
 
 	encrypted_data, err := exec.Command(args_enc[0], args_enc[1:]...).Output()
 
-	encrypted_data = encrypted_data[:len(encrypted_data)-2] //@audit remove the ending ":"
+	encrypted_data = encrypted_data[:len(encrypted_data)-2]
 
 	encKeyWithHash := append(khash[:], encrypted_data...)
 
@@ -244,14 +244,13 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, nonce uint64, ks *keystor
 	fmt.Println("[GasLimit in Ether]: ", ethValue.String())
 
 	enc := &types.EncryptedTx{
-		ChainID:   chainID,
-		Nonce:     nonce,
-		GasFeeCap: gasPrice,
-		GasTipCap: big.NewInt(10),
-		Gas:       gasLimit,
-		To:        &to.Address,
-		Value:     val,
-		// Key:        encrypted_data[:len(encrypted_data)-2], //@audit remove the ending ":"
+		ChainID:    chainID,
+		Nonce:      nonce,
+		GasFeeCap:  gasPrice,
+		GasTipCap:  big.NewInt(10),
+		Gas:        gasLimit,
+		To:         &to.Address,
+		Value:      val,
 		Key:        encKeyWithHash,
 		Data:       encryptedMsg,
 		AccessList: accesses,

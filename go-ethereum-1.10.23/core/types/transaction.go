@@ -54,7 +54,7 @@ const (
 
 // ################ For encrypted transaction #######################
 const EncryptedBlockDelay uint64 = 2
-const SymKeyLen = 24 // @audit 32 size is not allowed as it exceed f3b verifiable enc limit
+const SymKeyLen = 24
 
 const GBar string = "1d0194fdc2fa2ffcc041d3ff12045b73c86e4ff95ff662a5eee82abdf44a53c7"
 const NodePath string = "D:/EPFL/master_thesis/dela/dkg/pedersen/dkgcli/tmp/node1/"
@@ -94,7 +94,7 @@ type TxData interface {
 	value() *big.Int
 	nonce() uint64
 	to() *common.Address
-	key() []byte //@remind extra field
+	key() []byte
 
 	rawSignatureValues() (v, r, s *big.Int)
 	setSignatureValues(chainID, v, r, s *big.Int)
@@ -197,7 +197,7 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 		var inner DynamicFeeTx
 		err := rlp.DecodeBytes(b[1:], &inner)
 		return &inner, err
-	case EncryptedTxType: //@remind add enc tx case
+	case EncryptedTxType:
 		log.Info("#### Encrypted tx catched")
 		var inner EncryptedTx
 		err := rlp.DecodeBytes(b[1:], &inner)
@@ -638,7 +638,7 @@ func (t *TransactionsByPriceAndNonce) Pop() {
 //
 // NOTE: In a future PR this will be removed.
 type Message struct {
-	txType     uint8 //@remind add a type field
+	txType     uint8
 	to         *common.Address
 	from       common.Address
 	nonce      uint64

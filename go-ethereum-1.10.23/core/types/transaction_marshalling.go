@@ -285,7 +285,7 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 		if dec.AccessList != nil {
 			itx.AccessList = *dec.AccessList
 		}
-		if dec.ChainID == nil { //@remind tem remove
+		if dec.ChainID == nil {
 			return errors.New("missing required field 'chainId' in transaction")
 		}
 		itx.ChainID = (*big.Int)(dec.ChainID)
@@ -329,9 +329,9 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 		}
 		itx.S = (*big.Int)(dec.S)
 		if dec.Key != nil {
-			itx.Key = *dec.Key //@remind add key
+			itx.Key = *dec.Key
 		}
-		// withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0 //@remind tmp disable
+		// withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0
 		// if withSignature {
 		// 	if err := sanityCheckSignature(itx.V, itx.R, itx.S, false); err != nil {
 		// 		return err

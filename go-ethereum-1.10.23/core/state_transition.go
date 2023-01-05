@@ -54,7 +54,7 @@ The state transitioning model does all the necessary work to work out a valid ne
 type StateTransition struct {
 	gp         *GasPool
 	msg        Message
-	gas        uint64 //@audit where is this gas set
+	gas        uint64
 	gasPrice   *big.Int
 	gasFeeCap  *big.Int
 	gasTipCap  *big.Int
@@ -210,12 +210,11 @@ func (st *StateTransition) buyGas() error {
 	if st.gasFeeCap != nil {
 		balanceCheck = new(big.Int).SetUint64(st.msg.Gas())
 		balanceCheck = balanceCheck.Mul(balanceCheck, st.gasFeeCap)
-		balanceCheck.Add(balanceCheck, st.value) //@audit is this correct? comply to ancient geth
+		balanceCheck.Add(balanceCheck, st.value)
 	}
 	if have, want := st.state.GetBalance(st.msg.From()), balanceCheck; have.Cmp(want) < 0 {
 		return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
 	}
-	// @remind only reduce block gas consumption if the tx is not an encrypted tx
 	if st.msg.Type() != types.EncryptedTxType {
 		if err := st.gp.SubGas(st.msg.Gas()); err != nil {
 			return err
@@ -230,10 +229,9 @@ func (st *StateTransition) buyGas() error {
 
 func (st *StateTransition) encryptedPreCheck() (*ExecutionResult, error) {
 	stNonce := st.state.GetNonce(st.msg.From())
-	//@remind currently simply require the nonce is older than current nonce, so it won't be executed when the order is set, but executed upon decryption
 	if msgNonce := st.msg.Nonce(); stNonce == msgNonce {
 		log.Info(fmt.Sprintf("$ address %v, tx: %d state: %d, used gas: %v, ordering the encrypted tx", st.msg.From().Hex(), msgNonce, stNonce, st.gasUsed()))
-		st.state.SetNonce(st.msg.From(), st.state.GetNonce(vm.AccountRef(st.msg.From()).Address())+1) //@remind update the nonce
+		st.state.SetNonce(st.msg.From(), st.state.GetNonce(vm.AccountRef(st.msg.From()).Address())+1)
 
 		return &ExecutionResult{
 			UsedGas:    st.gasUsed(),
@@ -246,8 +244,6 @@ func (st *StateTransition) encryptedPreCheck() (*ExecutionResult, error) {
 		return nil, fmt.Errorf("%w: address %v, tx: %d state: %d", ErrNonceTooHigh, st.msg.From().Hex(), msgNonce, stNonce)
 
 	} else {
-		// @remind otherwise, check following for encrypted exec
-
 		// Make sure the sender is an EOA
 		if codeHash := st.state.GetCodeHash(st.msg.From()); codeHash != emptyCodeHash && codeHash != (common.Hash{}) {
 			return nil, fmt.Errorf("%w: address %v, codehash: %s", ErrSenderNoEOA, st.msg.From().Hex(), codeHash)
@@ -281,7 +277,7 @@ func (st *StateTransition) encryptedPreCheck() (*ExecutionResult, error) {
 	return nil, nil
 }
 
-func (st *StateTransition) preCheck() error { //@remind nonce correction
+func (st *StateTransition) preCheck() error {
 	// Only check transactions that are not fake
 	if !st.msg.IsFake() {
 		// Make sure this transaction's nonce is correct.
@@ -361,11 +357,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		if execResult != nil || err != nil {
 			return execResult, err
 		} else {
-			//@remind only execution of encrypted tx follows
+			//only execution of encrypted tx follows
 		}
 	} else {
 		// Check clauses 1-3, buy gas if everything is correct
-		if err := st.preCheck(); err != nil { //@remind where nonce is enforced for plaintext tx, should accept old nonce
+		if err := st.preCheck(); err != nil {
 			return nil, err
 		}
 	}
@@ -385,7 +381,6 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	)
 
 	// Check clauses 4-5, subtract intrinsic gas if everything is correct
-	// @remind st.data possibly decrypted data, msg.data is the original signed plaintext/encrypted data
 	// gas, err := IntrinsicGas(st.data, st.msg.AccessList(), contractCreation, rules.IsHomestead, rules.IsIstanbul)
 	gas, err := IntrinsicGas(st.msg.Data(), st.msg.AccessList(), contractCreation, rules.IsHomestead, rules.IsIstanbul)
 	if err != nil {
@@ -408,17 +403,17 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		vmerr error // vm errors do not effect consensus and are therefore not assigned to err
 	)
 	if contractCreation {
-		ret, _, st.gas, vmerr = st.evm.Create(sender, st.data, st.gas, st.value) //@remind use st.data correct
+		ret, _, st.gas, vmerr = st.evm.Create(sender, st.data, st.gas, st.value)
 	} else {
 		// Increment the nonce for the next transaction
-		if st.msg.Type() != types.EncryptedTxType { //@remind do not need to increase nonce for executing old encrypted tx
+		if st.msg.Type() != types.EncryptedTxType {
 			st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
 		}
 		if st.msg.Type() == types.EncryptedTxType {
 			// st.evm.Context.Coinbase = common.BigToAddress(big.NewInt(0))
 			log.Info(fmt.Sprintf("execution of encrypted tx, coinbase: %v", st.evm.Context.Coinbase))
 		}
-		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value) //@remind use st.data correct
+		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
 	}
 
 	if st.msg.Type() != types.EncryptedTxType {
@@ -463,7 +458,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			// Skip fee payment when NoBaseFee is set and the fee fields
 			// are 0. This avoids a negative effectiveTip being applied to
 			// the coinbase when simulating calls.
-		} else { //TODO: how to cleverly pass the previous coinbase here?
+		} else {
 			fee := new(big.Int).SetUint64(st.initialGas)
 			fee.Mul(fee, effectiveTip)
 			st.state.AddBalance(st.evm.Context.Coinbase, fee)

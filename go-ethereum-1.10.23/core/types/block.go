@@ -166,7 +166,7 @@ type Body struct {
 type Block struct {
 	header       *Header
 	uncles       []*Header
-	transactions Transactions //@remind place to store transactions
+	transactions Transactions
 
 	// caches
 	hash atomic.Value

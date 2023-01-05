@@ -526,7 +526,7 @@ func (pool *TxPool) ContentFrom(addr common.Address) (types.Transactions, types.
 	return pending, queued
 }
 
-// Pending retrieves all currently processable transactions, grouped by origin //@remind group of txs
+// Pending retrieves all currently processable transactions, grouped by origin
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
 //
@@ -585,7 +585,7 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Accept only legacy transactions until EIP-2718/2930 activates.
-	// if !pool.eip2718 && tx.Type() != types.LegacyTxType { //@remind removed tx type validate because of hardfork
+	// if !pool.eip2718 && tx.Type() != types.LegacyTxType {
 	// 	return ErrTxTypeNotSupported
 	// }
 	// // Reject dynamic fee transactions until EIP-1559 activates.
@@ -613,7 +613,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrTipVeryHigh
 	}
 	// Ensure gasFeeCap is greater than or equal to gasTipCap.
-	if tx.GasFeeCapIntCmp(tx.GasTipCap()) < 0 { // @audit gasFeeCap >= gasTipCap
+	if tx.GasFeeCapIntCmp(tx.GasTipCap()) < 0 {
 		return ErrTipAboveFeeCap
 	}
 	// Make sure the transaction is signed properly.
@@ -623,7 +623,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrInvalidSender
 	}
 	// Drop non-local transactions under our own minimal accepted gas price or tip
-	if !local && tx.GasTipCapIntCmp(pool.gasPrice) < 0 { // @audit gasFeeCap >= gasTipCap
+	if !local && tx.GasTipCapIntCmp(pool.gasPrice) < 0 {
 		return ErrUnderpriced
 	}
 	// Ensure the transaction adheres to nonce ordering
@@ -904,7 +904,7 @@ func (pool *TxPool) addTxs(txs []*types.Transaction, local, sync bool) []error {
 		// possible and cache senders in transactions before
 		// obtaining lock
 		_, err := types.Sender(pool.signer, tx)
-		if err != nil { //@remind place invalidate the tx
+		if err != nil {
 			log.Error("#error triggered here 2")
 			errs[i] = ErrInvalidSender
 			invalidTxMeter.Mark(1)

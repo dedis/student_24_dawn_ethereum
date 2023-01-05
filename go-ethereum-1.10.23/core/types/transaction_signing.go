@@ -84,7 +84,7 @@ func LatestSigner(config *params.ChainConfig) Signer {
 // Use this in transaction-handling code where the current block number and fork
 // configuration are unknown. If you have a ChainConfig, use LatestSigner instead.
 // If you have a ChainConfig and know the current block number, use MakeSigner instead.
-func LatestSignerForChainID(chainID *big.Int) Signer { //@remind only use eip155 signer
+func LatestSignerForChainID(chainID *big.Int) Signer {
 	// if chainID == nil {
 	// 	return HomesteadSigner{}
 	// }
@@ -272,7 +272,7 @@ func (s eip2930Signer) Sender(tx *Transaction) (common.Address, error) {
 		// AL txs are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
 		V = new(big.Int).Add(V, big.NewInt(27))
-	case EncryptedTxType: //@remind extra sig handle //@remind stop here, how to set the recover sender
+	case EncryptedTxType:
 		log.Error("#### eip2930 signer 3")
 		V = new(big.Int).Add(V, big.NewInt(27))
 	default:
@@ -297,7 +297,7 @@ func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *bi
 		}
 		R, S, _ = decodeSignature(sig)
 		V = big.NewInt(int64(sig[64]))
-	case *EncryptedTx: //@remind extra sig handle
+	case *EncryptedTx:
 		if txdata.ChainID.Sign() != 0 && txdata.ChainID.Cmp(s.chainId) != 0 {
 			return nil, nil, nil, ErrInvalidChainId
 		}
@@ -396,7 +396,7 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
 	// fmt.Println("### eip155 signature")
-	// if tx.Type() != LegacyTxType { //@remind removed unsupported
+	// if tx.Type() != LegacyTxType {
 	// 	return nil, nil, nil, ErrTxTypeNotSupported
 	// }
 	R, S, V = decodeSignature(sig)

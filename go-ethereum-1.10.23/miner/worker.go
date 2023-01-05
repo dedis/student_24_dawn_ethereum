@@ -114,7 +114,7 @@ func (env *environment) copy() *environment {
 		receipts:  copyReceipts(env.receipts),
 	}
 	if env.gasPool != nil {
-		gasPool := *env.gasPool //@remind why not cpy.gasPool = env.gasPool
+		gasPool := *env.gasPool
 		cpy.gasPool = &gasPool
 	}
 	// The content of txs and uncles are immutable, unnecessary
@@ -203,7 +203,7 @@ type worker struct {
 	chainSideSub event.Subscription
 
 	// Channels
-	newWorkCh          chan *newWorkReq //@audit I need an explanation of the channels
+	newWorkCh          chan *newWorkReq
 	getWorkCh          chan *getWorkReq
 	taskCh             chan *task
 	resultCh           chan *types.Block
@@ -842,7 +842,7 @@ func isExecuteEncryptedTx(env *environment, cf *params.ChainConfig, tx *types.Tr
 }
 
 func (w *worker) retrieveOrderingCoinbase(numbersBack uint64) common.Address {
-	currentNumber := w.chain.CurrentHeader().Number.Uint64() //@remind the recent block that already mined, not the current mining block
+	currentNumber := w.chain.CurrentHeader().Number.Uint64()
 	// regardless of the genesis block
 	if currentNumber <= numbersBack {
 		panic("try to retrieve genesis block for ordering coinbase")
@@ -875,7 +875,7 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 		return nil, err
 	}
 
-	if isExecEnc { //@audit this is always 0
+	if isExecEnc {
 		orderBlock := core.RetrieveOrderBlock(w.chain, types.EncryptedBlockDelay)
 		rcAuth, err := w.engine.Author(orderBlock.Header())
 		if err != nil {
@@ -884,13 +884,6 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 		beneficiary = rcAuth
 		log.Info(fmt.Sprintf("[ENC EXEC]use previous coinbase (order block signer): %v", beneficiary))
 	} else {
-		/*
-			TODO: in clique, PoA, the coinbase in blockheader is always 0.
-			need to derive the signer from signature: https://github.com/ethereum/go-ethereum/issues/15651
-		*/
-		// beneficiary = env.coinbase //@audit this is the miner who is mining this block
-		// beneficiary = *&common.Address{}
-		// beneficiary, _ = w.engine.Author(env.header)
 		beneficiary = env.coinbase
 		log.Info(fmt.Sprintf("[Other] use current coinbase: %v", beneficiary))
 	}
@@ -908,10 +901,9 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 	}
 
 	if receipt.Type == types.EncryptedTxType && receipt.CumulativeGasUsed != 0 {
-		//@remind do not need to add the tx as is already stored before
 		log.Info(fmt.Sprintf("[ENC][EXE] receipt key appended: %v", receipt.Key))
 	} else {
-		//@remind only store tx and receipt if it is not executing encrypted tx
+		// only store tx and receipt if it is not executing encrypted tx
 	}
 
 	env.txs = append(env.txs, tx)
@@ -1159,7 +1151,7 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 	}
 	start := time.Now()
 
-	pendingEncryptedTxs := RetrievePendingEncryptedTransactions(w.chain, types.EncryptedBlockDelay) //@remind add execution logic for pending encrypted txs
+	pendingEncryptedTxs := RetrievePendingEncryptedTransactions(w.chain, types.EncryptedBlockDelay)
 	if len(pendingEncryptedTxs) > 0 {
 		txs := types.NewEncryptedTxsByConsensus(env.signer, pendingEncryptedTxs)
 		if err := w.commitTransactions(env, txs, interrupt); err != nil {
@@ -1213,7 +1205,7 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 
 func RetrievePendingEncryptedTransactions(wc *core.BlockChain, numbersBack uint64) types.Transactions {
 	encryptedTxs := make(types.Transactions, 0)
-	currentNumber := wc.CurrentHeader().Number.Uint64() //@remind the recent block that already mined, not the current mining block
+	currentNumber := wc.CurrentHeader().Number.Uint64()
 	// regardless of the genesis block
 	if currentNumber <= numbersBack {
 		return encryptedTxs

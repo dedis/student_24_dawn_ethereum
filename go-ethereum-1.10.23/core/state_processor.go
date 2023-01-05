@@ -111,7 +111,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 
 		statedb.Prepare(tx.Hash(), i)
 
-		if isExecEncrypted, _ = isExecuteEncryptedTx(statedb, signer, p.config, tx); isExecEncrypted { //@audit validate executing enc tx, in PoA, coinbase is temporary zero
+		if isExecEncrypted, _ = isExecuteEncryptedTx(statedb, signer, p.config, tx); isExecEncrypted {
 			beneficiary = rcAuth
 			log.Info(fmt.Sprintf("[VERIFY][ENC EXE][beneficiary]: %s", beneficiary))
 		} else {
@@ -163,7 +163,7 @@ func isExecuteEncryptedTx(statedb *state.StateDB, signer types.Signer, cf *param
 }
 
 func RetrieveOrderBlock(wc *BlockChain, numbersBack uint64) *types.Block {
-	currentNumber := wc.CurrentHeader().Number.Uint64() //@remind the recent block that already mined, not the current mining block
+	currentNumber := wc.CurrentHeader().Number.Uint64()
 	// regardless of the genesis block
 	if currentNumber <= numbersBack {
 		return nil
@@ -176,7 +176,7 @@ func RetrieveOrderBlock(wc *BlockChain, numbersBack uint64) *types.Block {
 
 func RetrievePendingEncryptedTransactions(wc *BlockChain, numbersBack uint64) types.Transactions {
 	encryptedTxs := make(types.Transactions, 0)
-	currentNumber := wc.CurrentHeader().Number.Uint64() //@remind the recent block that already mined, not the current mining block
+	currentNumber := wc.CurrentHeader().Number.Uint64()
 	// regardless of the genesis block
 	if currentNumber <= numbersBack {
 		return encryptedTxs
@@ -334,13 +334,11 @@ func SplitPlaintextWithShares(raw []byte) ([]byte, []byte) {
 	return plaintext_data_bytes, share_with_proof_bytes
 }
 
-// @audit author is not used in this function, author is set into evm.Context.Coinbase
 func applyTransaction(msg types.Message, config *params.ChainConfig, author *common.Address, gp *GasPool, statedb *state.StateDB, blockNumber *big.Int, blockHash common.Hash, tx *types.Transaction, usedGas *uint64, evm *vm.EVM, isExecEncrypted bool) (*types.Receipt, error) {
 	// Create a new context to be used in the EVM environment.
 	txContext := NewEVMTxContext(msg)
 	evm.Reset(txContext, statedb)
 
-	// TODO: modify new state transition and transition db to set the msg.data from ciphertext to plaintext
 	var plaintextMsgData []byte = nil
 	var plaintextSymKey []byte = nil
 
@@ -382,7 +380,6 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 		receipt.ContractAddress = crypto.CreateAddress(evm.TxContext.Origin, tx.Nonce())
 	}
 
-	// TODO: key written into receipt
 	// If this is the execution of an encrypted tx, then add the key to the receipt
 	if isExecEncrypted {
 		receipt.Key = plaintextSymKey
@@ -403,7 +400,6 @@ func verifyDecryptionAndApplyTransaction(msg types.Message, config *params.Chain
 	txContext := NewEVMTxContext(msg)
 	evm.Reset(txContext, statedb)
 
-	// TODO: modify new state transition and transition db to set the msg.data from ciphertext to plaintext
 	var plaintextMsgData []byte = nil
 
 	plaintextMsgData = verifyProof(msg.Data(), rc.Key)
@@ -439,7 +435,6 @@ func verifyDecryptionAndApplyTransaction(msg types.Message, config *params.Chain
 		receipt.ContractAddress = crypto.CreateAddress(evm.TxContext.Origin, tx.Nonce())
 	}
 
-	// TODO: set key the same as remote block
 	// If this is the execution of an encrypted tx, then add the key to the receipt
 	receipt.Key = rc.Key
 

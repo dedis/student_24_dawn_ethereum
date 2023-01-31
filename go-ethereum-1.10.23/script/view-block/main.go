@@ -86,7 +86,7 @@ func main() {
 	flag.Parse()
 	var client *ethclient.Client
 	var err error
-	if client, err = ethclient.Dial(fmt.Sprintf("//./pipe/geth%v.ipc", *who)); err != nil {
+	if client, err = ethclient.Dial(fmt.Sprintf("pipe/geth%v.ipc", *who)); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Connection established")

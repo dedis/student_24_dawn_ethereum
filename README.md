@@ -34,13 +34,13 @@ geth --datadir .ethereum1/ init ../multiclique.json
 geth --datadir .ethereum2/ init ../multiclique.json
 
 // start node1
-geth --nodiscover --networkid 43 --datadir .ethereum1/ --unlock 0x280F6B48E4d9aEe0Efdb04EeBe882023357f6434 --mine --ipcpath \\.\pipe\geth1.ipc --authrpc.port 8551 --port 30303
+geth --nodiscover --networkid 43 --datadir .ethereum1/ --unlock 0x280F6B48E4d9aEe0Efdb04EeBe882023357f6434 --mine --ipcpath pipe/geth1.ipc --authrpc.port 8551 --port 30303
 
 // start node2
-geth --nodiscover --networkid 43 --datadir .ethereum2/ --unlock 0xa9ca84343c8dB08d596400d35A7034027A5F4b31 --mine --ipcpath \\.\pipe\geth2.ipc --authrpc.port 8552 --port 30304 --miner.etherbase 0xa9ca84343c8dB08d596400d35A7034027A5F4b31 --syncmode full
+geth --nodiscover --networkid 43 --datadir .ethereum2/ --unlock 0xa9ca84343c8dB08d596400d35A7034027A5F4b31 --mine --ipcpath pipe/geth2.ipc --authrpc.port 8552 --port 30304 --miner.etherbase 0xa9ca84343c8dB08d596400d35A7034027A5F4b31 --syncmode full
 
 // addPeers
-geth attach \\.\pipe\geth1.ipc
+geth attach pipe/geth1.ipc
 
 admin.addPeer
 

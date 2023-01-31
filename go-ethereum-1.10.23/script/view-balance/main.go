@@ -34,7 +34,7 @@ func main() {
 	cid := flag.String("id", "", "id of geth client")
 	bn := flag.Int64("bn", 0, "block number") // 0 as default to query latest block
 	flag.Parse()
-	if client, err = ethclient.Dial(fmt.Sprintf("//./pipe/geth%s.ipc", *cid)); err != nil {
+	if client, err = ethclient.Dial(fmt.Sprintf("pipe/geth%s.ipc", *cid)); err != nil {
 		log.Fatal(err)
 	}
 	// fmt.Println("Connection established")

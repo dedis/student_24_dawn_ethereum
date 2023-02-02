@@ -55,7 +55,7 @@ Please follow the [instructions](https://github.com/Mahsa-Bastankhah/dela/tree/5
 ```go run script/f3b-enc/main.go -num 2 -id 1```
 
 1. send one encrypted transaction to node2: 
-```go run script/f3b-enc/main.go -num 1 -id 2 -encrypt```
+```go run script/f3b-enc/main.go -num 1 -id 2 -encrypted```
 
 1. query balance of existing accounts at block 3 from node1:
 ```go run script/view-balance/main.go -id 1 -bn 3```

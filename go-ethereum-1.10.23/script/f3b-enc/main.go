@@ -315,7 +315,7 @@ func main() {
 
 	var client *ethclient.Client
 	var err error
-	if client, err = ethclient.Dial(fmt.Sprintf("//./pipe/geth%s.ipc", *cid)); err != nil {
+	if client, err = ethclient.Dial(fmt.Sprintf("pipe/geth%s.ipc", *cid)); err != nil {
 		log.Fatal(err)
 	}
 

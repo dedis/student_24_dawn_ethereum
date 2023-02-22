@@ -154,7 +154,7 @@ func prettyPrintBlock(client *ethclient.Client, num *big.Int) {
 func main() {
 	var client *ethclient.Client
 	var err error
-	if client, err = ethclient.Dial("//./pipe/geth.ipc"); err != nil {
+	if client, err = ethclient.Dial("pipe/geth.ipc"); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Connection established")

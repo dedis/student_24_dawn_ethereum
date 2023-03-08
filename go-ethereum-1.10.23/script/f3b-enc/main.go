@@ -17,8 +17,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/f3b"
 )
 
 const authority_file = "../.ethereum/keystore/UTC--2022-09-13T11-34-29.303731400Z--280f6b48e4d9aee0efdb04eebe882023357f6434"
@@ -191,7 +191,7 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, nonce uint64, ks *keystor
 
 	// cmd := strings.Join(args[:], " ")
 
-	msg := "Merry Christmas!"
+	msg := "Merry Christmas and a Happy New Year!"
 	fmt.Println("## Plaintext message: ", msg)
 	symKey := make([]byte, types.SymKeyLen)
 	_, err = rand.Read(symKey)
@@ -202,12 +202,12 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, nonce uint64, ks *keystor
 	symKeyStr := hex.EncodeToString(symKey)
 	// msgStr := hex.EncodeToString([]byte(msg))
 
-	encryptedMsg := crypto.EncryptAES(symKey, []byte(msg))
+	encryptedMsg := f3b.EncryptCompact(symKey, []byte(msg))
 	// compute hash of cleartext key
 	khash := sha256.Sum256([]byte(symKey))
 	khash[0] = 0
 
-	gBar := "1d0194fdc2fa2ffcc041d3ff12045b73c86e4ff95ff662a5eee82abdf44a53c7"
+	gBar := types.GBar
 
 	args_enc := []string{"dkgcli", "--config", node, "dkg", "verifiableEncrypt", "--GBar", gBar, "--message", symKeyStr}
 

@@ -35,6 +35,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/f3b"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -245,7 +246,7 @@ func decryptMsgData(hashWithEncSymKey []byte, encMsgData []byte) ([]byte, []byte
 
 	// plaintextMsgData, ShareWithProof := SplitPlaintextWithShares(decrypted_data)
 	plaintextKey, ShareWithProof := SplitPlaintextWithShares(decrypted_data)
-	plaintextMsgData := crypto.DecryptAES(plaintextKey, encMsgData)
+	plaintextMsgData := f3b.DecryptCompact(plaintextKey, encMsgData)
 	log.Info(fmt.Sprintf("length of shares&proof: %v", len(ShareWithProof)))
 	// csvFile, feer := os.Create("shares_size.csv")
 	// if feer != nil {

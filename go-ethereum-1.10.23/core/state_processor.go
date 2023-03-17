@@ -35,6 +35,10 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/f3b"
+
+	"github.com/drand/drand/chain"
+	"github.com/drand/tlock"
+	"github.com/drand/tlock/networks/http"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -218,7 +222,50 @@ Decrypt and get the plaintext msg.data
 		--->Dec(Enc(hex(msg.data))) = hex(msg.data)
 	 hexToBytes
 */
-func decryptMsgData(hashWithEncSymKey []byte, encMsgData []byte) ([]byte, []byte, []byte) {
+func decryptMsgDataDRand(hashWithEncSymKey []byte, encMsgData []byte) ([]byte, error) {
+
+	hashLen := 32
+
+	hash, encSymKey := hashWithEncSymKey[:hashLen], hashWithEncSymKey[hashLen:]
+
+	ciphertext, err := tlock.BytesToCiphertext(encSymKey)
+	if err != nil {
+		return nil, err
+	}
+
+	network, err := http.NewNetwork(f3b.DrandNetwork, f3b.DrandChain)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := network.Signature(f3b.RoundNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	beacon := chain.Beacon{
+		Round:     f3b.RoundNumber,
+		Signature: signature,
+	}
+
+	symKey, err := tlock.TimeUnlock(network.PublicKey(), beacon, ciphertext)
+	if err != nil {
+		return nil, err
+	}
+
+	localComputedKeyHash := sha256.Sum256(symKey)
+	if bytes.Compare(hash, localComputedKeyHash[:]) != 0 {
+		log.Error(fmt.Sprintf("Unequal Key Hash: local [%v], remote [%v]",
+			hex.EncodeToString(localComputedKeyHash[:]),
+			hex.EncodeToString(hash)),
+		)
+	}
+
+	msg := f3b.DecryptCompact(symKey, encMsgData)
+
+	return msg, nil
+}
+func decryptMsgDataDela(hashWithEncSymKey []byte, encMsgData []byte) ([]byte, []byte, []byte) {
 	node := f3b.DkgPath()
 	gBar := f3b.GBar()
 
@@ -342,10 +389,11 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 	evm.Reset(txContext, statedb)
 
 	var plaintextMsgData []byte = nil
-	var plaintextSymKey []byte = nil
+	var err error
 
 	if isExecEncrypted {
-		plaintextSymKey, plaintextMsgData, _ = decryptMsgData(msg.Key(), msg.Data())
+		plaintextMsgData, err = decryptMsgDataDRand(msg.Key(), msg.Data())
+		return nil, err
 	}
 	// if ok, _ := isExecuteEncryptedTx(statedb, , config, tx); ok {
 	// 	plaintextMsgData = decryptMsgData(msg.Data())
@@ -384,7 +432,7 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 
 	// If this is the execution of an encrypted tx, then add the key to the receipt
 	if isExecEncrypted {
-		receipt.Key = plaintextSymKey
+		receipt.Key = nil // TODO
 
 	}
 

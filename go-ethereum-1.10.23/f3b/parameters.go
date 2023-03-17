@@ -28,3 +28,13 @@ func DkgPath() string {
 func GBar() string {
 	return gBar
 }
+
+// Choice of Chain for Drand Tlock encryption
+// this is the unchained drand testnet
+const DrandChain = "7672797f548f3f4748ac4bf3352fc6c6b6468c9ad40ad456a397545c6e2df5bf"
+
+// Network for Drand Tlock encryption
+const DrandNetwork = "http://pl-us.testnet.drand.sh/"
+
+// Hardcoded Drand round number for testing purposes
+const RoundNumber = 1337

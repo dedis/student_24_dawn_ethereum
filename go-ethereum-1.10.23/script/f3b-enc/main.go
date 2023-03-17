@@ -18,6 +18,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/f3b"
+
+	"github.com/drand/tlock"
+	"github.com/drand/tlock/networks/http"
 )
 
 const authority_file = "../.ethereum/keystore/UTC--2022-09-13T11-34-29.303731400Z--280f6b48e4d9aee0efdb04eebe882023357f6434"
@@ -263,6 +266,90 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, nonce uint64, ks *keystor
 
 	fmt.Printf("Encrypted Transaction send: %v\n", signedTx.Hash().Hex())
 }
+func sendEtherDrandEnc(client *ethclient.Client, nonce uint64, ks *keystore.KeyStore, from, to accounts.Account, val *big.Int, gasLimit uint64) {
+	var err error
+	var gasPrice, chainID *big.Int
+	var signedTx *types.Transaction
+
+	// get gas price
+	if gasPrice, err = client.SuggestGasPrice(context.Background()); err != nil {
+		log.Fatal(err)
+	}
+	// get chainID
+	if chainID, err = client.ChainID(context.Background()); err != nil {
+		log.Fatal(err)
+	}
+
+	// dummy encrypted tx
+	addr := common.HexToAddress("0x0000000000000000000000000000000000000001")
+	accesses := types.AccessList{types.AccessTuple{
+		Address: addr,
+		StorageKeys: []common.Hash{
+			{0},
+		},
+	}}
+
+	msg := "Merry Christmas and a Happy New Year!"
+	fmt.Println("## Plaintext message: ", msg)
+	symKey := make([]byte, types.SymKeyLen)
+	_, err = rand.Read(symKey)
+	if err != nil {
+		panic(fmt.Sprintf("failed on load random key: %v", err))
+	}
+
+	encryptedMsg := f3b.EncryptCompact(symKey, []byte(msg))
+	// compute hash of cleartext key
+	khash := sha256.Sum256([]byte(symKey))
+	khash[0] = 0
+
+	network, err := http.NewNetwork(f3b.DrandNetwork, f3b.DrandChain)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ciphertext, err := tlock.TimeLock(network.PublicKey(), f3b.RoundNumber, []byte(symKey))
+	if err != nil {
+		log.Fatal(err)
+	}
+	encryptedKey, err := tlock.CiphertextToBytes(ciphertext)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	encKeyWithHash := append(khash[:], encryptedKey...)
+
+	// compute hash of cleartext key
+
+	weiValue := new(big.Int).Mul(gasPrice, big.NewInt(int64(gasLimit)))
+	weiFloat := new(big.Float).SetInt(weiValue)
+	ethValue := new(big.Float).Quo(weiFloat, big.NewFloat(math.Pow10(18)))
+	fmt.Println("[GasLimit in Ether]: ", ethValue.String())
+
+	enc := &types.EncryptedTx{
+		ChainID:    chainID,
+		Nonce:      nonce,
+		GasFeeCap:  gasPrice,
+		GasTipCap:  big.NewInt(10),
+		Gas:        gasLimit,
+		To:         &to.Address,
+		Value:      val,
+		Key:        encKeyWithHash,
+		Data:       encryptedMsg,
+		AccessList: accesses,
+	}
+	tx := types.NewTx(enc)
+
+	// sign
+	if signedTx, err = ks.SignTx(from, tx, chainID); err != nil {
+		log.Fatal(err)
+	}
+
+	if err = client.SendTransaction(context.Background(), signedTx); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Encrypted Transaction send: %v\n", signedTx.Hash().Hex())
+}
 
 func prettyPrintBlock(client *ethclient.Client, num *big.Int) {
 	var block *types.Block
@@ -360,7 +447,7 @@ func main() {
 		if !*encrypted {
 			sendEtherPlaintext(client, nonce+uint64(i), ks, user_acc, rcv_acc, val, gasLimit)
 		} else {
-			sendEtherF3bVerifiedEnc(client, nonce+uint64(i), ks, user_acc, rcv_acc, val, gasLimit)
+			sendEtherDrandEnc(client, nonce+uint64(i), ks, user_acc, rcv_acc, val, gasLimit)
 		}
 	}
 

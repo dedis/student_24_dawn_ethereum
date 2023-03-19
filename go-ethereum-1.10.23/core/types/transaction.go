@@ -56,9 +56,6 @@ const (
 const EncryptedBlockDelay uint64 = 2
 const SymKeyLen = 29
 
-const GBar string = "1d0194fdc2fa2ffcc041d3ff12045b73c86e4ff95ff662a5eee82abdf44a53c7"
-const NodePath string = "D:/EPFL/master_thesis/dela/dkg/pedersen/dkgcli/tmp/node1/"
-
 // Transaction is an Ethereum transaction.
 type Transaction struct {
 	inner TxData    // Consensus contents of a transaction

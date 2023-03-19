@@ -4,14 +4,22 @@ Execution layer based front-running protection on Ethereum (Master thesis) at DE
 Geth with F3B front-running protection achieved in execution layer based on go-ethereum v1.10.23.
 
 # Config before use
-There are several default parameters that are changeable in the system in core/types/transactions.go as shown below. The EncryptedBlockDelay defines the block delay between the ordering block and the execution block. The GBar is a publicly known constant we directly take from Dela dkg. The NodePath specifies the path to the SMC node directory which would be used to launch the verifiable encryption. Make sure you adapt NodePath according to your machine.
+There is a default parameter that is changeable in the system in core/types/transactions.go as shown below. The EncryptedBlockDelay defines the block delay between the ordering block and the execution block.
 ```
 const EncryptedBlockDelay uint64 = 2
-
-const GBar string = "1d0194fdc2fa2ffcc041d3ff12045b73c86e4ff95ff662a5eee82abdf44a53c7"
-
-const NodePath string = "D:/EPFL/master\_thesis/dela/dkg/pedersen/dkgcli/tmp/node1/"
 ```
+
+There are several parameters that must be passed using environment variables. `F3B_GBAR` a publicly known constant we directly take from Dela dkg. `F3B_DKG_PATH specifies the path to the SMC node directory which would be used to launch the verifiable encryption. Make sure you set both according to your machine.
+
+```sh
+# for example
+export F3B_GBAR=1d0194fdc2fa2ffcc041d3ff12045b73c86e4ff95ff662a5eee82abdf44a53c7
+export F3B_DKG_PATH="D:/EPFL/master_thesis/dela/dkg/pedersen/dkgcli/tmp/node1/"
+```
+
+# Start the Dela nodes
+Please follow the [instructions](https://github.com/Mahsa-Bastankhah/dela/tree/5593c8d782ae14910343212447956d8b46ea958b/dkg/pedersen/dkgcli) to run several F3B committee members.
+Set `F3B_GBAR` based on the output.
 
 # Start the geth node
 
@@ -45,9 +53,6 @@ geth attach pipe/geth1.ipc
 admin.addPeer
 
 ```
-
-# Start the Dela nodes
-Please follow the [instructions](https://github.com/Mahsa-Bastankhah/dela/tree/5593c8d782ae14910343212447956d8b46ea958b/dkg/pedersen/dkgcli) to run several F3B committee members.
 
 # Test Example
 

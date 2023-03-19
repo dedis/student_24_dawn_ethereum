@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"math/big"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -220,7 +219,8 @@ Decrypt and get the plaintext msg.data
 	 hexToBytes
 */
 func decryptMsgData(hashWithEncSymKey []byte, encMsgData []byte) ([]byte, []byte, []byte) {
-	node := filepath.Dir(types.NodePath)
+	node := f3b.DkgPath()
+	gBar := f3b.GBar()
 
 	hashLen := 32
 
@@ -230,7 +230,7 @@ func decryptMsgData(hashWithEncSymKey []byte, encMsgData []byte) ([]byte, []byte
 	// encSymKey := append([]byte(nil), hashWithEncSymKey[32:]...)
 
 	args_dec := []string{"dkgcli", "--config", node, "dkg", "verifiableDecrypt",
-		"--GBar", types.GBar, "--ciphertexts", string(encSymKey)}
+		"--GBar", gBar, "--ciphertexts", string(encSymKey)}
 
 	// log.Info(fmt.Sprintf("args to decrypt: %v", args_dec))
 	// log.Info(fmt.Sprintf("input: %v", string(hashWithEncSymKey)))
@@ -286,10 +286,11 @@ func decryptMsgData(hashWithEncSymKey []byte, encMsgData []byte) ([]byte, []byte
 }
 
 func verifyProof(encMsgData []byte, rcKey []byte) []byte {
-	node := filepath.Dir("D:/EPFL/master_thesis/dela/dkg/pedersen/dkgcli/tmp/node1/")
+	node := f3b.DkgPath()
+	gBar := f3b.GBar()
 
 	args_dec := []string{"dkgcli", "--config", node, "dkg", "validateDecrypt",
-		"--GBar", types.GBar, "--ciphertexts", string(encMsgData), "--shares", string(rcKey)}
+		"--GBar", gBar, "--ciphertexts", string(encMsgData), "--shares", string(rcKey)}
 
 	// first line of decrypted: plaintext data
 	// second line of decrypted: shares with proof

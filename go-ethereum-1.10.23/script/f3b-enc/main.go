@@ -11,7 +11,6 @@ import (
 	"math"
 	"math/big"
 	"os/exec"
-	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -96,9 +95,7 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from, to a
 	// --authority RjEyNy4wLjAuMToyMDAy:iVZVJ4vvL3We94Y75eG23SsXOOBgTupi1eKzeg66BbE=
 	// --authority RjEyNy4wLjAuMToyMDAz:9mZrUFDI2c6LML1t8qGCIw3hDCrYormquNxBbgcEaNg=
 
-	pt := "D:/EPFL/master_thesis/dela/dkg/pedersen/dkgcli/tmp/node1/"
-
-	node := filepath.Dir(pt)
+	node := f3b.DkgPath()
 
 	// auth := []string{"", "", ""}
 
@@ -181,9 +178,7 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, nonce uint64, ks *keystor
 	// --authority RjEyNy4wLjAuMToyMDAy:iVZVJ4vvL3We94Y75eG23SsXOOBgTupi1eKzeg66BbE=
 	// --authority RjEyNy4wLjAuMToyMDAz:9mZrUFDI2c6LML1t8qGCIw3hDCrYormquNxBbgcEaNg=
 
-	pt := "D:/EPFL/master_thesis/dela/dkg/pedersen/dkgcli/tmp/node1/"
-
-	node := filepath.Dir(pt)
+	node := f3b.DkgPath()
 
 	// auth := []string{"", "", ""}
 
@@ -207,7 +202,7 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, nonce uint64, ks *keystor
 	khash := sha256.Sum256([]byte(symKey))
 	khash[0] = 0
 
-	gBar := types.GBar
+	gBar := f3b.GBar()
 
 	args_enc := []string{"dkgcli", "--config", node, "dkg", "verifiableEncrypt", "--GBar", gBar, "--message", symKeyStr}
 

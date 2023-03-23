@@ -10,7 +10,7 @@ import (
 	"github.com/drand/kyber/sign"
 	"github.com/drand/kyber/sign/bls"
 	"github.com/drand/kyber/util/random"
-	_ "github.com/drand/tlock"
+	"github.com/drand/tlock"
 )
 
 // note: default scheme is not compatible with timelock encryption
@@ -81,4 +81,18 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	simKey := make([]byte, 32)
+	random.Bytes(simKey, random.New())
+	log.Printf("generated key %x", simKey)
+	ct, err := tlock.TimeLock(*network.Scheme, network.PublicKey(), rn, simKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("encrypted key: %v", ct)
+	simKey, err = tlock.TimeUnlock(*network.Scheme, network.PublicKey(), *b, ct)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("decrypted key %x", simKey)
 }

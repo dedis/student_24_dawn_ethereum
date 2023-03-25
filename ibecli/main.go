@@ -7,8 +7,7 @@ import (
 	drand_crypto "github.com/drand/drand/crypto"
 
 	"github.com/drand/kyber"
-	"github.com/drand/kyber/sign"
-	"github.com/drand/kyber/sign/bls"
+	"github.com/drand/kyber/share"
 	"github.com/drand/kyber/util/random"
 	"github.com/drand/tlock"
 )
@@ -16,49 +15,47 @@ import (
 // note: default scheme is not compatible with timelock encryption
 const SchemeID = drand_crypto.ShortSigSchemeID
 
+const (
+	THRESHOLD = 3
+	N_SHARES  = 5
+)
+
 // Network simulates a threshold network by holding the whole private key
 type Network struct {
 	*drand_crypto.Scheme
-	sigScheme sign.Scheme
-	priv      kyber.Scalar
-	pub       kyber.Point
+	priShares []*share.PriShare
+	pubPoly   *share.PubPoly
 }
 
-/*
-	func NewNetwork() (*Network, error) {
-		scheme, err := drand_crypto.SchemeFromName(SchemeID)
-		if err != nil {
-			return nil, err
-		}
-		random, err := chacha20.NewUnauthenticatedCipher(make([]byte, 32), []byte("realrandomiv"))
-		if err != nil {
-			return nil, err
-		}
-		// ref: https://github.com/drand/kyber/blob/master/sign/test/threshold.go#L14
-		const threshold = 1
-		priPoly := share.NewPriPoly(scheme.KeyGroup, threshold, nil, random)
-		pubPoly := priPoly.Commit(scheme.KeyGroup.Point().Base())
-		priv := priPoly.Shares(1)[0]
-		pub := pubPoly.Commit()
-		return &Network{priv, pub}, nil
-	}
-*/
 func NewNetwork() (*Network, error) {
 	scheme, err := drand_crypto.SchemeFromName(SchemeID)
 	if err != nil {
 		return nil, err
 	}
-	sigScheme := bls.NewSchemeOnG1(scheme.Pairing)
-	priv, pub := sigScheme.NewKeyPair(random.New())
-	return &Network{scheme, sigScheme, priv, pub}, nil
+
+	// ref: https://github.com/drand/kyber/blob/master/sign/test/threshold.go#L14
+	priPoly := share.NewPriPoly(scheme.KeyGroup, THRESHOLD, nil, random.New())
+	pubPoly := priPoly.Commit(scheme.KeyGroup.Point().Base())
+	shares := priPoly.Shares(N_SHARES)
+
+	return &Network{scheme, shares, pubPoly}, nil
 }
 
 func (b *Network) PublicKey() kyber.Point {
-	return b.pub
+	return b.pubPoly.Commit()
 }
 
 func (b *Network) SignRound(rn uint64) (*chain.Beacon, error) {
-	sig, err := b.sigScheme.Sign(b.priv, b.DigestBeacon(&chain.Beacon{Round: rn}))
+	msg := b.DigestBeacon(&chain.Beacon{Round: rn})
+	sigShares := make([][]byte, THRESHOLD)
+	for i := range sigShares {
+		var err error
+		sigShares[i], err = b.ThresholdScheme.Sign(b.priShares[i], msg)
+		if err != nil {
+			return nil, err
+		}
+	}
+	sig, err := b.ThresholdScheme.Recover(b.pubPoly, msg, sigShares, THRESHOLD, N_SHARES)
 	if err != nil {
 		return nil, err
 	}

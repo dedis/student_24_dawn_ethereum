@@ -7,13 +7,14 @@ import (
 	drand_crypto "github.com/drand/drand/crypto"
 
 	"github.com/drand/kyber"
+	bls "github.com/drand/kyber-bls12381"
+	"github.com/drand/kyber/encrypt/ibe"
 	"github.com/drand/kyber/share"
 	"github.com/drand/kyber/util/random"
-	"github.com/drand/tlock"
 )
 
 // note: default scheme is not compatible with timelock encryption
-const SchemeID = drand_crypto.ShortSigSchemeID
+const SchemeID = drand_crypto.UnchainedSchemeID
 
 const (
 	THRESHOLD = 3
@@ -82,12 +83,19 @@ func main() {
 	simKey := make([]byte, 32)
 	random.Bytes(simKey, random.New())
 	log.Printf("generated key %x", simKey)
-	ct, err := tlock.TimeLock(*network.Scheme, network.PublicKey(), rn, simKey)
+	id := network.DigestBeacon(&chain.Beacon{Round: rn})
+	ct, err := ibe.EncryptCPAonG1(bls.NewBLS12381Suite(), network.Scheme.KeyGroup.Point().Base(), network.PublicKey(), id, simKey)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("encrypted key: %v", ct)
-	simKey, err = tlock.TimeUnlock(*network.Scheme, network.PublicKey(), *b, ct)
+
+	// decrypt
+	var signature bls.KyberG2
+	if err := signature.UnmarshalBinary(b.Signature); err != nil {
+		log.Fatal(err)
+	}
+	simKey, err = ibe.DecryptCPAonG1(bls.NewBLS12381Suite(), &signature, ct)
 	if err != nil {
 		log.Fatal(err)
 	}

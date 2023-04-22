@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/drand/kyber"
-	bls "github.com/drand/kyber-bls12381"
+	bn256 "github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/encrypt/ibe"
 	"github.com/drand/kyber/pairing"
 	"github.com/drand/kyber/share"
@@ -29,9 +29,9 @@ type Network struct {
 }
 
 func NewNetwork() (*Network, error) {
-	suite := bls.NewBLS12381Suite()
-	thresholdScheme := tbls.NewThresholdSchemeOnG2(suite)
-	keyGroup := suite.G1()
+	suite := bn256.NewSuite()
+	thresholdScheme := tbls.NewThresholdSchemeOnG1(suite)
+	keyGroup := suite.G2()
 	// ref: https://github.com/drand/kyber/blob/master/sign/test/threshold.go#L14
 	priPoly := share.NewPriPoly(keyGroup, THRESHOLD, nil, random.New())
 	pubPoly := priPoly.Commit(keyGroup.Point().Base())
@@ -82,18 +82,18 @@ func main() {
 	random.Bytes(simKey, random.New())
 	log.Printf("generated key %x", simKey)
 	id := network.LabelForRound(rn)
-	ct, err := ibe.EncryptCPAonG1(network.Suite, network.KeyGroup.Point().Base(), network.PublicKey(), id, simKey)
+	ct, err := ibe.EncryptCCAonG2(network.Suite, network.PublicKey(), id, simKey)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("encrypted key: %v", ct)
 
 	// decrypt
-	var signature bls.KyberG2
+	signature := network.Suite.G1().Point()
 	if err := signature.UnmarshalBinary(sig); err != nil {
 		log.Fatal(err)
 	}
-	simKey, err = ibe.DecryptCPAonG1(bls.NewBLS12381Suite(), &signature, ct)
+	simKey, err = ibe.DecryptCCAonG2(network.Suite, signature, ct)
 	if err != nil {
 		log.Fatal(err)
 	}

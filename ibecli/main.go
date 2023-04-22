@@ -21,8 +21,6 @@ const (
 // Network simulates a threshold network by holding the whole private key
 type Network struct {
 	pairing.Suite
-	KeyGroup  kyber.Group
-	sigGroup  kyber.Group
 	priShares []*share.PriShare
 	pubPoly   *share.PubPoly
 }
@@ -30,13 +28,12 @@ type Network struct {
 func NewNetwork() (*Network, error) {
 	suite := bn256.NewSuite()
 	keyGroup := suite.G2()
-	sigGroup := suite.G1()
 	// ref: https://github.com/drand/kyber/blob/master/sign/test/threshold.go#L14
 	priPoly := share.NewPriPoly(keyGroup, THRESHOLD, nil, random.New())
 	pubPoly := priPoly.Commit(keyGroup.Point().Base())
 	shares := priPoly.Shares(N_SHARES)
 
-	return &Network{suite, keyGroup, sigGroup, shares, pubPoly}, nil
+	return &Network{suite, shares, pubPoly}, nil
 }
 
 func (network *Network) PublicKey() kyber.Point {

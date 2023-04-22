@@ -40,26 +40,26 @@ func NewNetwork() (*Network, error) {
 	return &Network{suite, keyGroup, thresholdScheme, shares, pubPoly}, nil
 }
 
-func (b *Network) PublicKey() kyber.Point {
-	return b.pubPoly.Commit()
+func (network *Network) PublicKey() kyber.Point {
+	return network.pubPoly.Commit()
 }
 
-func (b *Network) LabelForRound(rn uint64) []byte {
+func (network *Network) LabelForRound(rn uint64) []byte {
 	buf := []byte("my cool blockchain")
 	binary.BigEndian.AppendUint64(buf, rn)
 	return buf
 }
-func (b *Network) SignRound(rn uint64) ([]byte, error) {
-	msg := b.LabelForRound(rn)
+func (network *Network) SignRound(rn uint64) ([]byte, error) {
+	msg := network.LabelForRound(rn)
 	sigShares := make([][]byte, THRESHOLD)
 	for i := range sigShares {
 		var err error
-		sigShares[i], err = b.ThresholdScheme.Sign(b.priShares[i], msg)
+		sigShares[i], err = network.ThresholdScheme.Sign(network.priShares[i], msg)
 		if err != nil {
 			return nil, err
 		}
 	}
-	sig, err := b.ThresholdScheme.Recover(b.pubPoly, msg, sigShares, THRESHOLD, N_SHARES)
+	sig, err := network.ThresholdScheme.Recover(network.pubPoly, msg, sigShares, THRESHOLD, N_SHARES)
 	if err != nil {
 		return nil, err
 	}

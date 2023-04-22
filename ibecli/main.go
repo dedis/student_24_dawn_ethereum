@@ -1,20 +1,18 @@
 package main
 
 import (
+	"encoding/binary"
 	"log"
-
-	"github.com/drand/drand/chain"
-	drand_crypto "github.com/drand/drand/crypto"
 
 	"github.com/drand/kyber"
 	bls "github.com/drand/kyber-bls12381"
 	"github.com/drand/kyber/encrypt/ibe"
+	"github.com/drand/kyber/pairing"
 	"github.com/drand/kyber/share"
+	"github.com/drand/kyber/sign"
+	"github.com/drand/kyber/sign/tbls"
 	"github.com/drand/kyber/util/random"
 )
-
-// note: default scheme is not compatible with timelock encryption
-const SchemeID = drand_crypto.UnchainedSchemeID
 
 const (
 	THRESHOLD = 3
@@ -23,31 +21,36 @@ const (
 
 // Network simulates a threshold network by holding the whole private key
 type Network struct {
-	*drand_crypto.Scheme
+	pairing.Suite
+	KeyGroup kyber.Group
+	sign.ThresholdScheme
 	priShares []*share.PriShare
 	pubPoly   *share.PubPoly
 }
 
 func NewNetwork() (*Network, error) {
-	scheme, err := drand_crypto.SchemeFromName(SchemeID)
-	if err != nil {
-		return nil, err
-	}
-
+	suite := bls.NewBLS12381Suite()
+	thresholdScheme := tbls.NewThresholdSchemeOnG2(suite)
+	keyGroup := suite.G1()
 	// ref: https://github.com/drand/kyber/blob/master/sign/test/threshold.go#L14
-	priPoly := share.NewPriPoly(scheme.KeyGroup, THRESHOLD, nil, random.New())
-	pubPoly := priPoly.Commit(scheme.KeyGroup.Point().Base())
+	priPoly := share.NewPriPoly(keyGroup, THRESHOLD, nil, random.New())
+	pubPoly := priPoly.Commit(keyGroup.Point().Base())
 	shares := priPoly.Shares(N_SHARES)
 
-	return &Network{scheme, shares, pubPoly}, nil
+	return &Network{suite, keyGroup, thresholdScheme, shares, pubPoly}, nil
 }
 
 func (b *Network) PublicKey() kyber.Point {
 	return b.pubPoly.Commit()
 }
 
-func (b *Network) SignRound(rn uint64) (*chain.Beacon, error) {
-	msg := b.DigestBeacon(&chain.Beacon{Round: rn})
+func (b *Network) LabelForRound(rn uint64) []byte {
+	buf := []byte("my cool blockchain")
+	binary.BigEndian.AppendUint64(buf, rn)
+	return buf
+}
+func (b *Network) SignRound(rn uint64) ([]byte, error) {
+	msg := b.LabelForRound(rn)
 	sigShares := make([][]byte, THRESHOLD)
 	for i := range sigShares {
 		var err error
@@ -60,7 +63,7 @@ func (b *Network) SignRound(rn uint64) (*chain.Beacon, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &chain.Beacon{Round: rn, Signature: sig}, nil
+	return sig, nil
 }
 
 func main() {
@@ -70,12 +73,7 @@ func main() {
 	}
 
 	const rn uint64 = 1337
-	b, err := network.SignRound(rn)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = network.VerifyBeacon(b, network.PublicKey())
+	sig, err := network.SignRound(rn)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -83,8 +81,8 @@ func main() {
 	simKey := make([]byte, 32)
 	random.Bytes(simKey, random.New())
 	log.Printf("generated key %x", simKey)
-	id := network.DigestBeacon(&chain.Beacon{Round: rn})
-	ct, err := ibe.EncryptCPAonG1(bls.NewBLS12381Suite(), network.Scheme.KeyGroup.Point().Base(), network.PublicKey(), id, simKey)
+	id := network.LabelForRound(rn)
+	ct, err := ibe.EncryptCPAonG1(network.Suite, network.KeyGroup.Point().Base(), network.PublicKey(), id, simKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -92,7 +90,7 @@ func main() {
 
 	// decrypt
 	var signature bls.KyberG2
-	if err := signature.UnmarshalBinary(b.Signature); err != nil {
+	if err := signature.UnmarshalBinary(sig); err != nil {
 		log.Fatal(err)
 	}
 	simKey, err = ibe.DecryptCPAonG1(bls.NewBLS12381Suite(), &signature, ct)

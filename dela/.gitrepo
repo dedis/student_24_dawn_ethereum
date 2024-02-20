@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = ssh://git@gitlab.epfl.ch/bettens-f3b/dela_f3b_ibe
+	branch = main
+	commit = 868de3cd65a53b2583bd962ff8d2d18f48f4f39d
+	parent = 4557afa284434fb8b3e71618db9e1facdf25ea20
+	method = merge
+	cmdver = 0.4.6

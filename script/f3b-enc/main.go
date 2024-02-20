@@ -2,15 +2,12 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"flag"
 	"fmt"
 	"log"
 	"math"
 	"math/big"
-	"os/exec"
 	"path"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -60,16 +57,11 @@ func sendEtherPlaintext(client *ethclient.Client, nonce uint64, ks *keystore.Key
 	fmt.Printf("Plaintext Transaction send: %v\n", signedTx.Hash().Hex())
 }
 
-func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from, to accounts.Account, val *big.Int, gasLimit uint64) {
-	var nonce uint64
+func sendEtherF3bEnc(client *ethclient.Client, nonce uint64, ks *keystore.KeyStore, from, to accounts.Account, val *big.Int, gasLimit uint64) {
 	var err error
 	var gasPrice, chainID *big.Int
 	var signedTx *types.Transaction
 
-	// get nonce
-	if nonce, err = client.PendingNonceAt(context.Background(), from.Address); err != nil {
-		log.Fatal(err)
-	}
 	// get gas price
 	if gasPrice, err = client.SuggestGasPrice(context.Background()); err != nil {
 		log.Fatal(err)
@@ -88,40 +80,15 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from, to a
 		},
 	}}
 
-	// dkgcli --config ./tmp/node1 dkg setup
-	// --authority RjEyNy4wLjAuMToyMDAx:r7I444R4a+sh+a0n6PV/FBRDRho702USB9MCxNWkTOk=
-	// --authority RjEyNy4wLjAuMToyMDAy:iVZVJ4vvL3We94Y75eG23SsXOOBgTupi1eKzeg66BbE=
-	// --authority RjEyNy4wLjAuMToyMDAz:9mZrUFDI2c6LML1t8qGCIw3hDCrYormquNxBbgcEaNg=
+	dkgcli := f3b.NewDkgCli()
 
-	node := f3b.DkgPath()
+	plaintext := []byte("dddddddd")
+	label := []byte("TODO")
 
-	// auth := []string{"", "", ""}
-
-	// args := []string{"dkgcli", "--config", node, "dkg", "setup", "--authority", auth[0], "--authority", auth[1], "--authority", auth[2]}
-
-	// cmd := strings.Join(args[:], " ")
-
-	plaintext := "dddddddd"
-
-	args_enc := []string{"dkgcli", "--config", node, "dkg", "encrypt", "--message", plaintext}
-
-	encrypted_data, err := exec.Command(args_enc[0], args_enc[1:]...).Output()
-
+	encrypted_data, err := dkgcli.Encrypt(label, plaintext)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Fatal(err)
 	}
-
-	fmt.Println("## Encrypted data: ", string(encrypted_data))
-
-	args_dec := []string{"dkgcli", "--config", node, "dkg", "decrypt", "--encrypted", string(encrypted_data)}
-
-	decrypted_data, err := exec.Command(args_enc[0], args_dec[1:]...).Output()
-
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
-	fmt.Println("## Decrypted data: ", string(decrypted_data))
 
 	enc := &types.EncryptedTx{
 		ChainID:    chainID,
@@ -132,118 +99,6 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from, to a
 		To:         &to.Address,
 		Value:      val,
 		Data:       encrypted_data,
-		AccessList: accesses,
-	}
-	tx := types.NewTx(enc)
-
-	// sign
-	if signedTx, err = ks.SignTx(from, tx, chainID); err != nil {
-		log.Fatal(err)
-	}
-
-	if err = client.SendTransaction(context.Background(), signedTx); err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("Encrypted Transaction send: %v\n", signedTx.Hash().Hex())
-}
-
-func sendEtherF3bVerifiedEnc(client *ethclient.Client, nonce uint64, ks *keystore.KeyStore, from, to accounts.Account, val *big.Int, gasLimit uint64) {
-	var err error
-	var gasPrice, chainID *big.Int
-	var signedTx *types.Transaction
-
-	// get gas price
-	if gasPrice, err = client.SuggestGasPrice(context.Background()); err != nil {
-		log.Fatal(err)
-	}
-	// get chainID
-	if chainID, err = client.ChainID(context.Background()); err != nil {
-		log.Fatal(err)
-	}
-
-	// dummy encrypted tx
-	addr := common.HexToAddress("0x0000000000000000000000000000000000000001")
-	accesses := types.AccessList{types.AccessTuple{
-		Address: addr,
-		StorageKeys: []common.Hash{
-			{0},
-		},
-	}}
-
-	// dkgcli --config ./tmp/node1 dkg setup
-	// --authority RjEyNy4wLjAuMToyMDAx:r7I444R4a+sh+a0n6PV/FBRDRho702USB9MCxNWkTOk=
-	// --authority RjEyNy4wLjAuMToyMDAy:iVZVJ4vvL3We94Y75eG23SsXOOBgTupi1eKzeg66BbE=
-	// --authority RjEyNy4wLjAuMToyMDAz:9mZrUFDI2c6LML1t8qGCIw3hDCrYormquNxBbgcEaNg=
-
-	node := f3b.DkgPath()
-
-	// auth := []string{"", "", ""}
-
-	// args := []string{"dkgcli", "--config", node, "dkg", "setup", "--authority", auth[0], "--authority", auth[1], "--authority", auth[2]}
-
-	// cmd := strings.Join(args[:], " ")
-
-	msg := "Merry Christmas and a Happy New Year!"
-	fmt.Println("## Plaintext message: ", msg)
-	symKey := make([]byte, types.SymKeyLen)
-	_, err = rand.Read(symKey)
-	if err != nil {
-		panic(fmt.Sprintf("failed on load random key: %v", err))
-	}
-
-	symKeyStr := hex.EncodeToString(symKey)
-	// msgStr := hex.EncodeToString([]byte(msg))
-
-	encryptedMsg := f3b.EncryptCompact(symKey, []byte(msg))
-	// compute hash of cleartext key
-	khash := sha256.Sum256([]byte(symKey))
-	khash[0] = 0
-
-	args_enc := []string{"dkgcli", "--config", node, "dkg", "encrypt", "--message", symKeyStr}
-
-	encrypted_data, err := exec.Command(args_enc[0], args_enc[1:]...).Output()
-
-	encrypted_data = encrypted_data[:len(encrypted_data)-2]
-
-	encKeyWithHash := append(khash[:], encrypted_data...)
-
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
-	fmt.Println("## Random generated msg.Key: ", symKeyStr)
-	fmt.Println("## Hash: ", hex.EncodeToString(khash[:]))
-	fmt.Println("## Encrypted Key: ", string(encrypted_data))
-	fmt.Println("## hash | encrypted key: ", hex.EncodeToString(encKeyWithHash))
-
-	// TODO: uncomment following to display decryption result
-	// args_dec := []string{"dkgcli", "--config", node, "dkg", "verifiableDecrypt", "--GBar", gBar, "--ciphertexts", string(encrypted_data)}
-
-	// fmt.Printf("args to decrypt: %v\n", args_dec)
-
-	// decrypted_data, err := exec.Command(args_enc[0], args_dec[1:]...).Output()
-
-	// if err != nil {
-	// 	fmt.Println(err.Error())
-	// }
-	// fmt.Println("## Decrypted data: ", string(decrypted_data))
-
-	weiValue := new(big.Int).Mul(gasPrice, big.NewInt(int64(gasLimit)))
-	weiFloat := new(big.Float).SetInt(weiValue)
-	ethValue := new(big.Float).Quo(weiFloat, big.NewFloat(math.Pow10(18)))
-	fmt.Println("[GasLimit in Ether]: ", ethValue.String())
-
-	enc := &types.EncryptedTx{
-		ChainID:    chainID,
-		Nonce:      nonce,
-		GasFeeCap:  gasPrice,
-		GasTipCap:  big.NewInt(10),
-		Gas:        gasLimit,
-		To:         &to.Address,
-		Value:      val,
-		Key:        encKeyWithHash,
-		Data:       encryptedMsg,
 		AccessList: accesses,
 	}
 	tx := types.NewTx(enc)
@@ -301,7 +156,7 @@ func prettyPrintBlock(client *ethclient.Client, num *big.Int) {
 func main() {
 	encrypted := flag.Bool("encrypted", false, "if send an encrypted transaction")
 	num := flag.Int("num", 1, "number of transactions")
-	gethDir := flag.String("gethdir", "", "geth client directory")
+	gethDir := flag.String("ethdir", ".ethereum/", "geth client directory")
 	flag.Parse()
 
 	var client *ethclient.Client
@@ -356,7 +211,7 @@ func main() {
 		if !*encrypted {
 			sendEtherPlaintext(client, nonce+uint64(i), ks, user_acc, rcv_acc, val, gasLimit)
 		} else {
-			sendEtherF3bVerifiedEnc(client, nonce+uint64(i), ks, user_acc, rcv_acc, val, gasLimit)
+			sendEtherF3bEnc(client, nonce+uint64(i), ks, user_acc, rcv_acc, val, gasLimit)
 		}
 	}
 

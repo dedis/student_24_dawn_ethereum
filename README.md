@@ -1,66 +1,64 @@
 # F3B-Geth
-Execution layer based front-running protection on Ethereum (Master thesis) at DEDIS EPFL by Shufan Wang.
+Delayed-execution Ethereum client.
+Based on previous work by Shufan Wang.
 
-Geth with F3B front-running protection achieved in execution layer based on go-ethereum v1.10.23.
-
-# Config before use
-There is a default parameter that is changeable in the system in core/types/transactions.go as shown below. The EncryptedBlockDelay defines the block delay between the ordering block and the execution block.
-```
-const EncryptedBlockDelay uint64 = 2
-```
-
-There are several parameters that must be passed using environment variables. `F3B_GBAR` a publicly known constant we directly take from Dela dkg. `F3B_DKG_PATH specifies the path to the SMC node directory which would be used to launch the verifiable encryption. Make sure you set both according to your machine.
-
-```sh
-# for example
-export F3B_GBAR=1d0194fdc2fa2ffcc041d3ff12045b73c86e4ff95ff662a5eee82abdf44a53c7
-export F3B_DKG_PATH="D:/EPFL/master_thesis/dela/dkg/pedersen/dkgcli/tmp/node1/"
-```
+# Architecture
+`dela/` is a modified version of `dela`.
+`go-ethereum/` is a modified version of `go-ethereum v1.10.23` which integrates with `dela`.
 
 # Start the Dela nodes
-Please follow the [instructions](https://github.com/Mahsa-Bastankhah/dela/tree/5593c8d782ae14910343212447956d8b46ea958b/dkg/pedersen/dkgcli) to run several F3B committee members.
-Set `F3B_GBAR` based on the output.
+Reference: [README](dela/dkg/pedersen_bn256/dkgcli/README.md)
+```sh
+alias dkgcli="go run go.dedis.ch/dela/dkg/pedersen_bn256/dkgcli"
+
+LLVL=info dkgcli --config /tmp/dela/node1 start --routing tree --listen tcp://127.0.0.1:2001
+LLVL=info dkgcli --config /tmp/dela/node2 start --routing tree --listen tcp://127.0.0.1:2002
+LLVL=info dkgcli --config /tmp/dela/node3 start --routing tree --listen tcp://127.0.0.1:2003
+
+dkgcli --config /tmp/dela/node2 minogrpc join --address //127.0.0.1:2001 $(dkgcli --config /tmp/dela/node1 minogrpc token)
+dkgcli --config /tmp/dela/node3 minogrpc join --address //127.0.0.1:2001 $(dkgcli --config /tmp/dela/node1 minogrpc token)
+                                   
+# Initialize DKG on each node. Do that in a 4th session.
+dkgcli --config /tmp/dela/node1 dkg listen
+dkgcli --config /tmp/dela/node2 dkg listen
+dkgcli --config /tmp/dela/node3 dkg listen
+
+# Do the setup in one of the node:
+dkgcli --config /tmp/dela/node1 dkg setup \
+    --authority $(cat /tmp/dela/node1/dkgauthority) \
+    --authority $(cat /tmp/dela/node2/dkgauthority) \
+    --authority $(cat /tmp/dela/node3/dkgauthority)
+
+
+# this is for other commands to be able to communicate
+export F3B_DKG_PATH=/tmp/dela/node1
+```
+Set `` based on the output.
 
 # Start the geth node
 
 Please refer to the go-ethereum development [book](https://goethereumbook.org/) for more infomation about the commands.
 
-```
-// build geth
-go install -v ./cmd/geth
+```sh
+alias geth="go run github.com/ethereum/go-ethereum/cmd/geth"
 
-
-// Commands for single geth simulation:
+# commands for single geth simulation
 geth --datadir .ethereum/ init clique.json
 
-// start node
+# start node
 geth --nodiscover --networkid 42 --datadir .ethereum/ --unlock 0x280F6B48E4d9aEe0Efdb04EeBe882023357f6434 --mine
-
-
-// Commands for multiple geth simulation:
-geth --datadir .ethereum1/ init ../multiclique.json
-geth --datadir .ethereum2/ init ../multiclique.json
-
-// start node1
-geth --nodiscover --networkid 43 --datadir .ethereum1/ --unlock 0x280F6B48E4d9aEe0Efdb04EeBe882023357f6434 --mine --ipcpath pipe/geth1.ipc --authrpc.port 8551 --port 30303
-
-// start node2
-geth --nodiscover --networkid 43 --datadir .ethereum2/ --unlock 0xa9ca84343c8dB08d596400d35A7034027A5F4b31 --mine --ipcpath pipe/geth2.ipc --authrpc.port 8552 --port 30304 --miner.etherbase 0xa9ca84343c8dB08d596400d35A7034027A5F4b31 --syncmode full
-
-// addPeers
-geth attach pipe/geth1.ipc
-
-admin.addPeer
-
+# password is the empty string
 ```
 
 # Test Example
 
-1. send two plaintext transaction to node1:
-```go run script/f3b-enc/main.go -num 2 -id 1```
+1. send two plaintext transaction to your node:
+```sh
+go run ./script/f3b-enc -num 2
+```
 
-1. send one encrypted transaction to node2: 
-```go run script/f3b-enc/main.go -num 1 -id 2 -encrypted```
-
-1. query balance of existing accounts at block 3 from node1:
-```go run script/view-balance/main.go -id 1 -bn 3```
+# Config
+There is a default parameter that is changeable in the system in `go-ethereum/core/types/transaction.go` as shown below. The EncryptedBlockDelay defines the block delay between the ordering block and the execution block.
+```
+const EncryptedBlockDelay uint64 = 2
+```

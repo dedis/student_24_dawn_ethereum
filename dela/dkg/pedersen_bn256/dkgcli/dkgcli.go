@@ -15,7 +15,8 @@ import (
 func main() {
 	err := run(os.Args)
 	if err != nil {
-		fmt.Printf("%+v\n", err)
+		fmt.Fprintf(os.Stderr, "%+v\n", err)
+		os.Exit(1)
 	}
 }
 

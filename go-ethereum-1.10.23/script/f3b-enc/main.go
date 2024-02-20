@@ -11,6 +11,7 @@ import (
 	"math"
 	"math/big"
 	"os/exec"
+	"path"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -19,9 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/f3b"
 )
-
-const authority_file = "../.ethereum/keystore/UTC--2022-09-13T11-34-29.303731400Z--280f6b48e4d9aee0efdb04eebe882023357f6434"
-const user_file = "../.ethereum/keystore/UTC--2022-09-13T11-35-11.765870700Z--f5f341cd21350259a8666b3a5fe47132eff57838"
 
 func get_balance(client *ethclient.Client, addr common.Address) (*big.Int, *big.Float) {
 	weiValue, err := client.BalanceAt(context.Background(), addr, nil)
@@ -202,9 +200,7 @@ func sendEtherF3bVerifiedEnc(client *ethclient.Client, nonce uint64, ks *keystor
 	khash := sha256.Sum256([]byte(symKey))
 	khash[0] = 0
 
-	gBar := f3b.GBar()
-
-	args_enc := []string{"dkgcli", "--config", node, "dkg", "verifiableEncrypt", "--GBar", gBar, "--message", symKeyStr}
+	args_enc := []string{"dkgcli", "--config", node, "dkg", "encrypt", "--message", symKeyStr}
 
 	encrypted_data, err := exec.Command(args_enc[0], args_enc[1:]...).Output()
 
@@ -305,17 +301,17 @@ func prettyPrintBlock(client *ethclient.Client, num *big.Int) {
 func main() {
 	encrypted := flag.Bool("encrypted", false, "if send an encrypted transaction")
 	num := flag.Int("num", 1, "number of transactions")
-	cid := flag.String("id", "", "id of geth client")
+	gethDir := flag.String("gethdir", "", "geth client directory")
 	flag.Parse()
 
 	var client *ethclient.Client
 	var err error
-	if client, err = ethclient.Dial(fmt.Sprintf("pipe/geth%s.ipc", *cid)); err != nil {
+	if client, err = ethclient.Dial(path.Join(*gethDir, "geth.ipc")); err != nil {
 		log.Fatal(err)
 	}
 
 	// unlock the pre fund user account
-	ks := keystore.NewKeyStore("../.ethereum/keystore", keystore.StandardScryptN, keystore.StandardScryptP)
+	ks := keystore.NewKeyStore(path.Join(*gethDir, "keystore"), keystore.StandardScryptN, keystore.StandardScryptP)
 	if err = ks.Unlock(ks.Accounts()[1], ""); err != nil {
 		log.Fatal(err)
 	}

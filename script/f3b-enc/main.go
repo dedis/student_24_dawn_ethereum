@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -83,7 +84,8 @@ func sendEtherF3bEnc(client *ethclient.Client, nonce uint64, ks *keystore.KeySto
 	dkgcli := f3b.NewDkgCli()
 
 	plaintext := []byte("dddddddd")
-	label := []byte("TODO")
+	label := from.Address.Bytes()
+	label = binary.BigEndian.AppendUint64(label, nonce)
 
 	encrypted_data, err := dkgcli.Encrypt(label, plaintext)
 	if err != nil {

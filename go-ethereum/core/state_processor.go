@@ -18,6 +18,7 @@ package core
 
 import (
 	"fmt"
+	"encoding/binary"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -206,7 +207,9 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 
 	if isExecEncrypted {
 		dkgCli := f3b.NewDkgCli()
-		plaintext, err := dkgCli.Decrypt([]byte("TODO"), msg.Data())
+		label := msg.From().Bytes()
+		label = binary.BigEndian.AppendUint64(label, msg.Nonce())
+		plaintext, err := dkgCli.Decrypt(label, msg.Data())
 	if err != nil {
 		panic("decryptMsgData: fail on decryption")
 	}

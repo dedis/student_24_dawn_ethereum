@@ -9,11 +9,11 @@ Based on previous work by Shufan Wang.
 # Start the Dela nodes
 Reference: [README](dela/dkg/pedersen_bn256/dkgcli/README.md)
 ```sh
-alias dkgcli="go run go.dedis.ch/dela/dkg/pedersen_bn256/dkgcli"
+go install go.dedis.ch/dela/dkg/pedersen_bn256/dkgcli
 
-LLVL=info dkgcli --config /tmp/dela/node1 start --routing tree --listen tcp://127.0.0.1:2001
-LLVL=info dkgcli --config /tmp/dela/node2 start --routing tree --listen tcp://127.0.0.1:2002
-LLVL=info dkgcli --config /tmp/dela/node3 start --routing tree --listen tcp://127.0.0.1:2003
+LLVL=info dkgcli --config /tmp/dela/node1 start --routing tree --listen tcp://127.0.0.1:2001 &
+LLVL=info dkgcli --config /tmp/dela/node2 start --routing tree --listen tcp://127.0.0.1:2002 &
+LLVL=info dkgcli --config /tmp/dela/node3 start --routing tree --listen tcp://127.0.0.1:2003 &
 
 dkgcli --config /tmp/dela/node2 minogrpc join --address //127.0.0.1:2001 $(dkgcli --config /tmp/dela/node1 minogrpc token)
 dkgcli --config /tmp/dela/node3 minogrpc join --address //127.0.0.1:2001 $(dkgcli --config /tmp/dela/node1 minogrpc token)
@@ -27,7 +27,8 @@ dkgcli --config /tmp/dela/node3 dkg listen
 dkgcli --config /tmp/dela/node1 dkg setup \
     --authority $(cat /tmp/dela/node1/dkgauthority) \
     --authority $(cat /tmp/dela/node2/dkgauthority) \
-    --authority $(cat /tmp/dela/node3/dkgauthority)
+    --authority $(cat /tmp/dela/node3/dkgauthority) \
+    --threshold 2
 
 
 # this is for other commands to be able to communicate
@@ -40,7 +41,7 @@ Set `` based on the output.
 Please refer to the go-ethereum development [book](https://goethereumbook.org/) for more infomation about the commands.
 
 ```sh
-alias geth="go run github.com/ethereum/go-ethereum/cmd/geth"
+go install github.com/ethereum/go-ethereum/cmd/geth
 
 # commands for single geth simulation
 geth --datadir .ethereum/ init clique.json

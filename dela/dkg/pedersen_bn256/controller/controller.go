@@ -43,6 +43,7 @@ func (m minimal) SetCommands(builder node.Builder) {
 		cli.IntFlag{
 			Name:  "threshold",
 			Usage: "the threshold of the committee",
+			Value: 2,
 		},
 	)
 	sub.SetAction(builder.MakeAction(setupAction{}))

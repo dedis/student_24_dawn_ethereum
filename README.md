@@ -34,8 +34,6 @@ dkgcli --config /tmp/dela/node1 dkg setup \
 # this is for other commands to be able to communicate
 export F3B_DKG_PATH=/tmp/dela/node1
 ```
-Set `` based on the output.
-
 # Start the geth node
 
 Please refer to the go-ethereum development [book](https://goethereumbook.org/) for more infomation about the commands.
@@ -56,6 +54,11 @@ geth --nodiscover --networkid 42 --datadir .ethereum/ --unlock 0x280F6B48E4d9aEe
 1. send two plaintext transaction to your node:
 ```sh
 go run ./script/f3b-enc -num 2
+```
+
+2. send an encrypted transaction to your node:
+```sh
+go run ./script/f3b-enc -encrypted
 ```
 
 # Config

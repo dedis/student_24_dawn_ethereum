@@ -30,34 +30,6 @@ func get_balance(client *ethclient.Client, addr common.Address) (*big.Int, *big.
 	return weiValue, ethValue
 }
 
-func sendEtherPlaintext(client *ethclient.Client, nonce uint64, ks *keystore.KeyStore, from, to accounts.Account, val *big.Int, gasLimit uint64) {
-	var err error
-	var gasPrice, chainID *big.Int
-	var signedTx *types.Transaction
-
-	// get gas price
-	if gasPrice, err = client.SuggestGasPrice(context.Background()); err != nil {
-		log.Fatal(err)
-	}
-	// get chainID
-	if chainID, err = client.ChainID(context.Background()); err != nil {
-		log.Fatal(err)
-	}
-
-	tx := types.NewTransaction(nonce, to.Address, val, gasLimit, gasPrice, nil)
-
-	// sign
-	if signedTx, err = ks.SignTx(from, tx, chainID); err != nil {
-		log.Fatal(err)
-	}
-
-	if err = client.SendTransaction(context.Background(), signedTx); err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("Plaintext Transaction send: %v\n", signedTx.Hash().Hex())
-}
-
 func sendEtherF3bEnc(client *ethclient.Client, nonce uint64, ks *keystore.KeyStore, from, to accounts.Account, val *big.Int, gasLimit uint64) {
 	var err error
 	var gasPrice, chainID *big.Int
@@ -71,15 +43,6 @@ func sendEtherF3bEnc(client *ethclient.Client, nonce uint64, ks *keystore.KeySto
 	if chainID, err = client.ChainID(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-
-	// dummy encrypted tx
-	addr := common.HexToAddress("0x0000000000000000000000000000000000000001")
-	accesses := types.AccessList{types.AccessTuple{
-		Address: addr,
-		StorageKeys: []common.Hash{
-			{0},
-		},
-	}}
 
 	dkgcli := f3b.NewDkgCli()
 
@@ -101,7 +64,6 @@ func sendEtherF3bEnc(client *ethclient.Client, nonce uint64, ks *keystore.KeySto
 		To:         &to.Address,
 		Value:      val,
 		Data:       encrypted_data,
-		AccessList: accesses,
 	}
 	tx := types.NewTx(enc)
 
@@ -156,7 +118,6 @@ func prettyPrintBlock(client *ethclient.Client, num *big.Int) {
 // fmt.Println(isPending)       // false
 
 func main() {
-	encrypted := flag.Bool("encrypted", false, "if send an encrypted transaction")
 	num := flag.Int("num", 1, "number of transactions")
 	gethDir := flag.String("ethdir", ".ethereum/", "geth client directory")
 	flag.Parse()
@@ -210,11 +171,7 @@ func main() {
 	fmt.Printf("[Gas Info] Gas Limit: %v\n", gasLimit)
 
 	for i := 0; i < *num; i++ {
-		if !*encrypted {
-			sendEtherPlaintext(client, nonce+uint64(i), ks, user_acc, rcv_acc, val, gasLimit)
-		} else {
-			sendEtherF3bEnc(client, nonce+uint64(i), ks, user_acc, rcv_acc, val, gasLimit)
-		}
+		sendEtherF3bEnc(client, nonce+uint64(i), ks, user_acc, rcv_acc, val, gasLimit)
 	}
 
 	fmt.Printf("[Balance before tx exec] User: %s, Receiver: %s, Auth1: %s, Auth2: %s\n",

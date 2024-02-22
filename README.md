@@ -62,14 +62,9 @@ geth --nodiscover --networkid 42 --datadir .ethereum/ --unlock 0x280F6B48E4d9aEe
 
 # Test Example
 
-1. send two plaintext transaction to your node:
+2. send an example encrypted transaction to your node:
 ```sh
-go run ./script/f3b-enc -num 2
-```
-
-2. send an encrypted transaction to your node:
-```sh
-go run ./script/f3b-enc -encrypted
+go run ./script/f3b-enc
 ```
 
 # Config

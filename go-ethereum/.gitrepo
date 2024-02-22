@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/ethereum/go-ethereum
+	branch = v1.10.23
+	commit = d901d85377c2c2f05f09f423c7d739c0feecd90a
+	parent = 70824f446ca289b837e9f1cb9b33ef5b883ba535
+	method = merge
+	cmdver = 0.4.6

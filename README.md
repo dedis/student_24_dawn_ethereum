@@ -12,10 +12,11 @@ Based on previous work by Shufan Wang.
 - [x] The IBE label is sender address concatenated with big-endian 64-bit nonce
 - [x] The ciphertext is authenticated (HMAC-SHA256, encrypt-then-MAC)
 - [ ] The chain only accepts encrypted transactions
-- [ ] The `to` address is encrypted
+- [x] The `to` address is encrypted
 - [ ] The transaction receipt contains a symmetric encryption key
 - [ ] The execution layer can direct the SMC node to release an encryption label only after the transaction is finalized.
 - [ ] TDH2, PVSS, beacon IBE options maybe
+- [ ] Direct contract creation doesn't work ? (nil address thing)
 
 # Start the Dela nodes
 Reference: [README](dela/dkg/pedersen_bn256/dkgcli/README.md)

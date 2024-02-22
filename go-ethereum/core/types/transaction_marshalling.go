@@ -103,8 +103,8 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		enc.MaxFeePerGas = (*hexutil.Big)(tx.GasFeeCap)
 		enc.MaxPriorityFeePerGas = (*hexutil.Big)(tx.GasTipCap)
 		enc.Value = (*hexutil.Big)(tx.Value)
-		enc.Data = (*hexutil.Bytes)(&tx.Data)
-		enc.To = t.To()
+		enc.Data = (*hexutil.Bytes)(&tx.Payload)
+		enc.To = nil
 		enc.V = (*hexutil.Big)(tx.V)
 		enc.R = (*hexutil.Big)(tx.R)
 		enc.S = (*hexutil.Big)(tx.S)
@@ -289,9 +289,7 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 			return errors.New("missing required field 'chainId' in transaction")
 		}
 		itx.ChainID = (*big.Int)(dec.ChainID)
-		if dec.To != nil {
-			itx.To = dec.To
-		}
+		_ = dec.To
 		if dec.Nonce == nil {
 			return errors.New("missing required field 'nonce' in transaction")
 		}
@@ -315,7 +313,7 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 		if dec.Data == nil {
 			return errors.New("missing required field 'input' in transaction")
 		}
-		itx.Data = *dec.Data
+		itx.Payload = *dec.Data
 		if dec.V == nil {
 			return errors.New("missing required field 'v' in transaction")
 		}

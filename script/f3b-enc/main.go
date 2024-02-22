@@ -30,7 +30,7 @@ func get_balance(client *ethclient.Client, addr common.Address) (*big.Int, *big.
 	return weiValue, ethValue
 }
 
-func sendEtherF3bEnc(client *ethclient.Client, nonce uint64, ks *keystore.KeyStore, from, to accounts.Account, val *big.Int, gasLimit uint64) {
+func sendEtherF3bEnc(client *ethclient.Client, nonce uint64, ks *keystore.KeyStore, from accounts.Account, to common.Address, val *big.Int, gasLimit uint64, calldata []byte) {
 	var err error
 	var gasPrice, chainID *big.Int
 	var signedTx *types.Transaction
@@ -46,11 +46,11 @@ func sendEtherF3bEnc(client *ethclient.Client, nonce uint64, ks *keystore.KeySto
 
 	dkgcli := f3b.NewDkgCli()
 
-	plaintext := []byte("dddddddd")
+	plaintext := append(to.Bytes(), calldata...)
 	label := from.Address.Bytes()
 	label = binary.BigEndian.AppendUint64(label, nonce)
 
-	encrypted_data, err := dkgcli.Encrypt(label, plaintext)
+	ciphertext, err := dkgcli.Encrypt(label, plaintext)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -61,9 +61,8 @@ func sendEtherF3bEnc(client *ethclient.Client, nonce uint64, ks *keystore.KeySto
 		GasFeeCap:  gasPrice,
 		GasTipCap:  big.NewInt(10),
 		Gas:        gasLimit,
-		To:         &to.Address,
 		Value:      val,
-		Data:       encrypted_data,
+		Payload:    ciphertext,
 	}
 	tx := types.NewTx(enc)
 
@@ -152,7 +151,6 @@ func main() {
 	rcvAddr := common.BytesToAddress(rcvHex)
 
 	user_acc := accounts.Account{Address: user}
-	rcv_acc := accounts.Account{Address: rcvAddr}
 
 	_, eth_user := get_balance(client, user)
 	_, eth_rcv := get_balance(client, rcvAddr)
@@ -171,7 +169,7 @@ func main() {
 	fmt.Printf("[Gas Info] Gas Limit: %v\n", gasLimit)
 
 	for i := 0; i < *num; i++ {
-		sendEtherF3bEnc(client, nonce+uint64(i), ks, user_acc, rcv_acc, val, gasLimit)
+		sendEtherF3bEnc(client, nonce+uint64(i), ks, user_acc, rcvAddr, val, gasLimit, []byte("hello"))
 	}
 
 	fmt.Printf("[Balance before tx exec] User: %s, Receiver: %s, Auth1: %s, Auth2: %s\n",

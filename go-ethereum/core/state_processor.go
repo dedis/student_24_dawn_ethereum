@@ -204,18 +204,23 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 	evm.Reset(txContext, statedb)
 
 	var calldata []byte
+	var to *common.Address
 
 	if isExecEncrypted {
 		dkgCli := f3b.NewDkgCli()
 		label := msg.From().Bytes()
 		label = binary.BigEndian.AppendUint64(label, msg.Nonce())
 		plaintext, err := dkgCli.Decrypt(label, msg.Data())
-	if err != nil {
-		panic("decryptMsgData: fail on decryption")
-	}
-	calldata = plaintext
+		to = new(common.Address)
+		*to = common.BytesToAddress(plaintext[:common.AddressLength])
+		calldata = plaintext[common.AddressLength:]
+		if err != nil {
+			panic("decryptMsgData: fail on decryption")
+		}
+		calldata = plaintext
 	} else {
 		calldata = msg.Data()
+		to = msg.To()
 	}
 
 	// Apply the transaction to the current state (included in the env).
@@ -245,7 +250,7 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 	receipt.GasUsed = result.UsedGas
 
 	// If the transaction created a contract, store the creation address in the receipt.
-	if msg.To() == nil {
+	if to == nil {
 		receipt.ContractAddress = crypto.CreateAddress(evm.TxContext.Origin, tx.Nonce())
 	}
 

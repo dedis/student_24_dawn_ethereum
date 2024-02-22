@@ -28,9 +28,8 @@ type EncryptedTx struct {
 	GasTipCap  *big.Int // a.k.a. maxPriorityFeePerGas
 	GasFeeCap  *big.Int // a.k.a. maxFeePerGas
 	Gas        uint64
-	To         *common.Address `rlp:"nil"` // nil means contract creation
 	Value      *big.Int
-	Data       []byte // Enc_k(data) symmetric encryption
+	Payload    []byte // Enc_k(to | data) symmetric encryption
 	Key        []byte // hash(k) | Enc_smc(k)
 	AccessList AccessList
 
@@ -44,8 +43,7 @@ type EncryptedTx struct {
 func (tx *EncryptedTx) copy() TxData {
 	cpy := &EncryptedTx{
 		Nonce: tx.Nonce,
-		To:    copyAddressPtr(tx.To),
-		Data:  common.CopyBytes(tx.Data),
+		Payload:  common.CopyBytes(tx.Payload),
 		Key:   common.CopyBytes(tx.Key),
 		Gas:   tx.Gas,
 		// These are copied below.
@@ -87,14 +85,14 @@ func (tx *EncryptedTx) copy() TxData {
 func (tx *EncryptedTx) txType() byte           { return EncryptedTxType }
 func (tx *EncryptedTx) chainID() *big.Int      { return tx.ChainID }
 func (tx *EncryptedTx) accessList() AccessList { return tx.AccessList }
-func (tx *EncryptedTx) data() []byte           { return tx.Data }
+func (tx *EncryptedTx) data() []byte           { return tx.Payload }
 func (tx *EncryptedTx) gas() uint64            { return tx.Gas }
 func (tx *EncryptedTx) gasFeeCap() *big.Int    { return tx.GasFeeCap }
 func (tx *EncryptedTx) gasTipCap() *big.Int    { return tx.GasTipCap }
 func (tx *EncryptedTx) gasPrice() *big.Int     { return tx.GasFeeCap }
 func (tx *EncryptedTx) value() *big.Int        { return tx.Value }
 func (tx *EncryptedTx) nonce() uint64          { return tx.Nonce }
-func (tx *EncryptedTx) to() *common.Address    { return tx.To }
+func (tx *EncryptedTx) to() *common.Address    { return nil }
 func (tx *EncryptedTx) key() []byte            { return tx.Key }
 
 func (tx *EncryptedTx) rawSignatureValues() (v, r, s *big.Int) {

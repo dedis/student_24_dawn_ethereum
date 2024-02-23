@@ -18,7 +18,6 @@ package crypto
 
 import (
 	"bufio"
-	"crypto/aes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -36,7 +35,7 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-// SignatureLength indicates the byte length required to carry a signature with recovery id.
+//SignatureLength indicates the byte length required to carry a signature with recovery id.
 const SignatureLength = 64 + 1 // 64 bytes ECDSA signature + 1 byte recovery id
 
 // RecoveryIDOffset points to the byte offset within the signature that contains the recovery id.
@@ -281,36 +280,5 @@ func PubkeyToAddress(p ecdsa.PublicKey) common.Address {
 func zeroBytes(bytes []byte) {
 	for i := range bytes {
 		bytes[i] = 0
-	}
-}
-
-func EncryptAES(key []byte, plaintext []byte) []byte {
-	c, err := aes.NewCipher(key)
-	CheckError(err)
-
-	out := make([]byte, len(plaintext))
-
-	c.Encrypt(out, plaintext)
-
-	// return hex.EncodeToString(out)
-	return out
-}
-
-func DecryptAES(key []byte, ciphertext []byte) []byte {
-	// ciphertext, _ := hex.DecodeString(ct)
-	c, err := aes.NewCipher(key)
-	CheckError(err)
-
-	pt := make([]byte, len(ciphertext))
-	c.Decrypt(pt, ciphertext)
-
-	// s := string(pt[:])
-	return pt
-	// fmt.Println("DECRYPTED:", s)
-}
-
-func CheckError(err error) {
-	if err != nil {
-		panic(err)
 	}
 }

@@ -34,11 +34,9 @@ func (d *DkgCli) Encrypt(label []byte, plaintext []byte) ([]byte, error) {
 func (d *DkgCli) Decrypt(label []byte, ciphertext []byte) ([]byte, error) {
 	return d.run("decrypt", "--label", hex.EncodeToString(label), "--ciphertext", hex.EncodeToString(ciphertext))
 }
-func (d *DkgCli) run(extraArgs ...string) ([]byte, error) {
-	var args = []string{"go", "run", "go.dedis.ch/dela/dkg/pedersen_bn256/dkgcli"}
-	args = append(args, "--config", d.configPath, "dkg")
-	args = append(args, extraArgs...)
-	output, err := exec.Command(args[0], args[1:]...).Output()
+func (d *DkgCli) run(args ...string) ([]byte, error) {
+	args = append([]string{"--config", d.configPath, "dkg"}, args...)
+	output, err := exec.Command("dkgcli", args...).Output()
 
 	if exitError, ok := err.(*exec.ExitError); ok {
 		log.Printf("dkgcli stderr:\n%s", exitError.Stderr)

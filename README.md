@@ -21,6 +21,8 @@ Based on previous work by Shufan Wang.
 # Running
 Run `setup.sh` to build and install to `$GOPATH` the modified `dela and `go-ethereum`.
 
+Run `git submodule update --init --recursive` to make sure the foundry dependencies are ready.
+
 Run `run.sh` to start all the services and give a shell.
 
 # Config

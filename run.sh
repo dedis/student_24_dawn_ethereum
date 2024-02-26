@@ -34,7 +34,12 @@ export GETH_DATADIR=$tempdir/ethereum
 geth -datadir "$GETH_DATADIR" init clique.json
 
 cp -R .ethereum/keystore/* -t "$GETH_DATADIR/keystore/"
-geth -datadir "$GETH_DATADIR" --nodiscover --allow-insecure-unlock --unlock 0x280F6B48E4d9aEe0Efdb04EeBe882023357f6434 --password /dev/null --mine &
+geth -datadir "$GETH_DATADIR" --nodiscover --http --rpc.allow-unprotected-txs --allow-insecure-unlock --unlock 0xF5f341CD21350259A8666B3A5fE47132efF57838 --password /dev/null --mine &
+sleep 1 # give geth time to start
+
+(cd contracts
+forge script --broadcast --legacy --unlocked -f http://localhost:8545 --sender 0xF5f341CD21350259A8666B3A5fE47132efF57838 script/Deploy.s.sol
+)
 
 # send an encrypted transaction
 go run ./script/f3b-enc -ethdir "$GETH_DATADIR"

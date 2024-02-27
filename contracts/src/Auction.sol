@@ -26,11 +26,11 @@ contract Auction is ERC721 {
 
     constructor(address payable _proceedsReceiver) {
         proceedsReceiver = _proceedsReceiver;
-        deadline = block.timestamp + 1 minutes;
+        deadline = block.number + 10;
     }
 
     function bid() external payable {
-        require(block.timestamp < deadline, "Auction has ended");
+        require(block.number < deadline, "Auction has ended");
         require(msg.value > highestBidAmount, "Bid too low");
 
         address prevHighestBidder = highestBidder;
@@ -44,7 +44,7 @@ contract Auction is ERC721 {
     }
 
     function claim() external {
-        require(block.timestamp >= deadline, "Auction has not ended");
+        require(block.number >= deadline, "Auction has not ended");
         require(highestBidder != address(0), "No bids received");
         _mint(highestBidder, 0);
         proceedsReceiver.safeTransferETH(highestBidAmount);
@@ -52,6 +52,6 @@ contract Auction is ERC721 {
         // reset auction
         highestBidAmount = 0;
         highestBidder = address(0);
-        deadline = block.timestamp + 1 minutes;
+        deadline = block.number + 10;
     }
 }

@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"encoding/binary"
 	"math/big"
+	"os"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -198,12 +200,26 @@ func RetrievePendingEncryptedTransactions(wc *BlockChain, numbersBack uint64) ty
 
 }
 
+func logMeasurement(elapsed time.Duration) error {
+	f, err := os.OpenFile("dectiming.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.WriteString(fmt.Sprintf("%s\n", elapsed))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func applyTransaction(msg types.Message, config *params.ChainConfig, author *common.Address, gp *GasPool, statedb *state.StateDB, blockNumber *big.Int, blockHash common.Hash, tx *types.Transaction, usedGas *uint64, evm *vm.EVM, isExecEncrypted bool) (*types.Receipt, error) {
 	// Create a new context to be used in the EVM environment.
 	txContext := NewEVMTxContext(msg)
 	evm.Reset(txContext, statedb)
 
 	if isExecEncrypted {
+		start := time.Now()
 		dkgCli := f3b.NewDkgCli()
 		label := msg.From().Bytes()
 		label = binary.BigEndian.AppendUint64(label, msg.Nonce())
@@ -215,6 +231,11 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 		*to = common.BytesToAddress(plaintext[:common.AddressLength])
 		data := plaintext[common.AddressLength:]
 		msg = types.NewMessage(msg.Type(), msg.From(), to, msg.Nonce(), msg.Value(), msg.Gas(), msg.GasPrice(), msg.GasFeeCap(), msg.GasTipCap(), data, msg.AccessList(), false, msg.Key())
+		elapsed := time.Since(start)
+		err = logMeasurement(elapsed)
+		if err != nil {
+			panic("cannot log measurement")
+		}
 	}
 
 	// Apply the transaction to the current state (included in the env).

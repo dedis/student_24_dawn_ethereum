@@ -87,6 +87,10 @@ type Header struct {
 	// BaseFee was added by EIP-1559 and is ignored in legacy headers.
 	BaseFee *big.Int `json:"baseFeePerGas" rlp:"optional"`
 
+	// F3B extensions
+	ShadowCoinbase common.Address `json:"shadowCoinbase" rlp:"optional"`
+	ShadowTxHash   common.Hash    `json:"shadowTransactionsRoot" rlp:"optional"`
+
 	/*
 		TODO (MariusVanDerWijden) Add this field once needed
 		// Random was added during the merge and contains the BeaconState randomness
@@ -159,6 +163,7 @@ func (h *Header) EmptyReceipts() bool {
 // a block's data contents (transactions and uncles) together.
 type Body struct {
 	Transactions []*Transaction
+	ShadowTransactions []*ShadowTransaction
 	Uncles       []*Header
 }
 
@@ -176,13 +181,17 @@ type Block struct {
 	// inter-peer block relay.
 	ReceivedAt   time.Time
 	ReceivedFrom interface{}
+
+	// F3B extensions
+	shadowTransactions ShadowTransactions
 }
 
 // "external" block encoding. used for eth protocol, etc.
 type extblock struct {
 	Header *Header
-	Txs    []*Transaction
-	Uncles []*Header
+	Txs       []*Transaction
+	ShadowTxs []*ShadowTransaction
+	Uncles    []*Header
 }
 
 // NewBlock creates a new block. The input data is copied,
@@ -192,7 +201,7 @@ type extblock struct {
 // The values of TxHash, UncleHash, ReceiptHash and Bloom in header
 // are ignored and set to values derived from the given txs, uncles
 // and receipts.
-func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*Receipt, hasher TrieHasher) *Block {
+func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*Receipt, shadowTxs []*ShadowTransaction, hasher TrieHasher) *Block {
 	b := &Block{header: CopyHeader(header)}
 
 	// TODO: panic if len(txs) != len(receipts)
@@ -219,6 +228,15 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 		for i := range uncles {
 			b.uncles[i] = CopyHeader(uncles[i])
 		}
+	}
+
+	// F3B extensions
+	if len(shadowTxs) == 0 {
+		b.header.ShadowTxHash = EmptyRootHash
+	} else {
+		b.header.ShadowTxHash = DeriveSha(ShadowTransactions(shadowTxs), hasher)
+		b.shadowTransactions = make(ShadowTransactions, len(shadowTxs))
+		copy(b.shadowTransactions, shadowTxs)
 	}
 
 	return b
@@ -258,7 +276,7 @@ func (b *Block) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&eb); err != nil {
 		return err
 	}
-	b.header, b.uncles, b.transactions = eb.Header, eb.Uncles, eb.Txs
+	b.header, b.uncles, b.transactions, b.shadowTransactions = eb.Header, eb.Uncles, eb.Txs, eb.ShadowTxs
 	b.size.Store(common.StorageSize(rlp.ListSize(size)))
 	return nil
 }
@@ -276,6 +294,7 @@ func (b *Block) EncodeRLP(w io.Writer) error {
 
 func (b *Block) Uncles() []*Header          { return b.uncles }
 func (b *Block) Transactions() Transactions { return b.transactions }
+func (b *Block) ShadowTransactions() ShadowTransactions { return b.shadowTransactions }
 
 func (b *Block) Transaction(hash common.Hash) *Transaction {
 	for _, transaction := range b.transactions {
@@ -314,7 +333,7 @@ func (b *Block) BaseFee() *big.Int {
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
 // Body returns the non-header content of the block.
-func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles} }
+func (b *Block) Body() *Body { return &Body{b.transactions, b.shadowTransactions, b.uncles} }
 
 // Size returns the true RLP encoded storage size of the block, either by encoding
 // and returning it, or returning a previously cached value.

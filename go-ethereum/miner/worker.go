@@ -99,6 +99,7 @@ type environment struct {
 	txs      []*types.Transaction
 	receipts []*types.Receipt
 	uncles   map[common.Hash]*types.Header
+	shadowTxs []*types.ShadowTransaction
 }
 
 // copy creates a deep copy of environment.
@@ -818,6 +819,7 @@ func (w *worker) updateSnapshot(env *environment) {
 		env.txs,
 		env.unclelist(),
 		env.receipts,
+		env.shadowTxs,
 		trie.NewStackTrie(nil),
 	)
 	w.snapshotReceipts = copyReceipts(env.receipts)
@@ -1249,7 +1251,7 @@ func (w *worker) generateWork(params *generateParams) (*types.Block, error) {
 	if !params.noTxs {
 		w.fillTransactions(nil, work)
 	}
-	return w.engine.FinalizeAndAssemble(w.chain, work.header, work.state, work.txs, work.unclelist(), work.receipts)
+	return w.engine.FinalizeAndAssemble(w.chain, work.header, work.state, work.txs, work.unclelist(), work.receipts, work.shadowTxs)
 }
 
 // commitWork generates several new sealing tasks based on the parent block
@@ -1307,7 +1309,7 @@ func (w *worker) commit(env *environment, interval func(), update bool, start ti
 		// Create a local environment copy, avoid the data race with snapshot state.
 		// https://github.com/ethereum/go-ethereum/issues/24299
 		env := env.copy()
-		block, err := w.engine.FinalizeAndAssemble(w.chain, env.header, env.state, env.txs, env.unclelist(), env.receipts)
+		block, err := w.engine.FinalizeAndAssemble(w.chain, env.header, env.state, env.txs, env.unclelist(), env.receipts, env.shadowTxs)
 		if err != nil {
 			return err
 		}

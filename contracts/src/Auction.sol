@@ -12,21 +12,21 @@ contract Auction is ERC721 {
     uint256 public deadline;
     address payable public immutable proceedsReceiver;
 
-    function name() public view override returns (string memory) {
+    function name() public pure override returns (string memory) {
         return "Daredevil Iguana Squad";
     }
 
-    function symbol() public view override returns (string memory) {
+    function symbol() public pure override returns (string memory) {
         return "DDIS";
     }
 
-    function tokenURI(uint256) public view override returns (string memory) {
+    function tokenURI(uint256) public pure override returns (string memory) {
         return "https://dedis.ch";
     }
 
     constructor(address payable _proceedsReceiver) {
         proceedsReceiver = _proceedsReceiver;
-        deadline = block.number + 10;
+        deadline = block.number + 12;
     }
 
     function bid() external payable {
@@ -52,6 +52,6 @@ contract Auction is ERC721 {
         // reset auction
         highestBidAmount = 0;
         highestBidder = address(0);
-        deadline = block.number + 10;
+        deadline = block.number + 12;
     }
 }

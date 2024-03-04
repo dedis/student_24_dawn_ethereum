@@ -13,6 +13,7 @@ contract Deploy is Script {
         vm.startBroadcast();
         weth = new WETH();
         auction = new Auction(payable(msg.sender));
-        console.log(address(auction));
+        console.log("WETH deployed at:", address(weth));
+        console.log("Auction deployed at:", address(auction));
     }
 }

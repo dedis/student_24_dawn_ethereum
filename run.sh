@@ -51,12 +51,15 @@ forge script --broadcast --legacy --unlocked -f http://localhost:8545 --sender 0
 )
 
 # send an encrypted bid
-go run ./script/send_enc -ethdir "$GETH_DATADIR" -value 1 0x3712327B0E9fAE301cFED65eD6BDEf03629fCCFa $(cast sig 'bid()')
+go run ./script/send_enc -ethdir "$GETH_DATADIR" --sender 0xF5f341CD21350259A8666B3A5fE47132efF57838 -value 1 0x3712327B0E9fAE301cFED65eD6BDEf03629fCCFa $(cast sig 'bid()')
+go run ./script/send_enc -ethdir "$GETH_DATADIR" -value 2 0x3712327B0E9fAE301cFED65eD6BDEf03629fCCFa $(cast sig 'bid()')
 
 sleep 60
 
 #go run ./script/send_enc -ethdir "$GETH_DATADIR" -value 1 0x3712327B0E9fAE301cFED65eD6BDEf03629fCCFa $(cast sig 'claim()')
 
-cast send --unlocked --legacy --from 0xf5f341cd21350259a8666b3a5fe47132eff57838 0x3712327B0E9fAE301cFED65eD6BDEf03629fCCFa 'claim()'
+(cd contracts
+forge script --broadcast --legacy --unlocked -f http://localhost:8545 --sender 0xF5f341CD21350259A8666B3A5fE47132efF57838 script/CloseAuction.s.sol
+)
 
 bash

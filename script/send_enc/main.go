@@ -103,7 +103,9 @@ func main2() error {
 	var to common.Address
 	var calldata []byte
 
-	gethDir := flag.String("ethdir", ".ethereum/", "geth client directory")
+	var gethDir, sender string
+	flag.StringVar(&gethDir, "ethdir", ".ethereum/", "geth client directory")
+	flag.StringVar(&sender, "sender", "", "geth client directory")
 	var value *big.Int
 	flag.Func("value", "call value in wei", func(s string) error {
 		var ok bool
@@ -127,14 +129,24 @@ func main2() error {
 	calldata = common.FromHex(flag.Arg(1))
 
 	// unlock the pre fund user account
-	// FIXME: hardcoded
-	ks := keystore.NewKeyStore(path.Join(*gethDir, "keystore"), keystore.StandardScryptN, keystore.StandardScryptP)
-	from := ks.Accounts()[1]
+	ks := keystore.NewKeyStore(path.Join(gethDir, "keystore"), keystore.StandardScryptN, keystore.StandardScryptP)
+	var from accounts.Account
+	if sender == "" {
+		from = ks.Accounts()[0]
+	} else if !common.IsHexAddress(sender) {
+		return fmt.Errorf("invalid sender address: %s", sender)
+	} else {
+	addr := common.HexToAddress(sender)
+	if !ks.HasAddress(addr) {
+		return fmt.Errorf("no key for sender address: %s", sender)
+	}
+	from = accounts.Account{Address: addr}
+}
 	if err := ks.Unlock(from, ""); err != nil {
 		return err
 	}
 
-	client, err := ethclient.Dial(path.Join(*gethDir, "geth.ipc")); 
+	client, err := ethclient.Dial(path.Join(gethDir, "geth.ipc")); 
 	if err != nil {
 		return err
 	}

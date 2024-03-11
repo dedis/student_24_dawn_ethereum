@@ -36,7 +36,7 @@ go install github.com/ethereum/go-ethereum/cmd/geth
 geth -datadir "$GETH_DATADIR" init clique.json
 
 cp -R .ethereum/keystore/* -t "$GETH_DATADIR/keystore/"
-tmux neww env F3B_DKG_PATH="$F3B_DKG_PATH" geth -datadir "$GETH_DATADIR" --nodiscover --http --rpc.allow-unprotected-txs --allow-insecure-unlock --mine
+tmux neww env F3B_DKG_PATH="$F3B_DKG_PATH" geth -datadir "$GETH_DATADIR" --nodiscover --http --rpc.allow-unprotected-txs --allow-insecure-unlock --mine -verbosity 4
 sleep 1 # give geth time to start
 
 geth attach  -datadir "$GETH_DATADIR" <<END

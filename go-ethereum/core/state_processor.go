@@ -84,22 +84,12 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	var (
 		beneficiary     common.Address
 		receipt         *types.Receipt
-		isExecEncrypted bool
-		rcAuth          common.Address
-		err             error
 	)
 	// tmp_rcs := p.bc.GetReceiptsByHash(block.Hash())
 	// if len(tmp_rcs) != block.Transactions().Len() {
 	// 	panic("unequal transaction length and receipts")
 	// }
-	orderBlock := RetrieveOrderBlock(p.bc, types.EncryptedBlockDelay)
-	if orderBlock != nil {
-		rcAuth, err = p.bc.engine.Author(orderBlock.Header())
-		if err != nil {
-			panic(fmt.Sprintf("fail to retrieve author: %s", err))
-		}
-		log.Error(fmt.Sprintf("last block signer: %s", rcAuth))
-	}
+	beneficiary = RetrieveShadowCoinbase(p.bc, types.EncryptedBlockDelay)
 	for i, tx := range block.Transactions() {
 		signer := types.MakeSigner(p.config, header.Number)
 		msg, err := tx.AsMessage(signer, header.BaseFee)
@@ -109,18 +99,10 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 
 		statedb.Prepare(tx.Hash(), i)
 
-		if isExecEncrypted, _ = isExecuteEncryptedTx(statedb, signer, p.config, tx); isExecEncrypted {
-			beneficiary = rcAuth
-			log.Info(fmt.Sprintf("[VERIFY][ENC EXE][beneficiary]: %s", beneficiary))
-		} else {
-			beneficiary, _ = p.bc.engine.Author(block.Header())
-			log.Info(fmt.Sprintf("[VERIFY][Normal][beneficiary]: %s", beneficiary))
-		}
-
 		blockContext := NewEVMBlockContext(header, p.bc, &beneficiary)
 		vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, p.config, cfg)
 
-		receipt, err = applyTransaction(msg, p.config, &beneficiary, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv, isExecEncrypted)
+		receipt, err = applyTransaction(msg, p.config, &beneficiary, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv)
 
 		log.Info(fmt.Sprintf("[VERIFY][ENC][RC]] receipt key appended: %v", receipt.Key))
 
@@ -131,73 +113,9 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		allLogs = append(allLogs, receipt.Logs...)
 	}
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
-	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), block.ShadowTransactions())
+	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), block.Transactions())
 
 	return receipts, allLogs, *usedGas, nil
-}
-
-func isExecuteEncryptedTx(statedb *state.StateDB, signer types.Signer, cf *params.ChainConfig, tx *types.Transaction) (bool, error) {
-	var (
-		from common.Address
-		err  error
-	)
-	if from, err = types.Sender(signer, tx); err != nil {
-		return false, err
-	}
-	stNonce := statedb.GetNonce(from)
-	// executing encrypted tx from last finalty block
-	if tx.Type() == types.EncryptedTxType && stNonce > tx.Nonce() {
-		return true, nil
-	}
-
-	return false, nil
-}
-
-func RetrieveOrderBlock(wc *BlockChain, numbersBack uint64) *types.Block {
-	currentNumber := wc.CurrentHeader().Number.Uint64()
-	// regardless of the genesis block
-	if currentNumber <= numbersBack {
-		return nil
-	}
-
-	previousNumber := currentNumber - numbersBack
-	preBlock := wc.GetBlockByNumber(previousNumber)
-	return preBlock
-}
-
-func RetrievePendingEncryptedTransactions(wc *BlockChain, numbersBack uint64) types.Transactions {
-	encryptedTxs := make(types.Transactions, 0)
-	currentNumber := wc.CurrentHeader().Number.Uint64()
-	// regardless of the genesis block
-	if currentNumber <= numbersBack {
-		return encryptedTxs
-	}
-
-	previousNumber := currentNumber - numbersBack
-	preBlock := wc.GetBlockByNumber(previousNumber)
-
-	txs := preBlock.Transactions()
-	receipts := wc.GetReceiptsByHash(preBlock.Hash())
-
-	if len(txs) != len(receipts) {
-		panic("unequal length of txs and receipts")
-	}
-	var rc *types.Receipt
-
-	// retrieve all the pending encrypted txs that should be executed in this block
-	for i, tx := range txs {
-		if tx.Type() == types.EncryptedTxType {
-			rc = receipts[i]
-
-			if rc.Key == nil || len(rc.Key) == 0 { // if there is no key attached to the receipt, this encrypted tx must have not been executed
-				log.Info(fmt.Sprintf("[ENC][RETRIEVE] tx hash: %v", tx.Hash().String()))
-				encryptedTxs = append(encryptedTxs, tx)
-			}
-		}
-	}
-
-	return encryptedTxs
-
 }
 
 func logMeasurement(elapsed time.Duration) error {
@@ -213,12 +131,12 @@ func logMeasurement(elapsed time.Duration) error {
 	return nil
 }
 
-func applyTransaction(msg types.Message, config *params.ChainConfig, author *common.Address, gp *GasPool, statedb *state.StateDB, blockNumber *big.Int, blockHash common.Hash, tx *types.Transaction, usedGas *uint64, evm *vm.EVM, isExecEncrypted bool) (*types.Receipt, error) {
+func applyTransaction(msg types.Message, config *params.ChainConfig, author *common.Address, gp *GasPool, statedb *state.StateDB, blockNumber *big.Int, blockHash common.Hash, tx *types.Transaction, usedGas *uint64, evm *vm.EVM) (*types.Receipt, error) {
 	// Create a new context to be used in the EVM environment.
 	txContext := NewEVMTxContext(msg)
 	evm.Reset(txContext, statedb)
 
-	if isExecEncrypted {
+	if msg.Type() == types.EncryptedTxType {
 		start := time.Now()
 		dkgCli := f3b.NewDkgCli()
 		label := msg.From().Bytes()
@@ -269,12 +187,6 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 		receipt.ContractAddress = crypto.CreateAddress(evm.TxContext.Origin, tx.Nonce())
 	}
 
-	// If this is the execution of an encrypted tx, then add the key to the receipt
-	if isExecEncrypted {
-		receipt.Key = []byte("TODO")
-
-	}
-
 	// Set the receipt logs and create the bloom filter.
 	receipt.Logs = statedb.GetLogs(tx.Hash(), blockHash)
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
@@ -288,7 +200,7 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg vm.Config, isExecEncrypted bool) (*types.Receipt, error) {
+func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg vm.Config) (*types.Receipt, error) {
 	msg, err := tx.AsMessage(types.MakeSigner(config, header.Number), header.BaseFee)
 	if err != nil {
 		return nil, err
@@ -296,5 +208,5 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	// Create a new context to be used in the EVM environment
 	blockContext := NewEVMBlockContext(header, bc, author)
 	vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, config, cfg)
-	return applyTransaction(msg, config, author, gp, statedb, header.Number, header.Hash(), tx, usedGas, vmenv, isExecEncrypted)
+	return applyTransaction(msg, config, author, gp, statedb, header.Number, header.Hash(), tx, usedGas, vmenv)
 }

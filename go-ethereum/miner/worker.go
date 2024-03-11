@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -99,7 +98,7 @@ type environment struct {
 	txs      []*types.Transaction
 	receipts []*types.Receipt
 	uncles   map[common.Hash]*types.Header
-	shadowTxs []*types.ShadowTransaction
+	shadowTxs []*types.Transaction
 }
 
 // copy creates a deep copy of environment.
@@ -122,6 +121,8 @@ func (env *environment) copy() *environment {
 	// to do the expensive deep copy for them.
 	cpy.txs = make([]*types.Transaction, len(env.txs))
 	copy(cpy.txs, env.txs)
+	cpy.shadowTxs = make([]*types.Transaction, len(env.shadowTxs))
+	copy(cpy.shadowTxs, env.shadowTxs)
 	cpy.uncles = make(map[common.Hash]*types.Header)
 	for hash, uncle := range env.uncles {
 		cpy.uncles[hash] = uncle
@@ -843,59 +844,13 @@ func isExecuteEncryptedTx(env *environment, cf *params.ChainConfig, tx *types.Tr
 	return false, nil
 }
 
-func (w *worker) retrieveOrderingCoinbase(numbersBack uint64) common.Address {
-	currentNumber := w.chain.CurrentHeader().Number.Uint64()
-	// regardless of the genesis block
-	if currentNumber <= numbersBack {
-		panic("try to retrieve genesis block for ordering coinbase")
-	}
-
-	previousNumber := currentNumber - numbersBack
-	preBlock := w.chain.GetBlockByNumber(previousNumber)
-	// log.Error(fmt.Sprintf("inspect prev block header: %+v", preBlock.Header()))
-
-	return preBlock.Coinbase()
-}
-
 func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*types.Log, error) {
 	snap := env.state.Snapshot()
 
-	var (
-		err error
-		// receipt *types.Receipt = types.NewReceipt([]byte("Bingo! Enc receipt"), false, 10)
-		receipt *types.Receipt
-		// sender  common.Address
-		isExecEnc bool
+	beneficiary := env.coinbase
+	log.Info(fmt.Sprintf("[Other] use current coinbase: %v", beneficiary))
 
-		beneficiary common.Address
-		start       time.Time
-	)
-
-	isExecEnc, err = isExecuteEncryptedTx(env, w.chainConfig, tx)
-	if err != nil {
-		env.state.RevertToSnapshot(snap)
-		return nil, err
-	}
-
-	if isExecEnc {
-		orderBlock := core.RetrieveOrderBlock(w.chain, types.EncryptedBlockDelay)
-		rcAuth, err := w.engine.Author(orderBlock.Header())
-		if err != nil {
-			panic(fmt.Sprintf("fail to retrieve author: %s", err))
-		}
-		beneficiary = rcAuth
-		log.Info(fmt.Sprintf("[ENC EXEC]use previous coinbase (order block signer): %v", beneficiary))
-	} else {
-		beneficiary = env.coinbase
-		log.Info(fmt.Sprintf("[Other] use current coinbase: %v", beneficiary))
-	}
-
-	if tx.Type() == types.EncryptedTxType && !isExecEnc {
-		// measuring ordering time
-		start = time.Now()
-	}
-
-	receipt, err = core.ApplyTransaction(w.chainConfig, w.chain, &beneficiary, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig(), isExecEnc)
+	receipt, err := core.ApplyTransaction(w.chainConfig, w.chain, &beneficiary, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig())
 
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
@@ -910,21 +865,6 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 
 	env.txs = append(env.txs, tx)
 	env.receipts = append(env.receipts, receipt)
-
-	if tx.Type() == types.EncryptedTxType && !isExecEnc {
-		// measuring ordering time
-		start = time.Now()
-		elapsed := time.Since(start)
-		line := fmt.Sprintf("[ENC][EXE][Ordering single]: %s\n", elapsed)
-		log.Info(line)
-		f, err := os.OpenFile("ordlogfile", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-		if err != nil {
-			panic("wrong file")
-		}
-
-		f.Write([]byte(line))
-		f.Close()
-	}
 
 	return receipt.Logs, nil
 }
@@ -1086,7 +1026,7 @@ func (w *worker) prepareWork(genParams *generateParams) (*environment, error) {
 		Number:     num.Add(num, common.Big1),
 		GasLimit:   core.CalcGasLimit(parent.GasLimit(), w.config.GasCeil),
 		Time:       timestamp,
-		Coinbase:   genParams.coinbase,
+		ShadowCoinbase:   genParams.coinbase,
 	}
 	if !genParams.noExtra && len(w.extra) != 0 {
 		header.Extra = w.extra
@@ -1142,7 +1082,7 @@ func (w *worker) prepareWork(genParams *generateParams) (*environment, error) {
 // be customized with the plugin in the future.
 func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 	// Split the pending transactions into locals and remotes
-	// Fill the block with all available pending transactions.
+	// Fill the shadow block with all available pending transactions.
 	pending := w.eth.TxPool().Pending(true)
 	localTxs, remoteTxs := make(map[common.Address]types.Transactions), pending
 	for _, account := range w.eth.TxPool().Locals() {
@@ -1151,9 +1091,10 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 			localTxs[account] = txs
 		}
 	}
-	start := time.Now()
 
-	pendingEncryptedTxs := RetrievePendingEncryptedTransactions(w.chain, types.EncryptedBlockDelay)
+	pendingEncryptedTxs := core.RetrieveShadowTransactions(w.chain, types.EncryptedBlockDelay)
+
+	log.Debug("retrived shadow txs", "txs", pendingEncryptedTxs)
 	if len(pendingEncryptedTxs) > 0 {
 		txs := types.NewEncryptedTxsByConsensus(env.signer, pendingEncryptedTxs)
 		if err := w.commitTransactions(env, txs, interrupt); err != nil {
@@ -1161,83 +1102,21 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		}
 	}
 
-	if len(pendingEncryptedTxs) > 0 {
-		elapsed := time.Since(start)
-		line := fmt.Sprintf("[ENC][EXE][Elapse]: %s\n", elapsed)
-		log.Info(line)
-		f, err := os.OpenFile("exelogfile", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-		if err != nil {
-			panic("wrong file")
-		}
+	env.coinbase = core.RetrieveShadowCoinbase(w.chain, types.EncryptedBlockDelay)
 
-		f.Write([]byte(line))
-		f.Close()
+	// FIXME: need to account for shadow block gas
+	shadowTxs := []*types.Transaction{}
+	for _, tx := range localTxs {
+		shadowTxs = append(shadowTxs, tx...)
+	}
+	for _, tx := range remoteTxs {
+		shadowTxs = append(shadowTxs, tx...)
 	}
 
-	start = time.Now()
-
-	if len(localTxs) > 0 {
-		txs := types.NewTransactionsByPriceAndNonce(env.signer, localTxs, env.header.BaseFee)
-		if err := w.commitTransactions(env, txs, interrupt); err != nil {
-			return err
-		}
-	}
-	if len(remoteTxs) > 0 {
-		txs := types.NewTransactionsByPriceAndNonce(env.signer, remoteTxs, env.header.BaseFee)
-		if err := w.commitTransactions(env, txs, interrupt); err != nil {
-			return err
-		}
-	}
-
-	if len(localTxs)+len(remoteTxs) > 0 {
-		elapsed := time.Since(start)
-		line := fmt.Sprintf("[PLN][EXE][Elapse]: %v\n", elapsed.Seconds())
-		log.Info(line)
-		f, err := os.OpenFile("plnlogfile", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-		if err != nil {
-			panic("wrong file")
-		}
-
-		f.Write([]byte(line))
-		f.Close()
-	}
+	log.Debug("selected shadow txs", "txs", shadowTxs)
+	env.shadowTxs = shadowTxs
 
 	return nil
-}
-
-func RetrievePendingEncryptedTransactions(wc *core.BlockChain, numbersBack uint64) types.Transactions {
-	encryptedTxs := make(types.Transactions, 0)
-	currentNumber := wc.CurrentHeader().Number.Uint64()
-	// regardless of the genesis block
-	if currentNumber <= numbersBack {
-		return encryptedTxs
-	}
-
-	previousNumber := currentNumber - numbersBack
-	preBlock := wc.GetBlockByNumber(previousNumber)
-
-	txs := preBlock.Transactions()
-	receipts := wc.GetReceiptsByHash(preBlock.Hash())
-
-	if len(txs) != len(receipts) {
-		panic("unequal length of txs and receipts")
-	}
-	var rc *types.Receipt
-
-	// retrieve all the pending encrypted txs that should be executed in this block
-	for i, tx := range txs {
-		if tx.Type() == types.EncryptedTxType {
-			rc = receipts[i]
-
-			if rc.Key == nil || len(rc.Key) == 0 { // if there is no key attached to the receipt, this encrypted tx must have not been executed
-				log.Info(fmt.Sprintf("[ENC][RETRIEVE] tx hash: %v", tx.Hash().String()))
-				encryptedTxs = append(encryptedTxs, tx)
-			}
-		}
-	}
-
-	return encryptedTxs
-
 }
 
 // generateWork generates a sealing block based on the given parameters.
@@ -1251,6 +1130,7 @@ func (w *worker) generateWork(params *generateParams) (*types.Block, error) {
 	if !params.noTxs {
 		w.fillTransactions(nil, work)
 	}
+	log.Debug("finalized shadow", "txs", work.shadowTxs)
 	return w.engine.FinalizeAndAssemble(w.chain, work.header, work.state, work.txs, work.unclelist(), work.receipts, work.shadowTxs)
 }
 
@@ -1309,6 +1189,7 @@ func (w *worker) commit(env *environment, interval func(), update bool, start ti
 		// Create a local environment copy, avoid the data race with snapshot state.
 		// https://github.com/ethereum/go-ethereum/issues/24299
 		env := env.copy()
+		log.Debug("here", "env", env)
 		block, err := w.engine.FinalizeAndAssemble(w.chain, env.header, env.state, env.txs, env.unclelist(), env.receipts, env.shadowTxs)
 		if err != nil {
 			return err

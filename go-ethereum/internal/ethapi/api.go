@@ -1551,7 +1551,6 @@ func (s *TransactionAPI) GetTransactionCount(ctx context.Context, address common
 func (s *TransactionAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) (*RPCTransaction, error) {
 	// Try to return an already finalized transaction
 	tx, blockHash, blockNumber, index, err := s.b.GetTransaction(ctx, hash)
-	fmt.Printf("eth read tx %v, blockhash %v, number %v, index %v, err %v\n", tx, blockHash, blockNumber, index, err)
 	if err != nil {
 		return nil, err
 	}
@@ -1560,7 +1559,6 @@ func (s *TransactionAPI) GetTransactionByHash(ctx context.Context, hash common.H
 		if err != nil {
 			return nil, err
 		}
-		fmt.Printf("success return: %v, err: %v\n", s.b.ChainConfig(), err)
 		return newRPCTransaction(tx, blockHash, blockNumber, index, header.BaseFee, s.b.ChainConfig()), nil
 	}
 	// No finalized transaction, try to retrieve it from the pool

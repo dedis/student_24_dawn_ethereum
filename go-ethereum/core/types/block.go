@@ -163,7 +163,7 @@ func (h *Header) EmptyReceipts() bool {
 // a block's data contents (transactions and uncles) together.
 type Body struct {
 	Transactions []*Transaction
-	ShadowTransactions []*ShadowTransaction
+	ShadowTransactions []*Transaction
 	Uncles       []*Header
 }
 
@@ -183,14 +183,14 @@ type Block struct {
 	ReceivedFrom interface{}
 
 	// F3B extensions
-	shadowTransactions ShadowTransactions
+	shadowTransactions Transactions
 }
 
 // "external" block encoding. used for eth protocol, etc.
 type extblock struct {
 	Header *Header
 	Txs       []*Transaction
-	ShadowTxs []*ShadowTransaction
+	ShadowTxs []*Transaction
 	Uncles    []*Header
 }
 
@@ -201,7 +201,7 @@ type extblock struct {
 // The values of TxHash, UncleHash, ReceiptHash and Bloom in header
 // are ignored and set to values derived from the given txs, uncles
 // and receipts.
-func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*Receipt, shadowTxs []*ShadowTransaction, hasher TrieHasher) *Block {
+func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*Receipt, shadowTxs []*Transaction, hasher TrieHasher) *Block {
 	b := &Block{header: CopyHeader(header)}
 
 	// TODO: panic if len(txs) != len(receipts)
@@ -234,8 +234,8 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 	if len(shadowTxs) == 0 {
 		b.header.ShadowTxHash = EmptyRootHash
 	} else {
-		b.header.ShadowTxHash = DeriveSha(ShadowTransactions(shadowTxs), hasher)
-		b.shadowTransactions = make(ShadowTransactions, len(shadowTxs))
+		b.header.ShadowTxHash = DeriveSha(Transactions(shadowTxs), hasher)
+		b.shadowTransactions = make(Transactions, len(shadowTxs))
 		copy(b.shadowTransactions, shadowTxs)
 	}
 
@@ -287,6 +287,7 @@ func (b *Block) EncodeRLP(w io.Writer) error {
 		Header: b.header,
 		Txs:    b.transactions,
 		Uncles: b.uncles,
+		ShadowTxs:    b.shadowTransactions,
 	})
 }
 
@@ -294,7 +295,7 @@ func (b *Block) EncodeRLP(w io.Writer) error {
 
 func (b *Block) Uncles() []*Header          { return b.uncles }
 func (b *Block) Transactions() Transactions { return b.transactions }
-func (b *Block) ShadowTransactions() ShadowTransactions { return b.shadowTransactions }
+func (b *Block) ShadowTransactions() Transactions { return b.shadowTransactions }
 
 func (b *Block) Transaction(hash common.Hash) *Transaction {
 	for _, transaction := range b.transactions {

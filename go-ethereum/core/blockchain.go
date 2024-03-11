@@ -698,6 +698,36 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 	return rootNumber, bc.loadLastState()
 }
 
+func retrieveShadowBlock(wc *BlockChain, numbersBack uint64) *types.Block {
+	currentNumber := wc.CurrentHeader().Number.Uint64()
+	// regardless of the genesis block
+	if currentNumber <= numbersBack {
+		return nil
+	}
+
+	previousNumber := currentNumber - numbersBack
+	return wc.GetBlockByNumber(previousNumber)
+}
+
+func RetrieveShadowTransactions(wc *BlockChain, numbersBack uint64) types.Transactions {
+	block:= retrieveShadowBlock(wc, numbersBack)
+	log.Debug("retrieve", "block", block)
+	if block == nil {
+		return nil
+	}
+
+	return append(types.Transactions{}, block.ShadowTransactions()...)
+}
+
+func RetrieveShadowCoinbase(wc *BlockChain, numbersBack uint64) common.Address {
+	block:= retrieveShadowBlock(wc, numbersBack)
+	if block == nil {
+		return common.Address{}
+	}
+
+	return block.Header().ShadowCoinbase
+}
+
 // SnapSyncCommitHead sets the current head block to the one defined by the hash
 // irrelevant what the chain contents were prior.
 func (bc *BlockChain) SnapSyncCommitHead(hash common.Hash) error {

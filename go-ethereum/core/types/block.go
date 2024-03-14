@@ -387,6 +387,7 @@ func (b *Block) WithBody(transactions []*Transaction, uncles []*Header, shadowTr
 		header:       CopyHeader(b.header),
 		transactions: make([]*Transaction, len(transactions)),
 		uncles:       make([]*Header, len(uncles)),
+		shadowTransactions: make([]*Transaction, len(shadowTransactions)),
 	}
 	copy(block.transactions, transactions)
 	for i := range uncles {

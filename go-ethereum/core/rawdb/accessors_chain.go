@@ -380,11 +380,13 @@ func ReadHeader(db ethdb.Reader, hash common.Hash, number uint64) *types.Header 
 	if len(data) == 0 {
 		return nil
 	}
+	log.Debug("ReadHeader", "hash", hash, "number", number, "data", data)
 	header := new(types.Header)
 	if err := rlp.Decode(bytes.NewReader(data), header); err != nil {
 		log.Error("Invalid block header RLP", "hash", hash, "err", err)
 		return nil
 	}
+	log.Debug("ReadHeader", "header", header)
 	return header
 }
 
@@ -398,6 +400,8 @@ func WriteHeader(db ethdb.KeyValueWriter, header *types.Header) {
 	// Write the hash -> number mapping
 	WriteHeaderNumber(db, hash, number)
 
+	log.Debug("WriteHeader", "hash", hash, "number", number, "header", header)
+
 	// Write the encoded header
 	data, err := rlp.EncodeToBytes(header)
 	if err != nil {
@@ -407,6 +411,10 @@ func WriteHeader(db ethdb.KeyValueWriter, header *types.Header) {
 	if err := db.Put(key, data); err != nil {
 		log.Crit("Failed to store header", "err", err)
 	}
+	log.Debug("WriteHeader", "data", data)
+	header2 := new(types.Header)
+	rlp.DecodeBytes(data, header2)
+	log.Debug("WriteHeader", "header2", header2)
 }
 
 // DeleteHeader removes all block header data associated with a hash.

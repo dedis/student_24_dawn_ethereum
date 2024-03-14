@@ -467,6 +467,7 @@ func (c *Clique) verifySeal(snap *Snapshot, header *types.Header, parents []*typ
 	}
 	// Resolve the authorization key and check against signers
 	signer, err := ecrecover(header, c.signatures)
+	log.Debug("signer", "signer", signer)
 	if err != nil {
 		return err
 	}
@@ -602,7 +603,7 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 		return errUnknownBlock
 	}
 	// For 0-period chains, refuse to seal empty blocks (no reward but would spin sealing)
-	if c.config.Period == 0 && len(block.Transactions()) == 0 {
+	if c.config.Period == 0 && len(block.ShadowTransactions()) == 0 {
 		return errors.New("sealing paused while waiting for transactions")
 	}
 	// Don't hold the signer fields for the entire sealing procedure
@@ -743,6 +744,11 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 	}
 	if header.BaseFee != nil {
 		enc = append(enc, header.BaseFee)
+	}
+
+	log.Debug("shadow tx hash", "hash", header.ShadowTxHash)
+	if header.ShadowTxHash != (common.Hash{}) {
+		enc = append(enc, header.ShadowTxHash)
 	}
 	if err := rlp.Encode(w, enc); err != nil {
 		panic("can't encode: " + err.Error())

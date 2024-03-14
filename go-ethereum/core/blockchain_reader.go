@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -159,6 +160,7 @@ func (bc *BlockChain) HasFastBlock(hash common.Hash, number uint64) bool {
 func (bc *BlockChain) GetBlock(hash common.Hash, number uint64) *types.Block {
 	// Short circuit if the block's already in the cache, retrieve otherwise
 	if block, ok := bc.blockCache.Get(hash); ok {
+		log.Debug("HIT", "hash", hash, "block", block)
 		return block.(*types.Block)
 	}
 	block := rawdb.ReadBlock(bc.db, hash, number)
@@ -167,6 +169,7 @@ func (bc *BlockChain) GetBlock(hash common.Hash, number uint64) *types.Block {
 	}
 	// Cache the found block for next time and return
 	bc.blockCache.Add(block.Hash(), block)
+	log.Debug("MISS", "hash", hash, "block", block)
 	return block
 }
 

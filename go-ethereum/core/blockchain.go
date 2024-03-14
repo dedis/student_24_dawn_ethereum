@@ -706,12 +706,13 @@ func retrieveShadowBlock(wc *BlockChain, numbersBack uint64) *types.Block {
 	}
 
 	previousNumber := currentNumber - numbersBack
-	return wc.GetBlockByNumber(previousNumber)
+	block:=wc.GetBlockByNumber(previousNumber)
+	log.Debug("retrieve", "munber", previousNumber, "block", block)
+	return block
 }
 
 func RetrieveShadowTransactions(wc *BlockChain, numbersBack uint64) types.Transactions {
 	block:= retrieveShadowBlock(wc, numbersBack)
-	log.Debug("retrieve", "block", block)
 	if block == nil {
 		return nil
 	}

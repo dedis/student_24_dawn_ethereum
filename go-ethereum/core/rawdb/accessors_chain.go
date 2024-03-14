@@ -380,13 +380,11 @@ func ReadHeader(db ethdb.Reader, hash common.Hash, number uint64) *types.Header 
 	if len(data) == 0 {
 		return nil
 	}
-	log.Debug("ReadHeader", "hash", hash, "number", number, "data", data)
 	header := new(types.Header)
 	if err := rlp.Decode(bytes.NewReader(data), header); err != nil {
 		log.Error("Invalid block header RLP", "hash", hash, "err", err)
 		return nil
 	}
-	log.Debug("ReadHeader", "header", header)
 	return header
 }
 
@@ -400,8 +398,6 @@ func WriteHeader(db ethdb.KeyValueWriter, header *types.Header) {
 	// Write the hash -> number mapping
 	WriteHeaderNumber(db, hash, number)
 
-	log.Debug("WriteHeader", "hash", hash, "number", number, "header", header)
-
 	// Write the encoded header
 	data, err := rlp.EncodeToBytes(header)
 	if err != nil {
@@ -411,10 +407,6 @@ func WriteHeader(db ethdb.KeyValueWriter, header *types.Header) {
 	if err := db.Put(key, data); err != nil {
 		log.Crit("Failed to store header", "err", err)
 	}
-	log.Debug("WriteHeader", "data", data)
-	header2 := new(types.Header)
-	rlp.DecodeBytes(data, header2)
-	log.Debug("WriteHeader", "header2", header2)
 }
 
 // DeleteHeader removes all block header data associated with a hash.
@@ -510,6 +502,7 @@ func ReadBody(db ethdb.Reader, hash common.Hash, number uint64) *types.Body {
 		log.Error("Invalid block body RLP", "hash", hash, "err", err)
 		return nil
 	}
+	log.Debug("ReadBody", "body", body)
 	return body
 }
 
@@ -519,6 +512,7 @@ func WriteBody(db ethdb.KeyValueWriter, hash common.Hash, number uint64, body *t
 	if err != nil {
 		log.Crit("Failed to RLP encode body", "err", err)
 	}
+	log.Debug("WriteBody", "body", body)
 	WriteBodyRLP(db, hash, number, data)
 }
 
@@ -791,7 +785,7 @@ func ReadBlock(db ethdb.Reader, hash common.Hash, number uint64) *types.Block {
 	if body == nil {
 		return nil
 	}
-	return types.NewBlockWithHeader(header).WithBody(body.Transactions, body.Uncles)
+	return types.NewBlockWithHeader(header).WithBody(body.Transactions, body.Uncles, body.ShadowTransactions)
 }
 
 // WriteBlock serializes a block into the database, header and body separately.
@@ -891,7 +885,7 @@ func ReadBadBlock(db ethdb.Reader, hash common.Hash) *types.Block {
 	}
 	for _, bad := range badBlocks {
 		if bad.Header.Hash() == hash {
-			return types.NewBlockWithHeader(bad.Header).WithBody(bad.Body.Transactions, bad.Body.Uncles)
+			return types.NewBlockWithHeader(bad.Header).WithBody(bad.Body.Transactions, bad.Body.Uncles, bad.Body.ShadowTransactions)
 		}
 	}
 	return nil
@@ -910,7 +904,7 @@ func ReadAllBadBlocks(db ethdb.Reader) []*types.Block {
 	}
 	var blocks []*types.Block
 	for _, bad := range badBlocks {
-		blocks = append(blocks, types.NewBlockWithHeader(bad.Header).WithBody(bad.Body.Transactions, bad.Body.Uncles))
+		blocks = append(blocks, types.NewBlockWithHeader(bad.Header).WithBody(bad.Body.Transactions, bad.Body.Uncles, bad.Body.ShadowTransactions))
 	}
 	return blocks
 }

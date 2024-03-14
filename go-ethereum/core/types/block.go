@@ -151,7 +151,7 @@ func (h *Header) SanityCheck() error {
 // EmptyBody returns true if there is no additional 'body' to complete the header
 // that is: no transactions and no uncles.
 func (h *Header) EmptyBody() bool {
-	return h.TxHash == EmptyRootHash && h.UncleHash == EmptyUncleHash
+	return h.TxHash == EmptyRootHash && h.UncleHash == EmptyUncleHash && h.ShadowTxHash == EmptyRootHash
 }
 
 // EmptyReceipts returns true if there are no receipts for this header/block.
@@ -163,8 +163,8 @@ func (h *Header) EmptyReceipts() bool {
 // a block's data contents (transactions and uncles) together.
 type Body struct {
 	Transactions []*Transaction
-	ShadowTransactions []*Transaction
 	Uncles       []*Header
+	ShadowTransactions []*Transaction
 }
 
 // Block represents an entire block in the Ethereum blockchain.
@@ -334,7 +334,7 @@ func (b *Block) BaseFee() *big.Int {
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
 // Body returns the non-header content of the block.
-func (b *Block) Body() *Body { return &Body{b.transactions, b.shadowTransactions, b.uncles} }
+func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles, b.shadowTransactions} }
 
 // Size returns the true RLP encoded storage size of the block, either by encoding
 // and returning it, or returning a previously cached value.
@@ -374,14 +374,15 @@ func (b *Block) WithSeal(header *Header) *Block {
 	cpy := *header
 
 	return &Block{
-		header:       &cpy,
-		transactions: b.transactions,
-		uncles:       b.uncles,
+		header:             &cpy,
+		transactions:       b.transactions,
+		uncles:             b.uncles,
+		shadowTransactions: b.shadowTransactions,
 	}
 }
 
 // WithBody returns a new block with the given transaction and uncle contents.
-func (b *Block) WithBody(transactions []*Transaction, uncles []*Header) *Block {
+func (b *Block) WithBody(transactions []*Transaction, uncles []*Header, shadowTransactions []*Transaction) *Block {
 	block := &Block{
 		header:       CopyHeader(b.header),
 		transactions: make([]*Transaction, len(transactions)),
@@ -391,6 +392,7 @@ func (b *Block) WithBody(transactions []*Transaction, uncles []*Header) *Block {
 	for i := range uncles {
 		block.uncles[i] = CopyHeader(uncles[i])
 	}
+	copy(block.shadowTransactions, shadowTransactions)
 	return block
 }
 

@@ -5,6 +5,7 @@
 
 package types
 
+import "github.com/ethereum/go-ethereum/common"
 import "github.com/ethereum/go-ethereum/rlp"
 import "io"
 
@@ -41,7 +42,9 @@ func (obj *Header) EncodeRLP(_w io.Writer) error {
 	w.WriteBytes(obj.MixDigest[:])
 	w.WriteBytes(obj.Nonce[:])
 	_tmp1 := obj.BaseFee != nil
-	if _tmp1 {
+	_tmp2 := obj.ShadowCoinbase != (common.Address{})
+	_tmp3 := obj.ShadowTxHash != (common.Hash{})
+	if _tmp1 || _tmp2 || _tmp3 {
 		if obj.BaseFee == nil {
 			w.Write(rlp.EmptyString)
 		} else {
@@ -50,6 +53,12 @@ func (obj *Header) EncodeRLP(_w io.Writer) error {
 			}
 			w.WriteBigInt(obj.BaseFee)
 		}
+	}
+	if _tmp2 || _tmp3 {
+		w.WriteBytes(obj.ShadowCoinbase[:])
+	}
+	if _tmp3 {
+		w.WriteBytes(obj.ShadowTxHash[:])
 	}
 	w.ListEnd(_tmp0)
 	return w.Flush()

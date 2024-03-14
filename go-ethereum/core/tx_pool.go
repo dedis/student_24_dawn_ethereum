@@ -619,7 +619,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Make sure the transaction is signed properly.
 	from, err := types.Sender(pool.signer, tx)
 	if err != nil {
-		log.Error("#error triggered here 1")
 		return ErrInvalidSender
 	}
 	// Drop non-local transactions under our own minimal accepted gas price or tip
@@ -905,7 +904,6 @@ func (pool *TxPool) addTxs(txs []*types.Transaction, local, sync bool) []error {
 		// obtaining lock
 		_, err := types.Sender(pool.signer, tx)
 		if err != nil {
-			log.Error("#error triggered here 2")
 			errs[i] = ErrInvalidSender
 			invalidTxMeter.Mark(1)
 			continue

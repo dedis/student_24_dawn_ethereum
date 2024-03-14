@@ -707,7 +707,6 @@ func retrieveShadowBlock(wc *BlockChain, numbersBack uint64) *types.Block {
 
 	previousNumber := currentNumber - numbersBack
 	block:=wc.GetBlockByNumber(previousNumber)
-	log.Debug("retrieve", "munber", previousNumber, "block", block)
 	return block
 }
 

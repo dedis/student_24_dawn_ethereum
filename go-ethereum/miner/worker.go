@@ -589,7 +589,6 @@ func (w *worker) mainLoop() {
 			// already included in the current sealing block. These transactions will
 			// be automatically eliminated.
 			if !w.isRunning() && w.current != nil {
-				log.Info("## enter txsCh in clique: if")
 				// If block is already full, abort
 				if gp := w.current.gasPool; gp != nil && gp.Gas() < params.TxGas {
 					continue

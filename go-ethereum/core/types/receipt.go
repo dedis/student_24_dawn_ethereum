@@ -27,7 +27,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -331,14 +330,11 @@ func decodeStoredReceiptRLP(r *ReceiptForStorage, blob []byte) error {
 		r.Logs[i] = (*Log)(log)
 	}
 	r.Bloom = CreateBloom(Receipts{(*Receipt)(r)})
-	r.Key = stored.Key
-	// log.Error(fmt.Sprintf("decode v0 called: %v", len(stored.Key)))
 
 	return nil
 }
 
 func decodeV4StoredReceiptRLP(r *ReceiptForStorage, blob []byte) error {
-	log.Error("decode v4 called")
 	var stored v4StoredReceiptRLP
 	if err := rlp.DecodeBytes(blob, &stored); err != nil {
 		return err
@@ -360,7 +356,6 @@ func decodeV4StoredReceiptRLP(r *ReceiptForStorage, blob []byte) error {
 }
 
 func decodeV3StoredReceiptRLP(r *ReceiptForStorage, blob []byte) error {
-	log.Error("decode v3 called")
 	var stored v3StoredReceiptRLP
 	if err := rlp.DecodeBytes(blob, &stored); err != nil {
 		return err

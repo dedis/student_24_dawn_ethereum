@@ -502,7 +502,6 @@ func ReadBody(db ethdb.Reader, hash common.Hash, number uint64) *types.Body {
 		log.Error("Invalid block body RLP", "hash", hash, "err", err)
 		return nil
 	}
-	log.Debug("ReadBody", "body", body)
 	return body
 }
 
@@ -512,7 +511,6 @@ func WriteBody(db ethdb.KeyValueWriter, hash common.Hash, number uint64, body *t
 	if err != nil {
 		log.Crit("Failed to RLP encode body", "err", err)
 	}
-	log.Debug("WriteBody", "body", body)
 	WriteBodyRLP(db, hash, number, data)
 }
 

@@ -1609,8 +1609,6 @@ func (s *TransactionAPI) GetTransactionReceipt(ctx context.Context, hash common.
 	signer := types.MakeSigner(s.b.ChainConfig(), bigblock)
 	from, _ := types.Sender(signer, tx)
 
-	// log.Error(fmt.Sprintf("$$ len of key in receipt: %v", len(receipt.Key)))
-
 	fields := map[string]interface{}{
 		"blockHash":         blockHash,
 		"blockNumber":       hexutil.Uint64(blockNumber),

@@ -467,7 +467,6 @@ func (c *Clique) verifySeal(snap *Snapshot, header *types.Header, parents []*typ
 	}
 	// Resolve the authorization key and check against signers
 	signer, err := ecrecover(header, c.signatures)
-	log.Debug("signer", "signer", signer)
 	if err != nil {
 		return err
 	}
@@ -578,7 +577,6 @@ func (c *Clique) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *
 	c.Finalize(chain, header, state, txs, uncles, shadowTxs)
 
 	// Assemble and return the final block for sealing
-	log.Debug("clique", "txs", shadowTxs)
 	return types.NewBlock(header, txs, nil, receipts, shadowTxs, trie.NewStackTrie(nil)), nil
 }
 
@@ -746,7 +744,6 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 		enc = append(enc, header.BaseFee)
 	}
 
-	log.Debug("shadow tx hash", "hash", header.ShadowTxHash)
 	if header.ShadowTxHash != (common.Hash{}) {
 		enc = append(enc, header.ShadowTxHash)
 	}

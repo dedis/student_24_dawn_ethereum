@@ -184,7 +184,6 @@ func NewLondonSigner(chainId *big.Int) Signer {
 }
 
 func (s londonSigner) Sender(tx *Transaction) (common.Address, error) {
-	log.Error("### london sender")
 	if tx.Type() != DynamicFeeTxType {
 		return s.eip2930Signer.Sender(tx)
 	}
@@ -204,7 +203,6 @@ func (s londonSigner) Equal(s2 Signer) bool {
 }
 
 func (s londonSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	fmt.Println("### london signature")
 	txdata, ok := tx.inner.(*DynamicFeeTx)
 	if !ok {
 		return s.eip2930Signer.SignatureValues(tx, sig)
@@ -258,11 +256,9 @@ func (s eip2930Signer) Equal(s2 Signer) bool {
 }
 
 func (s eip2930Signer) Sender(tx *Transaction) (common.Address, error) {
-	log.Error("### eip2930 sender")
 	V, R, S := tx.RawSignatureValues()
 	switch tx.Type() {
 	case LegacyTxType:
-		log.Error("#### eip2930 signer 1")
 		if !tx.Protected() {
 			return HomesteadSigner{}.Sender(tx)
 		}
@@ -285,7 +281,6 @@ func (s eip2930Signer) Sender(tx *Transaction) (common.Address, error) {
 }
 
 func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	fmt.Println("### eip2930 signature")
 	switch txdata := tx.inner.(type) {
 	case *LegacyTx:
 		return s.EIP155Signer.SignatureValues(tx, sig)
@@ -379,13 +374,11 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	// 	return common.Address{}, ErrTxTypeNotSupported
 	// }
 	if !tx.Protected() {
-		log.Error("#### eip155 signer 2")
 		return HomesteadSigner{}.Sender(tx)
 	}
 	if tx.ChainId().Cmp(s.chainId) != 0 {
 		return common.Address{}, ErrInvalidChainId
 	}
-	log.Info("#### eip155 signer 3")
 	V, R, S := tx.RawSignatureValues()
 	V = new(big.Int).Sub(V, s.chainIdMul)
 	V.Sub(V, big8)
@@ -437,12 +430,10 @@ func (s HomesteadSigner) Equal(s2 Signer) bool {
 // SignatureValues returns signature values. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error) {
-	fmt.Println("### Homestead signature")
 	return hs.FrontierSigner.SignatureValues(tx, sig)
 }
 
 func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
-	log.Error("### HomesteadSigner sender")
 	if tx.Type() != LegacyTxType {
 		return common.Address{}, ErrTxTypeNotSupported
 	}
@@ -462,7 +453,6 @@ func (s FrontierSigner) Equal(s2 Signer) bool {
 }
 
 func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
-	log.Error("### FrontierSigner sender")
 	if tx.Type() != LegacyTxType {
 		return common.Address{}, ErrTxTypeNotSupported
 	}
@@ -473,7 +463,6 @@ func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
 // SignatureValues returns signature values. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error) {
-	fmt.Println("### FrontierSigner signature")
 	if tx.Type() != LegacyTxType {
 		return nil, nil, nil, ErrTxTypeNotSupported
 	}

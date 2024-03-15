@@ -464,7 +464,8 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		}
 	}
 
-	log.Info(fmt.Sprintf("ret = %x", ret))
+	log.Info("tx executed", "err", vmerr, "ret", ret)
+
 	return &ExecutionResult{
 		UsedGas:    st.gasUsed(),
 		Err:        vmerr,

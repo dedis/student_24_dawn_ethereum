@@ -10,6 +10,7 @@ contract Auction is ERC721 {
     uint256 public highestBidAmount;
     address public highestBidder;
     uint256 public deadline;
+    uint256 public constant duration = 4 /* blocks */;
     address payable public immutable proceedsReceiver;
 
     function name() public pure override returns (string memory) {
@@ -26,7 +27,12 @@ contract Auction is ERC721 {
 
     constructor(address payable _proceedsReceiver) {
         proceedsReceiver = _proceedsReceiver;
-        deadline = block.number + 12;
+        deadline = 0;
+    }
+
+    function start() external {
+	require(deadline <= block.number, "Auction ongoing");
+	deadline = block.number + duration;
     }
 
     function bid() external payable {
@@ -44,7 +50,7 @@ contract Auction is ERC721 {
     }
 
     function claim() external {
-        require(block.number >= deadline, "Auction has not ended");
+        require(block.number >= deadline, "Auction ongoing");
         require(highestBidder != address(0), "No bids received");
         _mint(highestBidder, 0);
         proceedsReceiver.safeTransferETH(highestBidAmount);
@@ -52,6 +58,5 @@ contract Auction is ERC721 {
         // reset auction
         highestBidAmount = 0;
         highestBidder = address(0);
-        deadline = block.number + 12;
     }
 }

@@ -60,13 +60,10 @@ cast send --async --legacy --unlocked -f 0xF5f341CD21350259A8666B3A5fE47132efF57
 go run ./script/send_enc -ethdir "$GETH_DATADIR" --sender 0xF5f341CD21350259A8666B3A5fE47132efF57838 -value 1 0x3712327B0E9fAE301cFED65eD6BDEf03629fCCFa $(cast sig 'bid()')
 go run ./script/send_enc -ethdir "$GETH_DATADIR" -value 2 0x3712327B0E9fAE301cFED65eD6BDEf03629fCCFa $(cast sig 'bid()')
 
-#cast send --gas-limit 100000 --async --legacy --unlocked --from 0xF5f341CD21350259A8666B3A5fE47132efF57838 --value 1 0x3712327B0E9fAE301cFED65eD6BDEf03629fCCFa 'bid()'
-#cast send --async --legacy --unlocked --value 2 0x3712327B0E9fAE301cFED65eD6BDEf03629fCCFa 'bid()'
-
-sleep 60
+sleep 40
 
 (cd contracts
-forge script --skip-simulation --broadcast --legacy --unlocked -f http://localhost:8545 --sender 0xF5f341CD21350259A8666B3A5fE47132efF57838 script/CloseAuction.s.sol
+forge script --broadcast --legacy --unlocked -f http://localhost:8545 --sender 0xF5f341CD21350259A8666B3A5fE47132efF57838 script/CloseAuction.s.sol
 )
 
 bash

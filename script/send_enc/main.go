@@ -65,7 +65,6 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 		ChainID:    chainID,
 		Nonce:      nonce,
 		GasFeeCap:  gasPrice,
-		GasTipCap:  big.NewInt(10),
 		Gas:        gasLimit,
 		Value:      val,
 		Payload:    ciphertext,

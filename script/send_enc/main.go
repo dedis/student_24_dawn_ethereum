@@ -8,7 +8,6 @@ import (
 	"log"
 	"math/big"
 	"os"
-	"path"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -103,9 +102,7 @@ func main2() error {
 	var to common.Address
 	var calldata []byte
 
-	var gethDir, sender string
-	flag.StringVar(&gethDir, "ethdir", ".ethereum/", "geth client directory")
-	flag.StringVar(&sender, "sender", "", "geth client directory")
+	sender := flag.String("sender", "", "sender address")
 	var value *big.Int
 	flag.Func("value", "call value in wei", func(s string) error {
 		var ok bool
@@ -129,16 +126,16 @@ func main2() error {
 	calldata = common.FromHex(flag.Arg(1))
 
 	// unlock the pre fund user account
-	ks := keystore.NewKeyStore(path.Join(gethDir, "keystore"), keystore.StandardScryptN, keystore.StandardScryptP)
+	ks := keystore.NewKeyStore(os.Getenv("ETH_KEYSTORE"), keystore.StandardScryptN, keystore.StandardScryptP)
 	var from accounts.Account
-	if sender == "" {
+	if sender == nil {
 		from = ks.Accounts()[0]
-	} else if !common.IsHexAddress(sender) {
-		return fmt.Errorf("invalid sender address: %s", sender)
+	} else if !common.IsHexAddress(*sender) {
+		return fmt.Errorf("invalid sender address: %s", *sender)
 	} else {
-	addr := common.HexToAddress(sender)
+	addr := common.HexToAddress(*sender)
 	if !ks.HasAddress(addr) {
-		return fmt.Errorf("no key for sender address: %s", sender)
+		return fmt.Errorf("no key for *sender address: %s", *sender)
 	}
 	from = accounts.Account{Address: addr}
 }
@@ -146,7 +143,7 @@ func main2() error {
 		return err
 	}
 
-	client, err := ethclient.Dial(path.Join(gethDir, "geth.ipc")); 
+	client, err := ethclient.Dial(os.Getenv("ETH_RPC_URL"))
 	if err != nil {
 		return err
 	}

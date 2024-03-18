@@ -81,7 +81,7 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 		return err
 	}
 
-	fmt.Println(signedTx.Hash().Hex())
+	fmt.Println("🔒", signedTx.Hash().Hex())
 	return nil
 }
 

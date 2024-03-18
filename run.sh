@@ -42,8 +42,6 @@ export F3B_DKG_PATH=$tempdir/dela/node1
 export GETH_DATADIR=$tempdir/ethereum
 export ETH_RPC_URL=http://localhost:8545
 
-go install github.com/ethereum/go-ethereum/cmd/geth
-
 geth -datadir "$GETH_DATADIR" init clique.json
 
 cp -R keystore/* -t "$GETH_DATADIR/keystore/"

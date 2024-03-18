@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {Auction} from "src/Auction.sol";
 
 contract CloseAuction is Script {
-    Auction private auction = Auction(0xF31b6eF875a924508bAB7A5922F6e34Ae2F65801);
+    Auction private auction = Auction(0xef434c1405f66997CBf4a04FDDed518C28a6a013);
     
 
     function run() public {

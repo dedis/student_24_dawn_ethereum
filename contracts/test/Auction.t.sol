@@ -11,7 +11,8 @@ contract AuctionTest is Test {
     address payable constant proceedsReceiver = payable(0x3333333333333333333333333333333333333333);
 
     function setUp() public {
-        auction = new Auction(proceedsReceiver);
+        vm.prank(proceedsReceiver);
+        auction = new Auction();
     }
 
     function test_bid() public {

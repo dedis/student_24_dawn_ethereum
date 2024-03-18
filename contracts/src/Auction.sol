@@ -25,8 +25,8 @@ contract Auction is ERC721 {
         return "https://dedis.ch";
     }
 
-    constructor(address payable _proceedsReceiver) {
-        proceedsReceiver = _proceedsReceiver;
+    constructor() {
+        proceedsReceiver = payable(msg.sender);
         deadline = 0;
     }
 

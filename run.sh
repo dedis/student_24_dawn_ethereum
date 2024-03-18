@@ -56,11 +56,10 @@ while ! cast block-number 2> /dev/null; do
 done
 
 (cd contracts
-	verbosely 'forge script --broadcast --legacy -f $ETH_RPC_URL --keystore "$ETH_KEYSTORE/$deployer" --sender $deployer script/Deploy.s.sol'
+	verbosely 'forge create --legacy --keystore "$ETH_KEYSTORE/$deployer" --from $deployer Auction'
 )
 
-weth_contract=0xef434c1405f66997CBf4a04FDDed518C28a6a013
-auction_contract=0xF31b6eF875a924508bAB7A5922F6e34Ae2F65801
+auction_contract=0xef434c1405f66997CBf4a04FDDed518C28a6a013
 
 verbosely 'cast send --async --legacy --keystore $ETH_KEYSTORE/$deployer --from $deployer $auction_contract "start()"'
 

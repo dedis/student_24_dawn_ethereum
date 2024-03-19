@@ -18,7 +18,6 @@ package core
 
 import (
 	"fmt"
-	"encoding/binary"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -29,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/f3b"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -116,20 +114,6 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 	// Create a new context to be used in the EVM environment.
 	txContext := NewEVMTxContext(msg)
 	evm.Reset(txContext, statedb)
-
-	if msg.Type() == types.EncryptedTxType {
-		dkgCli := f3b.NewDkgCli()
-		label := msg.From().Bytes()
-		label = binary.BigEndian.AppendUint64(label, msg.Nonce())
-		plaintext, err := dkgCli.Decrypt(label, msg.Data())
-		if err != nil {
-			panic("decryptMsgData: fail on decryption")
-		}
-		to := new(common.Address)
-		*to = common.BytesToAddress(plaintext[:common.AddressLength])
-		data := plaintext[common.AddressLength:]
-		msg = types.NewMessage(msg.Type(), msg.From(), to, msg.Nonce(), msg.Value(), msg.Gas(), msg.GasPrice(), msg.GasFeeCap(), msg.GasTipCap(), data, msg.AccessList(), false)
-	}
 
 	// Apply the transaction to the current state (included in the env).
 	result, err := ApplyMessage(evm, msg, gp, nil)

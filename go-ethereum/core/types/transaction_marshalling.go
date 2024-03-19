@@ -49,6 +49,7 @@ type txJSON struct {
 	// Only used for encoding:
 	Hash common.Hash    `json:"hash"`
 	Key  *hexutil.Bytes `json:"key"`
+	EncKey  *hexutil.Bytes `json:"enc_key"`
 }
 
 // MarshalJSON marshals as JSON with a hash.
@@ -108,7 +109,7 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		enc.V = (*hexutil.Big)(tx.V)
 		enc.R = (*hexutil.Big)(tx.R)
 		enc.S = (*hexutil.Big)(tx.S)
-		enc.Key = (*hexutil.Bytes)(&tx.Key)
+		enc.EncKey = (*hexutil.Bytes)(&tx.EncKey)
 	}
 
 	return json.Marshal(&enc)
@@ -327,7 +328,7 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 		}
 		itx.S = (*big.Int)(dec.S)
 		if dec.Key != nil {
-			itx.Key = *dec.Key
+			itx.EncKey = *dec.EncKey
 		}
 		// withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0
 		// if withSignature {

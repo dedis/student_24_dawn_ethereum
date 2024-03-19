@@ -46,6 +46,7 @@ const (
 	AccessListTxType
 	DynamicFeeTxType
 	EncryptedTxType
+	DecryptedTxType
 )
 
 // ################ For encrypted transaction #######################
@@ -190,6 +191,10 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 		return &inner, err
 	case EncryptedTxType:
 		var inner EncryptedTx
+		err := rlp.DecodeBytes(b[1:], &inner)
+		return &inner, err
+	case DecryptedTxType:
+		var inner DecryptedTx
 		err := rlp.DecodeBytes(b[1:], &inner)
 		return &inner, err
 	default:

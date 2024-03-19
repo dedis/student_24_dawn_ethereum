@@ -8,14 +8,16 @@ import (
 	"log"
 	"math/big"
 	"os"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto/cae"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/f3b"
+
+	"go.dedis.ch/kyber/v3/util/random"
 )
 
 func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accounts.Account, to common.Address, val *big.Int, gasLimit uint64, calldata []byte) (error) {
@@ -35,15 +37,20 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 		return err
 	}
 
+	key := make([]byte, 16)
+	random.Bytes(key, random.New())
+
 	dkgcli := f3b.NewDkgCli()
 
 	label := binary.BigEndian.AppendUint64(from.Address.Bytes(), nonce)
-	plaintext := append(to.Bytes(), calldata...)
-
-	ciphertext, err := dkgcli.Encrypt(label, plaintext)
+	enc_key, err := dkgcli.Encrypt(label, key)
 	if err != nil {
 		return err
 	}
+
+	plaintext := append(to.Bytes(), calldata...)
+
+	ciphertext, err := cae.Selected.Encrypt(key, plaintext)
 
 	enc := &types.EncryptedTx{
 		ChainID:    chainID,
@@ -52,6 +59,7 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 		Gas:        gasLimit,
 		Value:      val,
 		Payload:    ciphertext,
+		EncKey:     enc_key,
 	}
 	tx := types.NewTx(enc)
 

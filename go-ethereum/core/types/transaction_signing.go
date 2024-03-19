@@ -220,22 +220,37 @@ func (s londonSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s londonSigner) Hash(tx *Transaction) common.Hash {
-	if tx.Type() != DynamicFeeTxType {
-		return s.eip2930Signer.Hash(tx)
-	}
-	return prefixedRlpHash(
-		tx.Type(),
-		[]interface{}{
-			s.chainId,
-			tx.Nonce(),
-			tx.GasTipCap(),
-			tx.GasFeeCap(),
-			tx.Gas(),
-			tx.To(),
-			tx.Value(),
-			tx.Data(),
-			tx.AccessList(),
-		})
+	switch tx.Type() {
+	case EncryptedTxType:
+		return prefixedRlpHash(
+			tx.Type(),
+			[]interface{}{
+				s.chainId,
+				tx.Nonce(),
+				tx.GasTipCap(),
+				tx.GasFeeCap(),
+				tx.Gas(),
+				tx.Value(),
+				tx.inner.(*EncryptedTx).Payload,
+				tx.AccessList(),
+			})
+		case DynamicFeeTxType:
+			return prefixedRlpHash(
+				tx.Type(),
+				[]interface{}{
+					s.chainId,
+					tx.Nonce(),
+					tx.GasTipCap(),
+					tx.GasFeeCap(),
+					tx.Gas(),
+					tx.To(),
+					tx.Value(),
+					tx.Data(),
+					tx.AccessList(),
+				})
+			default:
+				return s.eip2930Signer.Hash(tx)
+			}
 }
 
 type eip2930Signer struct{ EIP155Signer }

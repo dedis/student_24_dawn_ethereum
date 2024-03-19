@@ -826,23 +826,6 @@ func (w *worker) updateSnapshot(env *environment) {
 	w.snapshotState = env.state.Copy()
 }
 
-func isExecuteEncryptedTx(env *environment, cf *params.ChainConfig, tx *types.Transaction) (bool, error) {
-	var (
-		from common.Address
-		err  error
-	)
-	if from, err = types.Sender(types.MakeSigner(cf, env.header.Number), tx); err != nil {
-		return false, err
-	}
-	stNonce := env.state.GetNonce(from)
-	// executing encrypted tx from last finalty block
-	if tx.Type() == types.EncryptedTxType && stNonce > tx.Nonce() {
-		return true, nil
-	}
-
-	return false, nil
-}
-
 func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*types.Log, error) {
 	snap := env.state.Snapshot()
 
@@ -856,12 +839,6 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 		return nil, err
 	}
 
-	if receipt.Type == types.EncryptedTxType && receipt.CumulativeGasUsed != 0 {
-		log.Info(fmt.Sprintf("[ENC][EXE] receipt key appended: %v", receipt.Key))
-	} else {
-		// only store tx and receipt if it is not executing encrypted tx
-	}
-
 	env.txs = append(env.txs, tx)
 	env.receipts = append(env.receipts, receipt)
 
@@ -869,6 +846,7 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 }
 
 func (w *worker) commitTransactions(env *environment, txs *types.TransactionsByPriceAndNonce, interrupt *int32) error {
+	var err error
 	gasLimit := env.header.GasLimit
 	if env.gasPool == nil {
 		env.gasPool = new(core.GasPool).AddGas(gasLimit)
@@ -906,6 +884,17 @@ func (w *worker) commitTransactions(env *environment, txs *types.TransactionsByP
 		tx := txs.Peek()
 		if tx == nil {
 			break
+		}
+
+		// F3B: decrypt the transaction if necessary
+		if tx.Type() == types.EncryptedTxType {
+			tx, err = tx.Decrypt()
+			if err != nil {
+				// FIXME this shouldn't happen
+				log.Error("Unexpected decryption error", "err", err)
+				txs.Pop()
+				continue
+			}
 		}
 		// Error may be ignored here. The error has already been checked
 		// during transaction acceptance is the transaction pool.

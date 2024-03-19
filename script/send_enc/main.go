@@ -18,19 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/f3b"
 )
 
-func logMeasurement(elapsed time.Duration) error {
-	f, err := os.OpenFile("enctiming.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, err = f.WriteString(fmt.Sprintf("%s\n", elapsed))
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accounts.Account, to common.Address, val *big.Int, gasLimit uint64, calldata []byte) (error) {
 	nonce, err := client.PendingNonceAt(context.Background(), from.Address); 
 	if err != nil {
@@ -48,7 +35,6 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 		return err
 	}
 
-	start := time.Now()
 	dkgcli := f3b.NewDkgCli()
 
 	label := binary.BigEndian.AppendUint64(from.Address.Bytes(), nonce)
@@ -58,8 +44,6 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 	if err != nil {
 		return err
 	}
-	elapsed := time.Since(start)
-	logMeasurement(elapsed)
 
 	enc := &types.EncryptedTx{
 		ChainID:    chainID,

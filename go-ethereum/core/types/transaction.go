@@ -50,7 +50,6 @@ const (
 
 // ################ For encrypted transaction #######################
 const EncryptedBlockDelay uint64 = 2
-const SymKeyLen = 29
 
 // Transaction is an Ethereum transaction.
 type Transaction struct {
@@ -87,7 +86,6 @@ type TxData interface {
 	value() *big.Int
 	nonce() uint64
 	to() *common.Address
-	key() []byte
 
 	rawSignatureValues() (v, r, s *big.Int)
 	setSignatureValues(chainID, v, r, s *big.Int)
@@ -294,9 +292,6 @@ func (tx *Transaction) Nonce() uint64 { return tx.inner.nonce() }
 func (tx *Transaction) To() *common.Address {
 	return copyAddressPtr(tx.inner.to())
 }
-
-// Nonce returns the sender account nonce of the transaction.
-func (tx *Transaction) Key() []byte { return tx.inner.key() }
 
 // Cost returns gas * gasPrice + value.
 func (tx *Transaction) Cost() *big.Int {
@@ -637,10 +632,9 @@ type Message struct {
 	data       []byte
 	accessList AccessList
 	isFake     bool
-	key        []byte
 }
 
-func NewMessage(txType uint8, from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, accessList AccessList, isFake bool, key []byte) Message {
+func NewMessage(txType uint8, from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, accessList AccessList, isFake bool) Message {
 	return Message{
 		txType:     txType,
 		from:       from,
@@ -654,7 +648,6 @@ func NewMessage(txType uint8, from common.Address, to *common.Address, nonce uin
 		data:       data,
 		accessList: accessList,
 		isFake:     isFake,
-		key:        key,
 	}
 }
 
@@ -672,7 +665,6 @@ func (tx *Transaction) AsMessage(s Signer, baseFee *big.Int) (Message, error) {
 		data:       tx.Data(),
 		accessList: tx.AccessList(),
 		isFake:     false,
-		key:        tx.Key(),
 	}
 	// If baseFee provided, set gasPrice to effectiveGasPrice.
 	if baseFee != nil {
@@ -695,7 +687,6 @@ func (m Message) Nonce() uint64          { return m.nonce }
 func (m Message) Data() []byte           { return m.data }
 func (m Message) AccessList() AccessList { return m.accessList }
 func (m Message) IsFake() bool           { return m.isFake }
-func (m Message) Key() []byte            { return m.key }
 
 // copyAddressPtr copies an address.
 func copyAddressPtr(a *common.Address) *common.Address {

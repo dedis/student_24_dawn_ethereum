@@ -79,7 +79,6 @@ type Message interface {
 	IsFake() bool
 	Data() []byte
 	AccessList() types.AccessList
-	Key() []byte
 }
 
 // ExecutionResult includes all output after executing given evm

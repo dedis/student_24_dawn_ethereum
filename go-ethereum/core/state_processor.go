@@ -128,7 +128,7 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 		to := new(common.Address)
 		*to = common.BytesToAddress(plaintext[:common.AddressLength])
 		data := plaintext[common.AddressLength:]
-		msg = types.NewMessage(msg.Type(), msg.From(), to, msg.Nonce(), msg.Value(), msg.Gas(), msg.GasPrice(), msg.GasFeeCap(), msg.GasTipCap(), data, msg.AccessList(), false, msg.Key())
+		msg = types.NewMessage(msg.Type(), msg.From(), to, msg.Nonce(), msg.Value(), msg.Gas(), msg.GasPrice(), msg.GasFeeCap(), msg.GasTipCap(), data, msg.AccessList(), false)
 	}
 
 	// Apply the transaction to the current state (included in the env).

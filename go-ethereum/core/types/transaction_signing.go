@@ -221,19 +221,33 @@ func (s londonSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 // It does not uniquely identify the transaction.
 func (s londonSigner) Hash(tx *Transaction) common.Hash {
 	switch tx.Type() {
-	case EncryptedTxType:
-		return prefixedRlpHash(
-			tx.Type(),
-			[]interface{}{
-				s.chainId,
-				tx.Nonce(),
-				tx.GasTipCap(),
-				tx.GasFeeCap(),
-				tx.Gas(),
-				tx.Value(),
-				tx.inner.(*EncryptedTx).Payload,
-				tx.AccessList(),
-			})
+		case DecryptedTxType:
+			payload, _ := tx.Reencrypt()
+			return prefixedRlpHash(
+				tx.Type(),
+				[]interface{}{
+					s.chainId,
+					tx.Nonce(),
+					tx.GasTipCap(),
+					tx.GasFeeCap(),
+					tx.Gas(),
+					tx.Value(),
+					payload,
+					tx.AccessList(),
+				})
+		case EncryptedTxType:
+			return prefixedRlpHash(
+				tx.Type(),
+				[]interface{}{
+					s.chainId,
+					tx.Nonce(),
+					tx.GasTipCap(),
+					tx.GasFeeCap(),
+					tx.Gas(),
+					tx.Value(),
+					tx.inner.(*EncryptedTx).Payload,
+					tx.AccessList(),
+				})
 		case DynamicFeeTxType:
 			return prefixedRlpHash(
 				tx.Type(),

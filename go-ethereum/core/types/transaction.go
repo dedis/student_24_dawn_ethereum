@@ -378,6 +378,9 @@ func (tx *Transaction) Hash() common.Hash {
 	var h common.Hash
 	if tx.Type() == LegacyTxType {
 		h = rlpHash(tx.inner)
+	} else if tx.Type() == DecryptedTxType {
+		tx ,_ = tx.Reencrypt()
+		h = prefixedRlpHash(tx.Type(), tx.inner)
 	} else {
 		h = prefixedRlpHash(tx.Type(), tx.inner)
 	}

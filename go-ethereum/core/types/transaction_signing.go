@@ -85,11 +85,10 @@ func LatestSigner(config *params.ChainConfig) Signer {
 // configuration are unknown. If you have a ChainConfig, use LatestSigner instead.
 // If you have a ChainConfig and know the current block number, use MakeSigner instead.
 func LatestSignerForChainID(chainID *big.Int) Signer {
-	// if chainID == nil {
-	// 	return HomesteadSigner{}
-	// }
-	// return NewLondonSigner(chainID)
-	return NewEIP155Signer(chainID)
+	if chainID == nil {
+		return HomesteadSigner{}
+	}
+	return NewLausanneSigner(chainID)
 }
 
 // SignTx signs the transaction using the given signer and private key.
@@ -172,6 +171,89 @@ type Signer interface {
 	Equal(Signer) bool
 }
 
+type lausanneSigner struct{ londonSigner }
+
+// NewLausanneSigner returns a signer that accepts
+// - EIP-1559 dynamic fee transactions
+// - EIP-2930 access list transactions,
+// - EIP-155 replay protected transactions, and
+// - legacy Homestead transactions.
+func NewLausanneSigner(chainId *big.Int) Signer {
+	return lausanneSigner{londonSigner{eip2930Signer{NewEIP155Signer(chainId)}}}
+}
+
+func (s lausanneSigner) Sender(tx *Transaction) (common.Address, error) {
+	switch tx.Type() {
+	case EncryptedTxType, DecryptedTxType:
+	V, R, S := tx.RawSignatureValues()
+	V = new(big.Int).Add(V, big.NewInt(27))
+	if tx.ChainId().Cmp(s.chainId) != 0 {
+		return common.Address{}, ErrInvalidChainId
+	}
+	return recoverPlain(s.Hash(tx), R, S, V, true)
+	default:
+		return s.londonSigner.Sender(tx)
+	}
+}
+
+func (s lausanneSigner) Equal(s2 Signer) bool {
+	x, ok := s2.(lausanneSigner)
+	return ok && x.chainId.Cmp(s.chainId) == 0
+}
+
+func (s lausanneSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
+	switch tx.inner.(type) {
+	case *EncryptedTx, *DecryptedTx:
+	// Check that chain ID of tx matches the signer. We also accept ID zero here,
+	// because it indicates that the chain ID was not specified in the tx.
+	if tx.ChainId().Sign() != 0 && tx.ChainId().Cmp(s.chainId) != 0 {
+		return nil, nil, nil, ErrInvalidChainId
+	}
+	R, S, _ = decodeSignature(sig)
+	V = big.NewInt(int64(sig[64]))
+	return R, S, V, nil
+	default:
+		return s.londonSigner.SignatureValues(tx, sig)
+	}
+}
+
+// Hash returns the hash to be signed by the sender.
+// It does not uniquely identify the transaction.
+func (s lausanneSigner) Hash(tx *Transaction) common.Hash {
+	switch tx.Type() {
+		case DecryptedTxType:
+			return prefixedRlpHash(
+				EncryptedTxType,
+				[]interface{}{
+					s.chainId,
+					tx.Nonce(),
+					tx.GasTipCap(),
+					tx.GasFeeCap(),
+					tx.Gas(),
+					tx.Value(),
+					tx.inner.(*DecryptedTx).Payload(),
+					tx.inner.(*DecryptedTx).EncKey,
+					tx.AccessList(),
+				})
+		case EncryptedTxType:
+			return prefixedRlpHash(
+				tx.Type(),
+				[]interface{}{
+					s.chainId,
+					tx.Nonce(),
+					tx.GasTipCap(),
+					tx.GasFeeCap(),
+					tx.Gas(),
+					tx.Value(),
+					tx.inner.(*EncryptedTx).Payload,
+					tx.inner.(*EncryptedTx).EncKey,
+					tx.AccessList(),
+				})
+			default:
+				return s.londonSigner.Hash(tx)
+			}
+}
+
 type londonSigner struct{ eip2930Signer }
 
 // NewLondonSigner returns a signer that accepts
@@ -222,9 +304,8 @@ func (s londonSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 func (s londonSigner) Hash(tx *Transaction) common.Hash {
 	switch tx.Type() {
 		case DecryptedTxType:
-			payload, _ := tx.Reencrypt()
 			return prefixedRlpHash(
-				tx.Type(),
+				EncryptedTxType,
 				[]interface{}{
 					s.chainId,
 					tx.Nonce(),
@@ -232,7 +313,8 @@ func (s londonSigner) Hash(tx *Transaction) common.Hash {
 					tx.GasFeeCap(),
 					tx.Gas(),
 					tx.Value(),
-					payload,
+					tx.inner.(*DecryptedTx).Payload(),
+					tx.inner.(*DecryptedTx).EncKey,
 					tx.AccessList(),
 				})
 		case EncryptedTxType:
@@ -246,6 +328,7 @@ func (s londonSigner) Hash(tx *Transaction) common.Hash {
 					tx.Gas(),
 					tx.Value(),
 					tx.inner.(*EncryptedTx).Payload,
+					tx.inner.(*EncryptedTx).EncKey,
 					tx.AccessList(),
 				})
 		case DynamicFeeTxType:

@@ -42,7 +42,7 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 	var signer Signer
 	switch {
 	case config.IsLondon(blockNumber):
-		signer = NewLondonSigner(config.ChainID)
+		signer = NewLausanneSigner(config.ChainID)
 	case config.IsBerlin(blockNumber):
 		signer = NewEIP2930Signer(config.ChainID)
 	case config.IsEIP155(blockNumber):
@@ -65,7 +65,7 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 func LatestSigner(config *params.ChainConfig) Signer {
 	if config.ChainID != nil {
 		if config.LondonBlock != nil {
-			return NewLondonSigner(config.ChainID)
+			return NewLausanneSigner(config.ChainID)
 		}
 		if config.BerlinBlock != nil {
 			return NewEIP2930Signer(config.ChainID)
@@ -219,7 +219,10 @@ func (s lausanneSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *b
 
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
-func (s lausanneSigner) Hash(tx *Transaction) common.Hash {
+func (s lausanneSigner) Hash(tx *Transaction) (hash common.Hash) {
+	defer func() {
+		log.Info("Hash", "hash", hash, "tx", tx)
+	}()
 	switch tx.Type() {
 		case DecryptedTxType:
 			return prefixedRlpHash(
@@ -303,34 +306,6 @@ func (s londonSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 // It does not uniquely identify the transaction.
 func (s londonSigner) Hash(tx *Transaction) common.Hash {
 	switch tx.Type() {
-		case DecryptedTxType:
-			return prefixedRlpHash(
-				EncryptedTxType,
-				[]interface{}{
-					s.chainId,
-					tx.Nonce(),
-					tx.GasTipCap(),
-					tx.GasFeeCap(),
-					tx.Gas(),
-					tx.Value(),
-					tx.inner.(*DecryptedTx).Payload(),
-					tx.inner.(*DecryptedTx).EncKey,
-					tx.AccessList(),
-				})
-		case EncryptedTxType:
-			return prefixedRlpHash(
-				tx.Type(),
-				[]interface{}{
-					s.chainId,
-					tx.Nonce(),
-					tx.GasTipCap(),
-					tx.GasFeeCap(),
-					tx.Gas(),
-					tx.Value(),
-					tx.inner.(*EncryptedTx).Payload,
-					tx.inner.(*EncryptedTx).EncKey,
-					tx.AccessList(),
-				})
 		case DynamicFeeTxType:
 			return prefixedRlpHash(
 				tx.Type(),
@@ -380,9 +355,6 @@ func (s eip2930Signer) Sender(tx *Transaction) (common.Address, error) {
 		// AL txs are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
 		V = new(big.Int).Add(V, big.NewInt(27))
-	case EncryptedTxType:
-		log.Error("#### eip2930 signer 3")
-		V = new(big.Int).Add(V, big.NewInt(27))
 	default:
 		return common.Address{}, ErrTxTypeNotSupported
 	}
@@ -399,12 +371,6 @@ func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *bi
 	case *AccessListTx:
 		// Check that chain ID of tx matches the signer. We also accept ID zero here,
 		// because it indicates that the chain ID was not specified in the tx.
-		if txdata.ChainID.Sign() != 0 && txdata.ChainID.Cmp(s.chainId) != 0 {
-			return nil, nil, nil, ErrInvalidChainId
-		}
-		R, S, _ = decodeSignature(sig)
-		V = big.NewInt(int64(sig[64]))
-	case *EncryptedTx:
 		if txdata.ChainID.Sign() != 0 && txdata.ChainID.Cmp(s.chainId) != 0 {
 			return nil, nil, nil, ErrInvalidChainId
 		}
@@ -480,11 +446,9 @@ func (s EIP155Signer) Equal(s2 Signer) bool {
 var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
-	log.Info("### eip155 sender")
-	// if tx.Type() != LegacyTxType {
-	// 	log.Error("### eip155 signer 1")
-	// 	return common.Address{}, ErrTxTypeNotSupported
-	// }
+	if tx.Type() != LegacyTxType {
+		return common.Address{}, ErrTxTypeNotSupported
+	}
 	if !tx.Protected() {
 		return HomesteadSigner{}.Sender(tx)
 	}
@@ -500,10 +464,9 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 // SignatureValues returns signature values. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	// fmt.Println("### eip155 signature")
-	// if tx.Type() != LegacyTxType {
-	// 	return nil, nil, nil, ErrTxTypeNotSupported
-	// }
+	if tx.Type() != LegacyTxType {
+		return nil, nil, nil, ErrTxTypeNotSupported
+	}
 	R, S, V = decodeSignature(sig)
 	if s.chainId.Sign() != 0 {
 		V = big.NewInt(int64(sig[64] + 35))

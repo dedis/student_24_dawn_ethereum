@@ -14,7 +14,7 @@ import (
 
 func (t *Transaction) Decrypt() (*Transaction, error) {
 	// Minimal signer for an encrypted transaction
-	signer := NewLondonSigner(t.ChainId())
+	signer := NewLausanneSigner(t.ChainId())
 
 	log.Info("Decrypt()", "tx", t.inner, "signer", signer, "sigcache", t.from.Load().(sigCache).signer)
 
@@ -58,6 +58,7 @@ func (t *Transaction) Decrypt() (*Transaction, error) {
 		To:        &to,
 		Data:       data,
 		Key:     key,
+		EncKey:     tx.EncKey,
 
 		V: tx.V,
 		R: tx.R,

@@ -56,12 +56,12 @@ while ! cast block-number 2> /dev/null; do
 done
 
 (cd contracts
-	verbosely 'forge create --legacy --keystore "$ETH_KEYSTORE/$deployer" --from $deployer Auction'
+	verbosely 'forge create --keystore "$ETH_KEYSTORE/$deployer" --from $deployer Auction'
 )
 
 auction_contract=0xef434c1405f66997CBf4a04FDDed518C28a6a013
 
-verbosely 'cast send --async --legacy --keystore $ETH_KEYSTORE/$deployer --from $deployer $auction_contract "start()"'
+verbosely 'cast send --async --keystore $ETH_KEYSTORE/$deployer --from $deployer $auction_contract "start()"'
 
 # send an encrypted bid
 verbosely 'go run ./script/send_enc -sender $address1 -value 1 $auction_contract $(cast sig "bid()")'
@@ -70,7 +70,7 @@ verbosely 'go run ./script/send_enc -sender $address2 -value 2 $auction_contract
 sleep 40
 
 (cd contracts
-	verbosely 'forge script --broadcast --legacy -f $ETH_RPC_URL --keystore "$ETH_KEYSTORE/$deployer" --sender $deployer script/CloseAuction.s.sol'
+	verbosely 'forge script --broadcast -f $ETH_RPC_URL --keystore "$ETH_KEYSTORE/$deployer" --sender $deployer script/CloseAuction.s.sol'
 )
 
 bash

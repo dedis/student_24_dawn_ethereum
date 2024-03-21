@@ -397,6 +397,9 @@ func (rs Receipts) EncodeIndex(i int, w *bytes.Buffer) {
 	case EncryptedTxType:
 		w.WriteByte(EncryptedTxType)
 		rlp.Encode(w, data)
+	case DecryptedTxType:
+		w.WriteByte(DecryptedTxType)
+		rlp.Encode(w, data)
 	default:
 		// For unsupported types, write nothing. Since this is for
 		// DeriveSha, the error will be caught matching the derived hash

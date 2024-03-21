@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"flag"
 	"fmt"
-	"log"
 	"math/big"
 	"os"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/cae"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/f3b"
+	"github.com/ethereum/go-ethereum/log"
 
 	"go.dedis.ch/kyber/v3/util/random"
 )
@@ -36,6 +36,8 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 	if err != nil {
 		return err
 	}
+
+	fmt.Println(gasPrice, gasLimit, val)
 
 	key := make([]byte, 16)
 	random.Bytes(key, random.New())
@@ -69,6 +71,8 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 		return err
 	}
 
+	fmt.Println(types.Sender(types.NewLausanneSigner(chainID), signedTx))
+
 	if err = client.SendTransaction(context.Background(), signedTx); err != nil {
 		return err
 	}
@@ -84,8 +88,10 @@ func usage() {
 }
 
 func main() {
+	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
 	if err := main2(); err != nil {
-		log.Fatal(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 }
 
@@ -126,7 +132,7 @@ func main2() error {
 	} else {
 	addr := common.HexToAddress(*sender)
 	if !ks.HasAddress(addr) {
-		return fmt.Errorf("no key for *sender address: %s", *sender)
+		return fmt.Errorf("no key for sender address: %s", *sender)
 	}
 	from = accounts.Account{Address: addr}
 }

@@ -34,17 +34,17 @@ func (ChaCha20HmacSha256) Encrypt(key, plaintext []byte) ([]byte, error) {
 	cipher.XORKeyStream(ciphertext, plaintext)
 	mac := hmac.New(sha256.New, mac_key)
 	mac.Write(ciphertext)
-	mac.Sum(ciphertext) // appends
+	ciphertext = mac.Sum(ciphertext) // appends
 	return ciphertext, nil
 }
 
 func (ChaCha20HmacSha256) Decrypt(key, ciphertext []byte) ([]byte, error) {
 	const tagSize = 32
 	cipher_key, mac_key := kdf(key, chacha20.KeySize, 32)
+	ciphertext, tag := ciphertext[:len(ciphertext)-tagSize], ciphertext[len(ciphertext)-tagSize:]
 	mac := hmac.New(sha256.New, mac_key)
-	mac.Write(ciphertext[:len(ciphertext)-tagSize])
-	tag := mac.Sum(nil)
-	if !hmac.Equal(tag, ciphertext[len(ciphertext)-tagSize:]) {
+	mac.Write(ciphertext)
+	if !hmac.Equal(tag, mac.Sum(nil)) {
 		return nil, AuthenticationError
 	}
 
@@ -54,7 +54,7 @@ func (ChaCha20HmacSha256) Decrypt(key, ciphertext []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	plaintext := make([]byte, len(ciphertext)-tagSize)
-	cipher.XORKeyStream(ciphertext, plaintext)
-	return ciphertext, nil
+	plaintext := make([]byte, len(ciphertext))
+	cipher.XORKeyStream(plaintext, ciphertext)
+	return plaintext, nil
 }

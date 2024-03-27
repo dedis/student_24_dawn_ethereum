@@ -25,12 +25,12 @@ func (ChaCha20HmacSha256) TagSize() int {
 	return 32
 }
 
-func (ChaCha20HmacSha256) Encrypt(ciphertext, mac, key, plaintext []byte) error {
+func (ChaCha20HmacSha256) Encrypt(ciphertext, tag, key, plaintext []byte) error {
 	cipher_key, mac_key := kdf(key, chacha20.KeySize, 32)
 
 	//NOTE: nul iv! this is ok because the key is single use
 	var iv [chacha20.NonceSize]byte
-	cipher, err := chacha20.NewUnauthenticatedCipher(cipher_key, iv)
+	cipher, err := chacha20.NewUnauthenticatedCipher(cipher_key, iv[:])
 	if err != nil {
 		return err
 	}
@@ -38,28 +38,27 @@ func (ChaCha20HmacSha256) Encrypt(ciphertext, mac, key, plaintext []byte) error 
 
 	mac := hmac.New(sha256.New, mac_key)
 	mac.Write(ciphertext)
-	mac.Read(tag)
+	mac.Sum(tag[:0])
 	return nil
 }
 
-func (ChaCha20HmacSha256) Decrypt(key, ciphertext []byte) ([]byte, error) {
+func (ChaCha20HmacSha256) Decrypt(plaintext, key, ciphertext, tag []byte) error {
 	cipher_key, mac_key := kdf(key, chacha20.KeySize, 32)
 
 	var buf [32]byte
 	mac := hmac.New(sha256.New, mac_key)
 	mac.Write(ciphertext)
-	mac.Read(buf)
-	if !hmac.Equal(tag, buf) {
-		return nil, AuthenticationError
+	mac.Sum(buf[:0])
+	if !hmac.Equal(tag, buf[:]) {
+		return AuthenticationError
 	}
 
 	var iv [chacha20.NonceSize]byte
-	cipher, err := chacha20.NewUnauthenticatedCipher(cipher_key, iv)
+	cipher, err := chacha20.NewUnauthenticatedCipher(cipher_key, iv[:])
 	if err != nil {
 		return err
 	}
 
-	plaintext := make([]byte, len(ciphertext))
 	cipher.XORKeyStream(plaintext, ciphertext)
-	return plaintext, nil
+	return nil
 }

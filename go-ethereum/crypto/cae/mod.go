@@ -14,12 +14,12 @@ type CAE interface {
 	// The key is consumed and must not be used for a different plaintext.
 	//
 	// ciphertext must be as long as plaintext and tag must have size TagSize()
-	Encrypt(ciphertext, tag, key, plaintext []byte) (err error)
+	Encrypt(ciphertext, tag, key, plaintext []byte) error
 	// Encrypt decrypts the cipherext using the key.
 	// It returns AuthenticationError if the ciphertext is not valid.
 	//
 	// plaintext must be as long as ciphertext and tag must have size TagSize()
-	Decrypt(plaintext, key, ciphertext, tag []byte) err error
+	Decrypt(plaintext, key, ciphertext, tag []byte) error
 	// Return the size of the authentication tag in bytes.
 	TagSize() int
 }

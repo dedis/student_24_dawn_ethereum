@@ -21,37 +21,42 @@ func kdf(key []byte, cipher_key_len, mac_key_len int) (cipher_key, mac_key []byt
 	return
 }
 
-func (ChaCha20HmacSha256) Encrypt(key, plaintext []byte) ([]byte, error) {
-	const tagSize = 32
+func (ChaCha20HmacSha256) TagSize() int {
+	return 32
+}
+
+func (ChaCha20HmacSha256) Encrypt(ciphertext, mac, key, plaintext []byte) error {
 	cipher_key, mac_key := kdf(key, chacha20.KeySize, 32)
-	iv := make([]byte, chacha20.NonceSize) //NOTE: this is ok because the key is used only once
+
+	//NOTE: nul iv! this is ok because the key is single use
+	var iv [chacha20.NonceSize]byte
 	cipher, err := chacha20.NewUnauthenticatedCipher(cipher_key, iv)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	ciphertext := make([]byte, len(plaintext), len(plaintext)+tagSize)
 	cipher.XORKeyStream(ciphertext, plaintext)
+
 	mac := hmac.New(sha256.New, mac_key)
 	mac.Write(ciphertext)
-	ciphertext = mac.Sum(ciphertext) // appends
-	return ciphertext, nil
+	mac.Read(tag)
+	return nil
 }
 
 func (ChaCha20HmacSha256) Decrypt(key, ciphertext []byte) ([]byte, error) {
-	const tagSize = 32
 	cipher_key, mac_key := kdf(key, chacha20.KeySize, 32)
-	ciphertext, tag := ciphertext[:len(ciphertext)-tagSize], ciphertext[len(ciphertext)-tagSize:]
+
+	var buf [32]byte
 	mac := hmac.New(sha256.New, mac_key)
 	mac.Write(ciphertext)
-	if !hmac.Equal(tag, mac.Sum(nil)) {
+	mac.Read(buf)
+	if !hmac.Equal(tag, buf) {
 		return nil, AuthenticationError
 	}
 
-	iv := make([]byte, chacha20.NonceSize)
+	var iv [chacha20.NonceSize]byte
 	cipher, err := chacha20.NewUnauthenticatedCipher(cipher_key, iv)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	plaintext := make([]byte, len(ciphertext))

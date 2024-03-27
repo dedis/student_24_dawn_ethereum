@@ -12,10 +12,16 @@ package cae
 type CAE interface {
 	// Encrypt encrypts and commits to the plaintext using the key.
 	// The key is consumed and must not be used for a different plaintext.
-	Encrypt(key, plaintext []byte) (ciphertext []byte, err error)
+	//
+	// ciphertext must be as long as plaintext and tag must have size TagSize()
+	Encrypt(ciphertext, tag, key, plaintext []byte) (err error)
 	// Encrypt decrypts the cipherext using the key.
 	// It returns AuthenticationError if the ciphertext is not valid.
-	Decrypt(key, ciphertext []byte) (plaintext []byte, err error)
+	//
+	// plaintext must be as long as ciphertext and tag must have size TagSize()
+	Decrypt(plaintext, key, ciphertext, tag []byte) err error
+	// Return the size of the authentication tag in bytes.
+	TagSize() int
 }
 
 type authenticationError struct {}

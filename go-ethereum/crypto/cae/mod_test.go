@@ -4,12 +4,10 @@ package cae
 
 import (
 	"testing"
-
-	"github.com/ethereum/go-ethereum/crypto/cae"
 )
 
 func TestHappyPath(t *testing.T) {
-	scheme := cae.Selected
+	scheme := ChaCha20HmacSha256{}
 	key := []byte{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,}
 	ciphertext, err := scheme.Encrypt(key, []byte("hello"))
 	if err != nil {

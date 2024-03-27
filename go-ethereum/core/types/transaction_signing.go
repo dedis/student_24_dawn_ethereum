@@ -24,7 +24,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -220,9 +219,6 @@ func (s lausanneSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *b
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s lausanneSigner) Hash(tx *Transaction) (hash common.Hash) {
-	defer func() {
-		log.Info("Hash", "hash", hash, "tx", tx)
-	}()
 	switch tx.Type() {
 		case DecryptedTxType:
 			return prefixedRlpHash(

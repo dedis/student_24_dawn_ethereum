@@ -37,8 +37,6 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 		return err
 	}
 
-	fmt.Println(gasPrice, gasLimit, val)
-
 	key := make([]byte, 16)
 	random.Bytes(key, random.New())
 
@@ -70,8 +68,6 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 	if err != nil {
 		return err
 	}
-
-	fmt.Println(types.Sender(types.NewLausanneSigner(chainID), signedTx))
 
 	if err = client.SendTransaction(context.Background(), signedTx); err != nil {
 		return err

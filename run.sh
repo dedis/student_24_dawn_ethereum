@@ -23,9 +23,9 @@ verbosely() {
 	eval "$@"
 }
 
-tmux neww env LLVL=info dkgcli --config $tempdir/dela/node1 start --routing tree --listen tcp://127.0.0.1:2001
-tmux neww env LLVL=info dkgcli --config $tempdir/dela/node2 start --routing tree --listen tcp://127.0.0.1:2002
-tmux neww env LLVL=info dkgcli --config $tempdir/dela/node3 start --routing tree --listen tcp://127.0.0.1:2003
+tmux neww -d env LLVL=info dkgcli --config $tempdir/dela/node1 start --routing tree --listen tcp://127.0.0.1:2001
+tmux neww -d env LLVL=info dkgcli --config $tempdir/dela/node2 start --routing tree --listen tcp://127.0.0.1:2002
+tmux neww -d env LLVL=info dkgcli --config $tempdir/dela/node3 start --routing tree --listen tcp://127.0.0.1:2003
 sleep 1
 
 dkgcli --config $tempdir/dela/node2 minogrpc join --address //127.0.0.1:2001 $(dkgcli --config $tempdir/dela/node1 minogrpc token)
@@ -48,7 +48,7 @@ export ETH_RPC_URL=http://localhost:8545
 verbosely 'geth -datadir "$GETH_DATADIR" init clique.json'
 
 cp keystore/$coinbase $GETH_DATADIR/keystore
-tmux neww env F3B_DKG_PATH="$F3B_DKG_PATH" geth -datadir "$GETH_DATADIR" -dev -http
+tmux neww -d env F3B_DKG_PATH="$F3B_DKG_PATH" geth -datadir "$GETH_DATADIR" -dev -http
 
 # wait for geth to start
 while ! cast block-number 2> /dev/null; do

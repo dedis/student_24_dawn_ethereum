@@ -21,7 +21,7 @@ func kdf(key []byte, cipher_key_len, mac_key_len int) (cipher_key, mac_key []byt
 	return
 }
 
-func (ChaCha20HmacSha256) TagSize() int {
+func (ChaCha20HmacSha256) TagLen() int {
 	return 32
 }
 

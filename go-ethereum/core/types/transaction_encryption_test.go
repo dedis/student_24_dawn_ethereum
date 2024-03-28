@@ -1,6 +1,6 @@
 // Copyright EPFL DEDIS
 
-package types
+package types_test
 
 import (
 	"fmt"

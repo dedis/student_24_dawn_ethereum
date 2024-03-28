@@ -48,8 +48,12 @@ type txJSON struct {
 
 	// Only used for encoding:
 	Hash common.Hash    `json:"hash"`
-	Key  *hexutil.Bytes `json:"key"`
-	EncKey  *hexutil.Bytes `json:"enc_key"`
+
+	// F3B Extensions
+	Key        *hexutil.Bytes `json:"key"`
+	EncKey     *hexutil.Bytes `json:"enc_key"`
+	Ciphertext *hexutil.Bytes `json:"ciphertext"`
+	Tag        *hexutil.Bytes `json:"tag"`
 }
 
 // MarshalJSON marshals as JSON with a hash.
@@ -104,8 +108,8 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		enc.MaxFeePerGas = (*hexutil.Big)(tx.GasFeeCap)
 		enc.MaxPriorityFeePerGas = (*hexutil.Big)(tx.GasTipCap)
 		enc.Value = (*hexutil.Big)(tx.Value)
-		enc.Data = (*hexutil.Bytes)(&tx.Payload)
-		enc.To = nil
+		enc.Ciphertext = (*hexutil.Bytes)(&tx.Ciphertext)
+		enc.Tag = (*hexutil.Bytes)(&tx.Tag)
 		enc.V = (*hexutil.Big)(tx.V)
 		enc.R = (*hexutil.Big)(tx.R)
 		enc.S = (*hexutil.Big)(tx.S)
@@ -311,10 +315,14 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 			return errors.New("missing required field 'value' in transaction")
 		}
 		itx.Value = (*big.Int)(dec.Value)
-		if dec.Data == nil {
-			return errors.New("missing required field 'input' in transaction")
+		if dec.Ciphertext == nil {
+			return errors.New("missing required field 'ciphertext' in transaction")
 		}
-		itx.Payload = *dec.Data
+		itx.Ciphertext = *dec.Ciphertext
+		if dec.Tag == nil {
+			return errors.New("missing required field 'tag' in transaction")
+		}
+		itx.Tag = *dec.Tag
 		if dec.V == nil {
 			return errors.New("missing required field 'v' in transaction")
 		}

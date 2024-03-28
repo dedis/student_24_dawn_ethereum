@@ -21,7 +21,7 @@ type CAE interface {
 	// plaintext must be as long as ciphertext and tag must have size TagSize()
 	Decrypt(plaintext, key, ciphertext, tag []byte) error
 	// Return the size of the authentication tag in bytes.
-	TagSize() int
+	TagLen() int
 }
 
 type authenticationError struct {}

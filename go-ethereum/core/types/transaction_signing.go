@@ -221,6 +221,10 @@ func (s lausanneSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *b
 func (s lausanneSigner) Hash(tx *Transaction) (hash common.Hash) {
 	switch tx.Type() {
 		case DecryptedTxType:
+			enc_tx, err := tx.Reencrypt()
+			if err != nil {
+				panic(err)
+			}
 			return prefixedRlpHash(
 				EncryptedTxType,
 				[]interface{}{
@@ -230,8 +234,9 @@ func (s lausanneSigner) Hash(tx *Transaction) (hash common.Hash) {
 					tx.GasFeeCap(),
 					tx.Gas(),
 					tx.Value(),
-					tx.inner.(*DecryptedTx).Payload(),
-					tx.inner.(*DecryptedTx).EncKey,
+					enc_tx.inner.(*EncryptedTx).Ciphertext,
+					enc_tx.inner.(*EncryptedTx).Tag,
+					enc_tx.inner.(*EncryptedTx).EncKey,
 					tx.AccessList(),
 				})
 		case EncryptedTxType:
@@ -244,7 +249,8 @@ func (s lausanneSigner) Hash(tx *Transaction) (hash common.Hash) {
 					tx.GasFeeCap(),
 					tx.Gas(),
 					tx.Value(),
-					tx.inner.(*EncryptedTx).Payload,
+					tx.inner.(*EncryptedTx).Ciphertext,
+					tx.inner.(*EncryptedTx).Tag,
 					tx.inner.(*EncryptedTx).EncKey,
 					tx.AccessList(),
 				})

@@ -29,7 +29,8 @@ type EncryptedTx struct {
 	GasFeeCap  *big.Int // a.k.a. maxFeePerGas
 	Gas        uint64
 	Value      *big.Int
-	Payload    []byte // Enc_k(to | data) symmetric encryption
+	Ciphertext []byte // Enc_k(to | data) symmetric encryption
+	Tag        []byte // MAC of Ciphertext
 	EncKey     []byte // The symmetric key k encrypted for the SMC
 	AccessList AccessList
 
@@ -42,10 +43,11 @@ type EncryptedTx struct {
 // copy creates a deep copy of the transaction data and initializes all fields.
 func (tx *EncryptedTx) copy() TxData {
 	cpy := &EncryptedTx{
-		Nonce: tx.Nonce,
-		Payload:  common.CopyBytes(tx.Payload),
-		EncKey:   common.CopyBytes(tx.EncKey),
-		Gas:   tx.Gas,
+		Nonce:      tx.Nonce,
+		Ciphertext: common.CopyBytes(tx.Ciphertext),
+		Tag:        common.CopyBytes(tx.Tag),
+		EncKey:     common.CopyBytes(tx.EncKey),
+		Gas:        tx.Gas,
 		// These are copied below.
 		AccessList: make(AccessList, len(tx.AccessList)),
 		Value:      new(big.Int),

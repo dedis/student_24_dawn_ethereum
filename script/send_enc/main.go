@@ -49,8 +49,9 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 	}
 
 	plaintext := append(to.Bytes(), calldata...)
-
-	ciphertext, err := cae.Selected.Encrypt(key, plaintext)
+	ciphertext := make([]byte, len(plaintext))
+	tag := make([]byte, cae.Selected.TagLen())
+	err = cae.Selected.Encrypt(ciphertext, tag, key, plaintext)
 
 	enc := &types.EncryptedTx{
 		ChainID:    chainID,
@@ -58,7 +59,8 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 		GasFeeCap:  gasPrice,
 		Gas:        gasLimit,
 		Value:      val,
-		Payload:    ciphertext,
+		Ciphertext: ciphertext,
+		Tag:        tag,
 		EncKey:     enc_key,
 	}
 	tx := types.NewTx(enc)

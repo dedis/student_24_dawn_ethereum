@@ -36,10 +36,9 @@ func (t *Transaction) Decrypt() (*Transaction, error) {
 		return nil, err
 	}
 
-	ciphertext := tx.Payload
 	// TODO: if the ciphertext is too short, penalize the sender
-
-	plaintext, err := cae.Selected.Decrypt(key, ciphertext)
+	plaintext := make([]byte, len(tx.Ciphertext))
+	err = cae.Selected.Decrypt(plaintext, key, tx.Ciphertext, tx.Tag)
 	// TODO: if this is an authentication error, penalize the sender
 	if err != nil {
 		return nil, err
@@ -66,20 +65,19 @@ func (t *Transaction) Decrypt() (*Transaction, error) {
 	}), nil
 }
 
-func (tx *DecryptedTx) Payload() []byte {
-	plaintext := append(tx.To.Bytes(), tx.Data...)
-
-	ciphertext, err := cae.Selected.Encrypt(tx.Key, plaintext)
-	if err != nil {
-		panic(err)
-	}
-	return ciphertext
-}
-
 func (t *Transaction) Reencrypt() (*Transaction, error) {
 	tx, ok := t.inner.(*DecryptedTx)
 	if !ok {
 		return nil, errors.New("cannot reencrypt a non-decrypted transaction")
+	}
+
+	plaintext := append(tx.To.Bytes(), tx.Data...)
+
+	ciphertext := make([]byte, len(plaintext))
+	tag := make([]byte, cae.Selected.TagLen())
+	err := cae.Selected.Encrypt(ciphertext, tag, tx.Key, plaintext)
+	if err != nil {
+		panic(err)
 	}
 
 	return NewTx(&EncryptedTx{
@@ -89,7 +87,8 @@ func (t *Transaction) Reencrypt() (*Transaction, error) {
 		GasFeeCap:  tx.GasFeeCap,
 		Gas:        tx.Gas,
 		Value:      tx.Value,
-		Payload:    tx.Payload(),
+		Ciphertext: ciphertext,
+		Tag:        tag,
 		EncKey:     tx.EncKey,
 
 		V: tx.V,

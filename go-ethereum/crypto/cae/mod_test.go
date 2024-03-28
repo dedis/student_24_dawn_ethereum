@@ -10,7 +10,7 @@ func TestHappyPath(t *testing.T) {
 	scheme := ChaCha20HmacSha256{}
 	plaintext := []byte("hello")
 	ciphertext := make([]byte, len(plaintext))
-	tag := make([]byte, scheme.TagSize())
+	tag := make([]byte, scheme.TagLen())
 	key := []byte{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,}
 	err := scheme.Encrypt(ciphertext, tag, key, plaintext)
 	if err != nil {
@@ -32,7 +32,7 @@ func TestMac(t *testing.T) {
 	scheme := ChaCha20HmacSha256{}
 	plaintext := []byte("hello")
 	ciphertext := make([]byte, len(plaintext))
-	tag := make([]byte, scheme.TagSize())
+	tag := make([]byte, scheme.TagLen())
 	key := []byte{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,}
 	err := scheme.Encrypt(ciphertext, tag, key, plaintext)
 	if err != nil {
@@ -51,7 +51,7 @@ func BenchmarkDecrypt(b *testing.B) {
 	scheme := ChaCha20HmacSha256{}
 	plaintext := []byte("hellohellohellohello")
 	ciphertext := make([]byte, len(plaintext))
-	tag := make([]byte, scheme.TagSize())
+	tag := make([]byte, scheme.TagLen())
 	key := []byte{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,}
 	err := scheme.Encrypt(ciphertext, tag, key, plaintext)
 	if err != nil {

@@ -707,7 +707,7 @@ func setBlockhash(data *beacon.ExecutableDataV1) *beacon.ExecutableDataV1 {
 		Extra:       data.ExtraData,
 		MixDigest:   data.Random,
 	}
-	block := types.NewBlockWithHeader(header).WithBody(txs, nil /* uncles */)
+	block := types.NewBlockWithHeader(header).WithBody(txs, nil /* uncles */, nil)
 	data.BlockHash = block.Hash()
 	return data
 }

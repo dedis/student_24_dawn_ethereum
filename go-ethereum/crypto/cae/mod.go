@@ -37,6 +37,7 @@ var Selected Scheme = Chacha20HmacSha256
 
 var AllSchemes = []Scheme{
 	Aes256Gcm,
+	Aes256CtrHmacSha256,
 	Chacha20HmacSha256,
 	Chacha20Poly1305,
 	Chacha20Alt,

@@ -10,7 +10,9 @@ import (
 )
 
 
-type ChaCha20HmacSha256 struct {}
+type chacha20HmacSha256 struct {}
+
+var Chacha20HmacSha256 = chacha20HmacSha256{}
 
 func kdf(key []byte, cipher_key_len, mac_key_len int) (cipher_key, mac_key []byte) {
 	kdf := hkdf.New(sha512.New, key, nil, nil)
@@ -21,11 +23,15 @@ func kdf(key []byte, cipher_key_len, mac_key_len int) (cipher_key, mac_key []byt
 	return
 }
 
-func (ChaCha20HmacSha256) TagLen() int {
+func (chacha20HmacSha256) Name() string {
+	return "chacha20-hmac-sha256"
+}
+
+func (chacha20HmacSha256) TagLen() int {
 	return 32
 }
 
-func (ChaCha20HmacSha256) Encrypt(ciphertext, tag, key, plaintext []byte) error {
+func (chacha20HmacSha256) Encrypt(ciphertext, tag, key, plaintext []byte) error {
 	cipher_key, mac_key := kdf(key, chacha20.KeySize, 32)
 
 	//NOTE: nul iv! this is ok because the key is single use
@@ -42,7 +48,7 @@ func (ChaCha20HmacSha256) Encrypt(ciphertext, tag, key, plaintext []byte) error 
 	return nil
 }
 
-func (ChaCha20HmacSha256) Decrypt(plaintext, key, ciphertext, tag []byte) error {
+func (chacha20HmacSha256) Decrypt(plaintext, key, ciphertext, tag []byte) error {
 	cipher_key, mac_key := kdf(key, chacha20.KeySize, 32)
 
 	var buf [32]byte

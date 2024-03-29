@@ -9,7 +9,7 @@
 
 package cae
 
-type CAE interface {
+type Scheme interface {
 	// Encrypt encrypts and commits to the plaintext using the key.
 	// The key is consumed and must not be used for a different plaintext.
 	//
@@ -20,6 +20,8 @@ type CAE interface {
 	//
 	// plaintext must be as long as ciphertext and tag must have size TagSize()
 	Decrypt(plaintext, key, ciphertext, tag []byte) error
+	// Return the unique, human-readable name of the Scheme.
+	Name() string
 	// Return the size of the authentication tag in bytes.
 	TagLen() int
 }
@@ -30,5 +32,7 @@ func (authenticationError) Error() string {
 }
 var AuthenticationError error = authenticationError{}
 
-// For development convenience, this is used to select the CAE to use.
-var Selected CAE = ChaCha20HmacSha256{}
+// For development convenience, this is used to select the scheme to use.
+var Selected Scheme = Chacha20HmacSha256
+
+var AllSchemes = []Scheme{Chacha20HmacSha256}

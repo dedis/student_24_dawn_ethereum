@@ -10,43 +10,53 @@ import (
 )
 
 func TestHappyPath(t *testing.T) {
-	scheme := cae.Selected
-	plaintext := []byte("hello")
-	ciphertext := make([]byte, len(plaintext))
-	tag := make([]byte, scheme.TagLen())
-	key := []byte{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,}
-	err := scheme.Encrypt(ciphertext, tag, key, plaintext)
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, scheme := range cae.AllSchemes {
+		t.Run("Scheme=" + scheme.Name(), func(t *testing.T) {
+			plaintext := []byte("hello")
+			ciphertext := make([]byte, len(plaintext))
+			tag := make([]byte, scheme.TagLen())
+			key := []byte{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,}
+			err := scheme.Encrypt(ciphertext, tag, key, plaintext)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	plaintext = make([]byte, len(ciphertext))
-	err = scheme.Decrypt(plaintext, key, ciphertext, tag)
-	if err != nil {
-		t.Fatal(err)
-	}
+			plaintext = make([]byte, len(ciphertext))
+			err = scheme.Decrypt(plaintext, key, ciphertext, tag)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	if string(plaintext) != "hello" {
-		t.Fatalf("%x != hello", plaintext)
+			if string(plaintext) != "hello" {
+				t.Fatalf("%x != hello", plaintext)
+			}
+		})
 	}
 }
 
 func TestMac(t *testing.T) {
-	scheme := cae.Selected
-	plaintext := []byte("hello")
-	ciphertext := make([]byte, len(plaintext))
-	tag := make([]byte, scheme.TagLen())
-	key := []byte{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,}
-	err := scheme.Encrypt(ciphertext, tag, key, plaintext)
-	if err != nil {
-		t.Fatal(err)
-	}
-	tag[2] ^= 1
+	for _, scheme := range cae.AllSchemes {
+		t.Run("Scheme=" + scheme.Name(), func(t *testing.T) {
+			if scheme.TagLen() == 0 {
+				// no MAC
+				t.SkipNow()
+			}
+			plaintext := []byte("hello")
+			ciphertext := make([]byte, len(plaintext))
+			tag := make([]byte, scheme.TagLen())
+			key := []byte{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,}
+			err := scheme.Encrypt(ciphertext, tag, key, plaintext)
+			if err != nil {
+				t.Fatal(err)
+			}
+			tag[2] ^= 1
 
-	plaintext = make([]byte, len(ciphertext))
-	err = scheme.Decrypt(plaintext, key, ciphertext, tag)
-	if err != cae.AuthenticationError {
-		t.Fatalf("expected cae.AuthenticationError, got %v", err)
+			plaintext = make([]byte, len(ciphertext))
+			err = scheme.Decrypt(plaintext, key, ciphertext, tag)
+			if err != cae.AuthenticationError {
+				t.Fatalf("expected cae.AuthenticationError, got %v", err)
+			}
+		})
 	}
 }
 

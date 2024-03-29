@@ -35,4 +35,8 @@ var AuthenticationError error = authenticationError{}
 // For development convenience, this is used to select the scheme to use.
 var Selected Scheme = Chacha20HmacSha256
 
-var AllSchemes = []Scheme{Chacha20HmacSha256}
+var AllSchemes = []Scheme{
+	Chacha20HmacSha256,
+	Chacha20Poly1305,
+	Chacha20,
+}

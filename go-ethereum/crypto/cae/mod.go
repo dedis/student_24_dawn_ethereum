@@ -36,7 +36,14 @@ var AuthenticationError error = authenticationError{}
 var Selected Scheme = Chacha20HmacSha256
 
 var AllSchemes = []Scheme{
+	Aes256Gcm,
 	Chacha20HmacSha256,
 	Chacha20Poly1305,
+	Chacha20Alt,
 	Chacha20,
+	Chacha12,
+	Chacha8,
+	Null,
+	NullNokdf,
+	NullHmacSha256,
 }

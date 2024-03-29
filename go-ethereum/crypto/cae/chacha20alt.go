@@ -7,10 +7,10 @@ import (
 
 type _chacha20 struct {}
 
-var Chacha20 = _chacha20{}
+var Chacha20Alt = _chacha20{}
 
 func (_chacha20) Name() string {
-	return "chacha20"
+	return "chacha20alt"
 }
 
 func (_chacha20) TagLen() int {

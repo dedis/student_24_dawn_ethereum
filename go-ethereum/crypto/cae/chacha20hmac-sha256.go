@@ -1,27 +1,16 @@
 package cae
 
 import (
-	"crypto/sha512"
 	"crypto/sha256"
 	"crypto/hmac"
 
 	"golang.org/x/crypto/chacha20"
-	"golang.org/x/crypto/hkdf"
 )
 
 
 type chacha20HmacSha256 struct {}
 
 var Chacha20HmacSha256 = chacha20HmacSha256{}
-
-func kdf(key []byte, cipher_key_len, mac_key_len int) (cipher_key, mac_key []byte) {
-	kdf := hkdf.New(sha512.New, key, nil, nil)
-	cipher_key = make([]byte, cipher_key_len)
-	mac_key = make([]byte, mac_key_len)
-	kdf.Read(cipher_key)
-	kdf.Read(mac_key)
-	return
-}
 
 func (chacha20HmacSha256) Name() string {
 	return "chacha20-hmac-sha256"

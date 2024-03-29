@@ -46,4 +46,6 @@ var AllSchemes = []Scheme{
 	Null,
 	NullNokdf,
 	NullHmacSha256,
+	RkAes256Gcm,
+	RkChacha20Poly1305,
 }

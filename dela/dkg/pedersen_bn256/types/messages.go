@@ -375,27 +375,27 @@ func (s StartDone) Serialize(ctx serde.Context) ([]byte, error) {
 	return data, nil
 }
 
-// SignRequest is a message sent to request a threshold signature share.
+// ExtractRequest is a message sent to request a threshold signature share.
 //
 // - implements serde.Message
-type SignRequest struct {
-	msg []byte
+type ExtractRequest struct {
+	label []byte
 }
 
-// NewSignRequest creates a new signature request.
-func NewSignRequest(msg []byte) SignRequest {
-	return SignRequest{
-		msg: bytes.Clone(msg),
+// NewExtractRequest creates a new identity extraction request.
+func NewExtractRequest(label []byte) ExtractRequest {
+	return ExtractRequest{
+		label: bytes.Clone(label),
 	}
 }
 
-// GetMsg returns the message being signed.
-func (req SignRequest) GetMsg() []byte {
-	return bytes.Clone(req.msg)
+// GetLabel returns the identity label
+func (req ExtractRequest) GetLabel() []byte {
+	return bytes.Clone(req.label)
 }
 
 // Serialize implements serde.Message.
-func (req SignRequest) Serialize(ctx serde.Context) ([]byte, error) {
+func (req ExtractRequest) Serialize(ctx serde.Context) ([]byte, error) {
 	format := msgFormats.Get(ctx.GetFormat())
 
 	data, err := format.Encode(ctx, req)
@@ -406,22 +406,22 @@ func (req SignRequest) Serialize(ctx serde.Context) ([]byte, error) {
 	return data, nil
 }
 
-// SignReply is the response of a decryption request.
+// ExtractReply is the response of a decryption request.
 //
 // - implements serde.Message
-type SignReply struct {
+type ExtractReply struct {
 	Share tbls.SigShare
 }
 
-// NewSignReply returns a new decryption reply.
-func NewSignReply(share tbls.SigShare) SignReply {
-	return SignReply{
+// NewExtractReply returns a new decryption reply.
+func NewExtractReply(share tbls.SigShare) ExtractReply {
+	return ExtractReply{
 		Share: bytes.Clone(share),
 	}
 }
 
 // Serialize implements serde.Message.
-func (resp SignReply) Serialize(ctx serde.Context) ([]byte, error) {
+func (resp ExtractReply) Serialize(ctx serde.Context) ([]byte, error) {
 	format := msgFormats.Get(ctx.GetFormat())
 
 	data, err := format.Encode(ctx, resp)

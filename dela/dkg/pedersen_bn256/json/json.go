@@ -66,8 +66,8 @@ type StartDone struct {
 	PublicKey PublicKey
 }
 
-type SignRequest struct {
-	Msg []byte
+type ExtractRequest struct {
+	Label []byte
 }
 
 type Ciphertext struct {
@@ -79,7 +79,7 @@ type Ciphertext struct {
 	GBar PublicKey // GBar
 }
 
-type SignReply struct {
+type ExtractReply struct {
 	Share []byte
 }
 
@@ -100,8 +100,8 @@ type Message struct {
 	Reshare                  *Reshare                  `json:",omitempty"`
 	Response                 *Response                 `json:",omitempty"`
 	StartDone                *StartDone                `json:",omitempty"`
-	SignRequest           *SignRequest           `json:",omitempty"`
-	SignReply             *SignReply             `json:",omitempty"`
+	ExtractRequest           *ExtractRequest           `json:",omitempty"`
+	ExtractReply             *ExtractReply             `json:",omitempty"`
 }
 
 // MsgFormat is the engine to encode and decode dkg messages in JSON format.
@@ -157,10 +157,10 @@ func (f msgFormat) Encode(ctx serde.Context, msg serde.Message) ([]byte, error) 
 		m = Message{Response: &r}
 	case types.StartDone:
 		m, err = encodeStartDone(in)
-	case types.SignRequest:
-		m, err = encodeSignRequest(in)
-	case types.SignReply:
-		m, err = encodeSignReply(in)
+	case types.ExtractRequest:
+		m, err = encodeExtractRequest(in)
+	case types.ExtractReply:
+		m, err = encodeExtractReply(in)
 	default:
 		return nil, xerrors.Errorf("unsupported message of type '%T'", msg)
 	}
@@ -226,11 +226,11 @@ func (f msgFormat) Decode(ctx serde.Context, data []byte) (serde.Message, error)
 	case m.StartDone != nil:
 		return f.decodeStartDone(ctx, m.StartDone)
 
-	case m.SignRequest != nil:
-		return f.decodeSignRequest(ctx, m.SignRequest)
+	case m.ExtractRequest != nil:
+		return f.decodeExtractRequest(ctx, m.ExtractRequest)
 
-	case m.SignReply != nil:
-		return f.decodeSignReply(ctx, m.SignReply)
+	case m.ExtractReply != nil:
+		return f.decodeExtractReply(ctx, m.ExtractReply)
 	}
 
 	return nil, xerrors.New("message is empty")
@@ -479,29 +479,29 @@ func (f msgFormat) decodeStartDone(ctx serde.Context, msg *StartDone) (serde.Mes
 	return ack, nil
 }
 
-func encodeSignRequest(msg types.SignRequest) (Message, error) {
-	req := SignRequest{
-		Msg: msg.GetMsg(),
+func encodeExtractRequest(msg types.ExtractRequest) (Message, error) {
+	req := ExtractRequest{
+		Label: msg.GetLabel(),
 	}
 
 
-	return Message{SignRequest: &req}, nil
+	return Message{ExtractRequest: &req}, nil
 }
 
-func (f msgFormat) decodeSignRequest(ctx serde.Context, msg *SignRequest) (serde.Message, error) {
-	req := types.NewSignRequest(msg.Msg)
+func (f msgFormat) decodeExtractRequest(ctx serde.Context, msg *ExtractRequest) (serde.Message, error) {
+	req := types.NewExtractRequest(msg.Label)
 
 	return req, nil
 }
 
-func encodeSignReply(msg types.SignReply) (Message, error) {
-	resp := SignReply{ []byte(msg.Share) }
+func encodeExtractReply(msg types.ExtractReply) (Message, error) {
+	resp := ExtractReply{ []byte(msg.Share) }
 
-	return Message{SignReply: &resp}, nil
+	return Message{ExtractReply: &resp}, nil
 }
 
-func (f msgFormat) decodeSignReply(ctx serde.Context, msg *SignReply) (serde.Message, error) {
-	resp := types.NewSignReply(msg.Share)
+func (f msgFormat) decodeExtractReply(ctx serde.Context, msg *ExtractReply) (serde.Message, error) {
+	resp := types.NewExtractReply(msg.Share)
 
 	return resp, nil
 }

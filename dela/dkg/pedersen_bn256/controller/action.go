@@ -199,9 +199,9 @@ func (_ getPublicKeyAction) Execute(ctx node.Context) error {
 	return nil
 }
 
-type signAction struct{}
+type extractAction struct{}
 
-func (a signAction) Execute(ctx node.Context) error {
+func (a extractAction) Execute(ctx node.Context) error {
 	var actor dkg.Actor
 
 	err := ctx.Injector.Resolve(&actor)
@@ -214,7 +214,7 @@ func (a signAction) Execute(ctx node.Context) error {
 		return xerrors.Errorf("failed to decode message: %v", err)
 	}
 
-	sig, err := actor.Sign(message)
+	sig, err := actor.Extract(message)
 	if err != nil {
 		return xerrors.Errorf("failed to encrypt: %v", err)
 	}
@@ -234,19 +234,30 @@ func (a verifyAction) Execute(ctx node.Context) error {
 		return xerrors.Errorf(resolveActorFailed, err)
 	}
 
-	message, err := hex.DecodeString(ctx.Flags.String("message"))
+	label, err := hex.DecodeString(ctx.Flags.String("label"))
 	if err != nil {
-		return xerrors.Errorf("failed to decode message: %v", err)
+		return xerrors.Errorf("failed to decode label: %v", err)
 	}
 
-	signature, err := hex.DecodeString(ctx.Flags.String("signature"))
+	identityBytes, err := hex.DecodeString(ctx.Flags.String("identity"))
 	if err != nil {
-		return xerrors.Errorf("failed to decode signature: %v", err)
+		return xerrors.Errorf("failed to decode identity: %v", err)
 	}
 
-	err = actor.Verify(message, signature)
+	identity := pairingSuite.G1().Point()
+	identity.UnmarshalBinary(identityBytes)
+
+	pk, err := actor.GetPublicKey()
 	if err != nil {
-		return xerrors.Errorf("failed to verify: %v", err)
+		return xerrors.Errorf("failed to query public key: %v", err)
+	}
+
+	ok, err := ibe.VerifyIdentityOnG2(pairingSuite, pk, identity, label)
+	if err != nil {
+		return xerrors.Errorf("failed to verify identity: %v", err)
+	}
+	if !ok {
+		return xerrors.Errorf("invalid identity")
 	}
 
 	return nil
@@ -325,7 +336,7 @@ func (a decryptAction) Execute(ctx node.Context) error {
 		return xerrors.Errorf("failed to unmarshal ct: %v", err)
 	}
 
-	dkBytes, err := actor.Sign(label)
+	dkBytes, err := actor.Extract(label)
 	if err != nil {
 		return xerrors.Errorf("failed to derive decryption key: %v", err)
 	}

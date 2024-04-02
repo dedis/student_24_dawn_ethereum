@@ -159,13 +159,13 @@ func (s *instance) handleMessage(ctx context.Context, msg serde.Message, from mi
 
 		s.responses.Send(msg)
 
-	case types.SignRequest:
+	case types.ExtractRequest:
 		err := s.startRes.checkState(certified)
 		if err != nil {
 			return xerrors.Errorf(badState, err)
 		}
 
-		return s.handleSign(out, msg, from)
+		return s.handleExtract(out, msg, from)
 
 	default:
 		return xerrors.Errorf("expected Start message, decrypt request or "+
@@ -762,19 +762,19 @@ func (s *instance) receiveDealsResharing(ctx context.Context, nt nodeType,
 	return nil
 }
 
-func (s *instance) handleSign(out mino.Sender, req types.SignRequest,
+func (s *instance) handleExtract(out mino.Sender, req types.ExtractRequest,
 	from mino.Address) error {
 
 	if !s.startRes.Done() {
 		return xerrors.Errorf("you must first initialize DKG. Did you call setup() first?")
 	}
 
-	sig, err := tbls.Sign(pairingSuite, s.privShare, req.GetMsg())
+	sig, err := tbls.Sign(pairingSuite, s.privShare, req.GetLabel())
 	if err != nil {
 		return xerrors.Errorf("tbls.Sign: %v", err)
 	}
 
-	signReply := types.NewSignReply(sig)
+	signReply := types.NewExtractReply(sig)
 
 	errs := out.Send(signReply, from)
 	err = <-errs

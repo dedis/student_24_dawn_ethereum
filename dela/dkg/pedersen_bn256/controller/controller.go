@@ -52,15 +52,15 @@ func (m minimal) SetCommands(builder node.Builder) {
 	sub.SetDescription("Query the collective public key. Outputs in hex")
 	sub.SetAction(builder.MakeAction(getPublicKeyAction{}))
 
-	sub = cmd.SetSubCommand("sign")
-	sub.SetDescription("sign a message. Outputs signature in hex")
+	sub = cmd.SetSubCommand("extract")
+	sub.SetDescription("extract a identity decryption key")
 	sub.SetFlags(
 		cli.StringFlag{
-			Name:  "message",
-			Usage: "the message to sign, encoded in hex",
+			Name:  "label",
+			Usage: "the identity label, encoded in hex",
 		},
 	)
-	sub.SetAction(builder.MakeAction(signAction{}))
+	sub.SetAction(builder.MakeAction(extractAction{}))
 
 	sub = cmd.SetSubCommand("verify")
 	sub.SetDescription("verify a threshold signature")

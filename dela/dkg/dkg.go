@@ -23,8 +23,7 @@ type Actor interface {
 	// setup has not been done.
 	GetPublicKey() (kyber.Point, error)
 
-	Sign(msg []byte) ([]byte, error)
-	Verify(msg, sig []byte) error
+	Extract(label []byte) ([]byte, error)
 
 	Reshare(co crypto.CollectiveAuthority, newThreshold int) error
 }

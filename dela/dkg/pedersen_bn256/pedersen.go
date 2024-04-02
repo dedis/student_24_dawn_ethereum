@@ -79,7 +79,7 @@ func NewPedersen(m mino.Mino) (*Pedersen, kyber.Point) {
 	}, pubkey
 }
 
-// Listen implements dkg.DKG. It must be called on each node that participates
+// Listen implements dkg.Actor. It must be called on each node that participates
 // in the DKG. Creates the RPC.
 func (s *Pedersen) Listen() (dkg.Actor, error) {
 	h := NewHandler(s.privKey, s.mino.GetAddress())
@@ -187,9 +187,9 @@ func (a *Actor) GetPublicKey() (kyber.Point, error) {
 	return a.startRes.getDistKey(), nil
 }
 
-// Sign implements dkg.Actor. It gets the private shares of the nodes and
-// signs the message.
-func (a *Actor) Sign(msg []byte) ([]byte, error) {
+// Extract implements dkg.Actor. It gets the private shares of the nodes and
+// extracts the decryption key for an identity.
+func (a *Actor) Extract(msg []byte) ([]byte, error) {
 
 	if !a.startRes.Done() {
 		return nil, xerrors.Errorf(initDkgFirst)
@@ -214,7 +214,7 @@ func (a *Actor) Sign(msg []byte) ([]byte, error) {
 		addrs = append(addrs, iterator.GetNext())
 	}
 
-	message := types.NewSignRequest(msg)
+	message := types.NewExtractRequest(msg)
 
 	err = <-sender.Send(message, addrs...)
 	if err != nil {
@@ -235,7 +235,7 @@ func (a *Actor) Sign(msg []byte) ([]byte, error) {
 
 		dela.Logger.Debug().Msgf("Received a signature reply from %v", src)
 
-		signReply, ok := message.(types.SignReply)
+		signReply, ok := message.(types.ExtractReply)
 		if !ok {
 			return []byte{}, xerrors.Errorf("got unexpected reply, expected "+
 				"%T but got: %T", signReply, message)

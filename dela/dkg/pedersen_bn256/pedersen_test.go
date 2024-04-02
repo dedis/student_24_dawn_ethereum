@@ -88,7 +88,7 @@ func TestPedersen_GetPublicKey(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestPedersen_Sign(t *testing.T) {
+func TestPedersen_Extract(t *testing.T) {
 	priShares := []*share.PriShare{
 		&share.PriShare{0, suite.Scalar().Pick(suite.RandomStream())},
 		&share.PriShare{1, suite.Scalar().Pick(suite.RandomStream())},
@@ -116,14 +116,14 @@ func TestPedersen_Sign(t *testing.T) {
 	require.NoError(t, err)
 
 	recv := fake.NewReceiver(
-		fake.NewRecvMsg(fake.NewAddress(0), types.NewSignReply(tsigs[0])),
-		fake.NewRecvMsg(fake.NewAddress(1), types.NewSignReply(tsigs[1])),
+		fake.NewRecvMsg(fake.NewAddress(0), types.NewExtractReply(tsigs[0])),
+		fake.NewRecvMsg(fake.NewAddress(1), types.NewExtractReply(tsigs[1])),
 	)
 
 	rpc := fake.NewStreamRPC(recv, fake.Sender{})
 	actor.rpc = rpc
 
-	sig, err := actor.Sign(msg)
+	sig, err := actor.Extract(msg)
 	require.NoError(t, err)
 
 	// Expect a valid signature
@@ -190,7 +190,7 @@ func TestPedersen_Scenario(t *testing.T) {
 	}
 
 	// trying to call sign before a setup
-	_, err := actors[0].Sign(message)
+	_, err := actors[0].Extract(message)
 	require.EqualError(t, err, "you must first initialize DKG. Did you call setup() first?")
 
 	_, err = actors[0].Setup(fakeAuthority, n)
@@ -199,9 +199,9 @@ func TestPedersen_Scenario(t *testing.T) {
 	_, err = actors[0].Setup(fakeAuthority, n)
 	require.EqualError(t, err, "startRes is already done, only one setup call is allowed")
 
-	// every node should be able to sign
+	// every node should be able to extract
 	for i := 0; i < n; i++ {
-		_, err := actors[i].Sign(message)
+		_, err := actors[i].Extract(message)
 		require.NoError(t, err)
 	}
 }

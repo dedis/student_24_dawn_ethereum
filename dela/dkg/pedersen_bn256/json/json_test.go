@@ -126,26 +126,26 @@ func TestMessageFormat_StartDone_Encode(t *testing.T) {
 	require.EqualError(t, err, fake.Err("failed to encode message: couldn't marshal public key"))
 }
 
-func TestMessageFormat_SignRequest_Encode(t *testing.T) {
-	req := types.NewSignRequest([]byte{1,2,3,4})
+func TestMessageFormat_ExtractRequest_Encode(t *testing.T) {
+	req := types.NewExtractRequest([]byte{1,2,3,4})
 
 	format := newMsgFormat()
 	ctx := serde.NewContext(fake.ContextEngine{})
 
 	data, err := format.Encode(ctx, req)
 	require.NoError(t, err)
-	require.Regexp(t, `{(("SignRequest":{"Msg":"[^"]+"}|"\w+":null),?)+}`, string(data))
+	require.Regexp(t, `{(("ExtractRequest":{"Label":"[^"]+"}|"\w+":null),?)+}`, string(data))
 }
 
-func TestMessageFormat_SignReply_Encode(t *testing.T) {
-	resp := types.NewSignReply([]byte{1,2,3,4})
+func TestMessageFormat_ExtractReply_Encode(t *testing.T) {
+	resp := types.NewExtractReply([]byte{1,2,3,4})
 
 	format := newMsgFormat()
 	ctx := serde.NewContext(fake.ContextEngine{})
 
 	data, err := format.Encode(ctx, resp)
 	require.NoError(t, err)
-	require.Regexp(t, `{(("SignReply":{"Share":"[^"]+"}|"\w+":null),?)+}`, string(data))
+	require.Regexp(t, `{(("ExtractReply":{"Share":"[^"]+"}|"\w+":null),?)+}`, string(data))
 }
 
 func TestMessageFormat_Decode(t *testing.T) {
@@ -199,16 +199,16 @@ func TestMessageFormat_Decode(t *testing.T) {
 		"couldn't unmarshal public key: bn256.G2: not enough data")
 
 	// Decode sign request messages.
-	data = []byte(`{"SignRequest":{}}`)
+	data = []byte(`{"ExtractRequest":{}}`)
 	req, err := format.Decode(ctx, data)
 	require.NoError(t, err)
-	require.IsType(t, types.SignRequest{}, req)
+	require.IsType(t, types.ExtractRequest{}, req)
 
 	// Decode sign reply messages.
-	data = []byte(`{"SignReply":{}}`)
+	data = []byte(`{"ExtractReply":{}}`)
 	resp, err = format.Decode(ctx, data)
 	require.NoError(t, err)
-	require.IsType(t, types.SignReply{}, resp)
+	require.IsType(t, types.ExtractReply{}, resp)
 
 	_, err = format.Decode(fake.NewBadContext(), []byte(`{}`))
 	require.EqualError(t, err, fake.Err("couldn't deserialize message"))

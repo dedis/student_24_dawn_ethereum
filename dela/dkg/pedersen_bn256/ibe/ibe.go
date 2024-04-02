@@ -100,3 +100,14 @@ func DecryptCPAonG2(suite pairing.Suite, decKey kyber.Point, ct *CiphertextCPA) 
 	xof.XORKeyStream(msg, ct.V)
 	return msg, nil
 }
+
+func VerifyIdentityOnG2(suite pairing.Suite, pk, identity kyber.Point, label []byte) (bool, error) {
+	hashable, ok := suite.G1().Point().(hashablePoint)
+	if !ok {
+		return false, errors.New("point needs to implement hashablePoint")
+	}
+
+	lhs := suite.Pair(identity, suite.G2().Point())
+	rhs := suite.Pair(hashable.Hash(label), pk)
+	return lhs.Equal(rhs), nil
+}

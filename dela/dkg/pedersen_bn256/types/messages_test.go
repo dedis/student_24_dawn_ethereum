@@ -237,8 +237,8 @@ func TestStartDone_Serialize(t *testing.T) {
 	require.EqualError(t, err, fake.Err("couldn't encode ack"))
 }
 
-func TestSignRequest_Serialize(t *testing.T) {
-	req := SignRequest{}
+func TestExtractRequest_Serialize(t *testing.T) {
+	req := ExtractRequest{}
 
 	data, err := req.Serialize(fake.NewContext())
 	require.NoError(t, err)

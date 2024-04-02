@@ -33,25 +33,25 @@ func NewDkgCli() *DkgCli {
 	return &DkgCli{configPath: configPath}
 }
 
-func (d *DkgCli) Encrypt(label []byte, plaintext []byte) ([]byte, error) {
-	return d.run("encrypt", "--label", hex.EncodeToString(label), "--message", hex.EncodeToString(plaintext))
+func (d *DkgCli) GetPublicKey() (kyber.Point, error) {
+	pkBytes, err := d.run("get-public-key")
+	if err != nil {
+		return nil, err
+	}
+	pk := Suite.G2().Point()
+	err = pk.UnmarshalBinary(pkBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return pk, nil
 }
+
 func (d *DkgCli) Decrypt(label []byte, ciphertext []byte) ([]byte, error) {
 	return d.run("decrypt", "--label", hex.EncodeToString(label), "--ciphertext", hex.EncodeToString(ciphertext))
 }
-func (d *DkgCli) Extract(label []byte) (kyber.Point, error) {
-	identityBytes, err := d.run("decrypt", "--label", hex.EncodeToString(label))
-	if err != nil {
-		return nil, err
-	}
-
-	identity := Suite.G1().Point()
-	err = identity.UnmarshalBinary(identityBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	return identity, nil
+func (d *DkgCli) Extract(label []byte) ([]byte, error) {
+	return d.run("decrypt", "--label", hex.EncodeToString(label))
 }
 
 func (d *DkgCli) run(args ...string) ([]byte, error) {

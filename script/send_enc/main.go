@@ -16,8 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/f3b"
 	"github.com/ethereum/go-ethereum/log"
-
-	"go.dedis.ch/kyber/v3/util/random"
 )
 
 func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accounts.Account, to common.Address, val *big.Int, gasLimit uint64, calldata []byte) (error) {
@@ -37,21 +35,30 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 		return err
 	}
 
-	key := make([]byte, 16)
-	random.Bytes(key, random.New())
-
 	dkgcli := f3b.NewDkgCli()
 
-	label := binary.BigEndian.AppendUint64(from.Address.Bytes(), nonce)
-	enc_key, err := dkgcli.Encrypt(label, key)
+	pk, err := dkgcli.GetPublicKey()
 	if err != nil {
 		return err
 	}
+	label := binary.BigEndian.AppendUint64(from.Address.Bytes(), nonce)
+	U, secret := f3b.ShareSecret(pk, label)
 
 	plaintext := append(to.Bytes(), calldata...)
 	ciphertext := make([]byte, len(plaintext))
 	tag := make([]byte, cae.Selected.TagLen())
-	err = cae.Selected.Encrypt(ciphertext, tag, key, plaintext)
+	seed, err := secret.MarshalBinary()
+	if err != nil {
+		return err
+	}
+	err = cae.Selected.Encrypt(ciphertext, tag, seed, plaintext)
+	if err != nil {
+		return err
+	}
+	encKey, err := U.MarshalBinary()
+	if err != nil {
+		return err
+	}
 
 	enc := &types.EncryptedTx{
 		ChainID:    chainID,
@@ -61,7 +68,7 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 		Value:      val,
 		Ciphertext: ciphertext,
 		Tag:        tag,
-		EncKey:     enc_key,
+		EncKey:     encKey,
 	}
 	tx := types.NewTx(enc)
 

@@ -31,14 +31,31 @@ func (t *Transaction) Decrypt() (*Transaction, error) {
 	dkgcli := f3b.NewDkgCli()
 
 	label := binary.BigEndian.AppendUint64(from.Bytes(), tx.Nonce)
-	key, err := dkgcli.Decrypt(label, tx.EncKey)
+	U := f3b.Suite.G2().Point()
+	err = U.UnmarshalBinary(tx.EncKey)
+	if err != nil {
+		return nil, err
+	}
+	identityBytes, err := dkgcli.Extract(label)
+	if err != nil {
+		return nil, err
+	}
+
+	identity := f3b.Suite.G1().Point()
+	err = identity.UnmarshalBinary(identityBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	secret := f3b.RecoverSecret(identity, U)
+	seed, err := secret.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO: if the ciphertext is too short, penalize the sender
 	plaintext := make([]byte, len(tx.Ciphertext))
-	err = cae.Selected.Decrypt(plaintext, key, tx.Ciphertext, tx.Tag)
+	err = cae.Selected.Decrypt(plaintext, seed, tx.Ciphertext, tx.Tag)
 	// TODO: if this is an authentication error, penalize the sender
 	if err != nil {
 		return nil, err
@@ -56,8 +73,8 @@ func (t *Transaction) Decrypt() (*Transaction, error) {
 		Value:      tx.Value,
 		To:        &to,
 		Data:       data,
-		Key:     key,
 		EncKey:     tx.EncKey,
+		Reveal:     identityBytes,
 
 		V: tx.V,
 		R: tx.R,
@@ -71,13 +88,31 @@ func (t *Transaction) Reencrypt() (*Transaction, error) {
 		return nil, errors.New("cannot reencrypt a non-decrypted transaction")
 	}
 
+	U := f3b.Suite.G2().Point()
+	err := U.UnmarshalBinary(tx.EncKey)
+	if err != nil {
+		return nil, err
+	}
+
+	identity := f3b.Suite.G1().Point()
+	err = identity.UnmarshalBinary(tx.Reveal)
+	if err != nil {
+		return nil, err
+	}
+
+	secret := f3b.RecoverSecret(identity, U)
+	seed, err := secret.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
 	plaintext := append(tx.To.Bytes(), tx.Data...)
 
 	ciphertext := make([]byte, len(plaintext))
 	tag := make([]byte, cae.Selected.TagLen())
-	err := cae.Selected.Encrypt(ciphertext, tag, tx.Key, plaintext)
+	err = cae.Selected.Encrypt(ciphertext, tag, seed, plaintext)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	return NewTx(&EncryptedTx{

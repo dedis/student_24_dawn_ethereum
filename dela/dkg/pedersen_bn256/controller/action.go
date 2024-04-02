@@ -13,7 +13,7 @@ import (
 	"go.dedis.ch/dela/crypto"
 	"go.dedis.ch/dela/crypto/bls"
 	"go.dedis.ch/dela/dkg"
-	"go.dedis.ch/dela/dkg/pedersen_bn256/ibe"
+	"go.dedis.ch/dela/dkg/ibe"
 	"go.dedis.ch/dela/mino"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/suites"

@@ -57,7 +57,7 @@ func (t *Transaction) Decrypt() (*Transaction, error) {
 		return nil, err
 	}
 	if !ok {
-		//return nil, errors.New("bad identity")
+		return nil, errors.New("bad identity")
 	}
 
 	secret := f3b.RecoverSecret(identity, U)

@@ -1,0 +1,17 @@
+services:
+  dev:
+    build:
+      context: .
+    volumes:
+      - type: bind
+        source: .
+        target: /app
+
+  demo:
+    build:
+      context: .
+    volumes:
+      - type: bind
+        source: .
+        target: /app
+    command: sh -c "./setup.sh && tmux new-session ./run.sh"

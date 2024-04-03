@@ -9,14 +9,12 @@ import (
 
 const pointMarshalledSize = 128
 
-type hashablePoint interface {
-	Hash([]byte) kyber.Point
-}
-
-var hashable = Suite.G1().Point().(hashablePoint)
-
 func HashToG1(label []byte) kyber.Point {
-	return hashable.Hash(label)
+	// sync with kyber/sign/bls
+	h := Suite.Hash()
+	h.Write(label)
+	x := Suite.G1().Scalar().SetBytes(h.Sum(nil))
+	return Suite.G1().Point().Mul(x, nil)
 }
 
 // Share a secret with the SMC pk by computing

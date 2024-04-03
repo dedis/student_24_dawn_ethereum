@@ -10,11 +10,12 @@ import (
        "path/filepath"
        "strings"
        "go.dedis.ch/kyber/v3/pairing"
-       "go.dedis.ch/kyber/v3/pairing/bn256"
+	"go.dedis.ch/kyber/v3/suites"
        "go.dedis.ch/kyber/v3"
 )
 
-var Suite pairing.Suite = bn256.NewSuite()
+//var Suite pairing.Suite = bn256.NewSuite()
+var Suite = suites.MustFind("bn256.G2").(pairing.Suite)
 
 func getEnv(name string) string {
 value, ok := os.LookupEnv(name)
@@ -47,11 +48,8 @@ func (d *DkgCli) GetPublicKey() (kyber.Point, error) {
 	return pk, nil
 }
 
-func (d *DkgCli) Decrypt(label []byte, ciphertext []byte) ([]byte, error) {
-	return d.run("decrypt", "--label", hex.EncodeToString(label), "--ciphertext", hex.EncodeToString(ciphertext))
-}
 func (d *DkgCli) Extract(label []byte) ([]byte, error) {
-	return d.run("decrypt", "--label", hex.EncodeToString(label))
+	return d.run("extract", "--label", hex.EncodeToString(label))
 }
 
 func (d *DkgCli) run(args ...string) ([]byte, error) {

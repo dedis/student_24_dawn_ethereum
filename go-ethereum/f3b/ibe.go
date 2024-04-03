@@ -3,6 +3,7 @@
 package f3b
 
 import (
+	"fmt"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/util/random"
 )
@@ -37,7 +38,8 @@ func RecoverSecret(sigma kyber.Point, U kyber.Point) kyber.Point {
 
 func VerifyIdentity(pk, sigma kyber.Point, label []byte) (bool, error) {
 	// FIXME do pair(...) == 0 for performance
-	lhs := Suite.Pair(sigma, Suite.G2().Point())
+	lhs := Suite.Pair(sigma, Suite.G2().Point().Base())
 	rhs := Suite.Pair(HashToG1(label), pk)
+	fmt.Println(lhs, rhs)
 	return lhs.Equal(rhs), nil
 }

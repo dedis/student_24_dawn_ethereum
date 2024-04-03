@@ -107,7 +107,7 @@ func VerifyIdentityOnG2(suite pairing.Suite, pk, identity kyber.Point, label []b
 		return false, errors.New("point needs to implement hashablePoint")
 	}
 
-	lhs := suite.Pair(identity, suite.G2().Point())
+	lhs := suite.Pair(identity, suite.G2().Point().Base())
 	rhs := suite.Pair(hashable.Hash(label), pk)
 	return lhs.Equal(rhs), nil
 }

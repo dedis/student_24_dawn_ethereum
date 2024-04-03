@@ -47,11 +47,25 @@ func (t *Transaction) Decrypt() (*Transaction, error) {
 		return nil, err
 	}
 
+	pk, err := dkgcli.GetPublicKey()
+	if err != nil {
+		return nil, err
+	}
+
+	ok, err = f3b.VerifyIdentity(pk, identity, label)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		//return nil, errors.New("bad identity")
+	}
+
 	secret := f3b.RecoverSecret(identity, U)
 	seed, err := secret.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
+	log.Info("Decrypt()", "label", label, "U", U, "secret", secret, "seed", seed)
 
 	// TODO: if the ciphertext is too short, penalize the sender
 	plaintext := make([]byte, len(tx.Ciphertext))

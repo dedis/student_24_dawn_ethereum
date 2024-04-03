@@ -51,6 +51,7 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 	if err != nil {
 		return err
 	}
+	log.Info("Enc()", "label", label, "U", U, "secret", secret, "seed", seed)
 	err = cae.Selected.Encrypt(ciphertext, tag, seed, plaintext)
 	if err != nil {
 		return err

@@ -209,12 +209,12 @@ func (a extractAction) Execute(ctx node.Context) error {
 		return xerrors.Errorf(resolveActorFailed, err)
 	}
 
-	message, err := hex.DecodeString(ctx.Flags.String("message"))
+	label, err := hex.DecodeString(ctx.Flags.String("label"))
 	if err != nil {
 		return xerrors.Errorf("failed to decode message: %v", err)
 	}
 
-	sig, err := actor.Extract(message)
+	sig, err := actor.Extract(label)
 	if err != nil {
 		return xerrors.Errorf("failed to encrypt: %v", err)
 	}

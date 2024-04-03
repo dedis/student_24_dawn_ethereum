@@ -189,7 +189,7 @@ func (a *Actor) GetPublicKey() (kyber.Point, error) {
 
 // Extract implements dkg.Actor. It gets the private shares of the nodes and
 // extracts the decryption key for an identity.
-func (a *Actor) Extract(msg []byte) ([]byte, error) {
+func (a *Actor) Extract(label []byte) ([]byte, error) {
 
 	if !a.startRes.Done() {
 		return nil, xerrors.Errorf(initDkgFirst)
@@ -214,7 +214,7 @@ func (a *Actor) Extract(msg []byte) ([]byte, error) {
 		addrs = append(addrs, iterator.GetNext())
 	}
 
-	message := types.NewExtractRequest(msg)
+	message := types.NewExtractRequest(label)
 
 	err = <-sender.Send(message, addrs...)
 	if err != nil {
@@ -244,7 +244,7 @@ func (a *Actor) Extract(msg []byte) ([]byte, error) {
 		sigShares[i] = signReply.Share
 	}
 
-	signature, err := tbls.Recover(suite.(pairing.Suite), pubPoly, msg, sigShares, t, n)
+	signature, err := tbls.Recover(suite.(pairing.Suite), pubPoly, label, sigShares, t, n)
 	if err != nil {
 		return []byte{}, xerrors.Errorf("failed to recover signature: %v", err)
 	}

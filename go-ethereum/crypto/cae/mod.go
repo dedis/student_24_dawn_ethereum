@@ -33,7 +33,7 @@ func (authenticationError) Error() string {
 var AuthenticationError error = authenticationError{}
 
 // For development convenience, this is used to select the scheme to use.
-var Selected Scheme = Chacha20HmacSha256
+var Selected Scheme = RkChacha20Poly1305
 
 var AllSchemes = []Scheme{
 	Aes256Gcm,

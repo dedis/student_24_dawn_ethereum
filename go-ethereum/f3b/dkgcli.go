@@ -9,13 +9,8 @@ import (
        "os/exec"
        "path/filepath"
        "strings"
-       "go.dedis.ch/kyber/v3/pairing"
-	"go.dedis.ch/kyber/v3/suites"
        "go.dedis.ch/kyber/v3"
 )
-
-//var Suite pairing.Suite = bn256.NewSuite()
-var Suite = suites.MustFind("bn256.G2").(pairing.Suite)
 
 func getEnv(name string) string {
 value, ok := os.LookupEnv(name)

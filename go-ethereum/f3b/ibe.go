@@ -6,7 +6,11 @@ import (
 	"fmt"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/util/random"
+       "go.dedis.ch/kyber/v3/pairing"
+       "go.dedis.ch/kyber/v3/pairing/bn256"
 )
+
+var Suite pairing.Suite = bn256.NewSuite()
 
 const pointMarshalledSize = 128
 

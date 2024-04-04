@@ -3,11 +3,10 @@
 package f3b
 
 import (
-	"fmt"
 	"go.dedis.ch/kyber/v3"
+	"go.dedis.ch/kyber/v3/pairing"
+	"go.dedis.ch/kyber/v3/pairing/bn256"
 	"go.dedis.ch/kyber/v3/util/random"
-       "go.dedis.ch/kyber/v3/pairing"
-       "go.dedis.ch/kyber/v3/pairing/bn256"
 )
 
 var Suite pairing.Suite = bn256.NewSuite()
@@ -41,9 +40,8 @@ func RecoverSecret(sigma kyber.Point, U kyber.Point) kyber.Point {
 }
 
 func VerifyIdentity(pk, sigma kyber.Point, label []byte) (bool, error) {
-	// FIXME do pair(...) == 0 for performance
+	// note: this could be optimized
 	lhs := Suite.Pair(sigma, Suite.G2().Point().Base())
 	rhs := Suite.Pair(HashToG1(label), pk)
-	fmt.Println(lhs, rhs)
 	return lhs.Equal(rhs), nil
 }

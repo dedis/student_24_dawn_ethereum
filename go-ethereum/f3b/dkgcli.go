@@ -3,21 +3,21 @@
 package f3b
 
 import (
-	"log"
 	"encoding/hex"
-       "os"
-       "os/exec"
-       "path/filepath"
-       "strings"
-       "go.dedis.ch/kyber/v3"
+	"go.dedis.ch/kyber/v3"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
 func getEnv(name string) string {
-value, ok := os.LookupEnv(name)
-       if !ok {
-               log.Fatalf("environment variable %s must be set", name)
-       }
-       return value
+	value, ok := os.LookupEnv(name)
+	if !ok {
+		log.Fatalf("environment variable %s must be set", name)
+	}
+	return value
 }
 
 type DkgCli struct {
@@ -59,4 +59,3 @@ func (d *DkgCli) run(args ...string) ([]byte, error) {
 	}
 	return hex.DecodeString(strings.TrimSpace(string(output)))
 }
-

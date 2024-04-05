@@ -86,7 +86,7 @@ func Main() error {
 			return fmt.Errorf("expected affine polynomial!")
 		}
 
-		fmt.Printf("%s: f(x) = %f*x + %f\n", filename, b, a)
+		fmt.Printf("%s: f(x) = %.3fx + %.3f\n", filename, b, a)
 	}
 
 	return nil

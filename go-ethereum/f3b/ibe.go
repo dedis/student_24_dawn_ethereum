@@ -11,8 +11,6 @@ import (
 
 var Suite pairing.Suite = bn256.NewSuite()
 
-const pointMarshalledSize = 128
-
 type hashablePoint interface {
 	Hash([]byte) kyber.Point
 }

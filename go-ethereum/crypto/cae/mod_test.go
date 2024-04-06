@@ -86,12 +86,8 @@ func BenchmarkDecrypt(b *testing.B) {
 						b.Fatalf("%x != 0", plaintext)
 					}
 				}
-				// 25 Gas = 1 μs
-				// cost = 10MGas/s * elpased
-				// cost = 10MGas/s * elpased / 10e9 μs/s
-				suggestedGas := b.Elapsed().Microseconds() * 25 / int64(b.N)
-				b.ReportMetric(float64(suggestedGas), "gas/op")
-				b.ReportMetric(float64(suggestedGas)/float64(l), "gas/B")
+				nsPerByte := float64(b.Elapsed().Nanoseconds() / int64(b.N)) / float64(l)
+				b.ReportMetric(nsPerByte, "ns/B")
 			})
 		}
 	}

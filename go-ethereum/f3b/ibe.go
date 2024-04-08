@@ -36,8 +36,15 @@ func RecoverSecret(sigma kyber.Point, U kyber.Point) kyber.Point {
 	return Suite.Pair(sigma, U)
 }
 
-func VerifyIdentity(pk, sigma kyber.Point, label []byte) (bool, error) {
-	// note: this could be optimized
-	nbase := Suite.G2().Point().Neg(Suite.G2().Point().Base())
-	return Suite.PairingCheck([]kyber.Point{sigma, HashToG1(label)}, []kyber.Point{nbase, pk}), nil
+func VerifyIdentitySlow(pk, sigma kyber.Point, label []byte) bool {
+       lhs := Suite.Pair(sigma, Suite.G2().Point().Base())
+       rhs := Suite.Pair(HashToG1(label), pk)
+       return lhs.Equal(rhs)
 }
+
+func VerifyIdentityFast(pk, sigma kyber.Point, label []byte) bool {
+	nbase := Suite.G2().Point().Neg(Suite.G2().Point().Base())
+	return Suite.PairingCheck([]kyber.Point{sigma, HashToG1(label)}, []kyber.Point{nbase, pk})
+}
+
+var VerifyIdentity = VerifyIdentityFast

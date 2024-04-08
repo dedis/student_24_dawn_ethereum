@@ -52,10 +52,7 @@ func (t *Transaction) Decrypt() (*Transaction, error) {
 		return nil, err
 	}
 
-	ok, err = f3b.VerifyIdentity(pk, identity, label)
-	if err != nil {
-		return nil, err
-	}
+	ok = f3b.VerifyIdentity(pk, identity, label)
 	if !ok {
 		return nil, errors.New("bad identity")
 	}

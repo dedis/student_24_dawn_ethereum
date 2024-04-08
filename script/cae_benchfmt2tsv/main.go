@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"os"
 
@@ -45,9 +46,17 @@ func Main() error {
 				w := csv.NewWriter(f)
 				w.Comma = '\t'
 				writers[scheme] = w
-				w.Write([]string{"l", "gas/B", "gas/op"})
+				w.Write([]string{"l", "sec/B", "sec/op"})
 			}
-			writers[scheme].Write([]string{l, fmt.Sprintf("%f", r.Values[1].Value), fmt.Sprintf("%f", r.Values[2].Value)})
+			secPerByte, ok := r.Value("sec/B")
+			if !ok {
+				return errors.New("missing measurement: sec/B")
+			}
+			secPerOp, ok := r.Value("sec/op")
+			if !ok {
+				return errors.New("missing measurement: sec/op")
+			}
+			writers[scheme].Write([]string{l, fmt.Sprintf("%g", secPerByte), fmt.Sprintf("%g", secPerOp)})
 		}
 	}
 

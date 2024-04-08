@@ -4,12 +4,11 @@ package f3b
 
 import (
 	"go.dedis.ch/kyber/v3"
-	"go.dedis.ch/kyber/v3/pairing"
 	"go.dedis.ch/kyber/v3/pairing/bn256"
 	"go.dedis.ch/kyber/v3/util/random"
 )
 
-var Suite pairing.Suite = bn256.NewSuite()
+var Suite = bn256.NewSuite()
 
 type hashablePoint interface {
 	Hash([]byte) kyber.Point
@@ -39,7 +38,6 @@ func RecoverSecret(sigma kyber.Point, U kyber.Point) kyber.Point {
 
 func VerifyIdentity(pk, sigma kyber.Point, label []byte) (bool, error) {
 	// note: this could be optimized
-	lhs := Suite.Pair(sigma, Suite.G2().Point().Base())
-	rhs := Suite.Pair(HashToG1(label), pk)
-	return lhs.Equal(rhs), nil
+	nbase := Suite.G2().Point().Neg(Suite.G2().Point().Base())
+	return Suite.PairingCheck([]kyber.Point{sigma, HashToG1(label)}, []kyber.Point{nbase, pk}), nil
 }

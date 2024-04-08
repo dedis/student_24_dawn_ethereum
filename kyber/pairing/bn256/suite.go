@@ -98,6 +98,25 @@ func (s *Suite) Pair(p1 kyber.Point, p2 kyber.Point) kyber.Point {
 	return s.GT().Point().(*pointGT).Pair(p1, p2)
 }
 
+// Pair takes the pair of points p1s and p2s in groups G1 and G2, respectively, as input
+// and checks whether the sum of all pairwise pairings is the base point
+func (s *Suite) PairingCheck(p1s []kyber.Point, p2s []kyber.Point) bool {
+	acc := s.GT().Point().Base().(*pointGT)
+	acc.g.SetOne()
+	tmp := s.GT().Point().(*pointGT)
+	null1 := s.G1().Point().Null()
+	null2 := s.G2().Point().Null()
+
+	for i := range p1s {
+		if p1s[i].Equal(null1) || p2s[i].Equal(null2) {
+			continue
+		}
+		acc.Add(acc, tmp.Miller(p1s[i], p2s[i]))
+	}
+	acc.Finalize()
+	return acc.g.IsOne()
+}
+
 // Not used other than for reflect.TypeOf()
 var aScalar kyber.Scalar
 var aPoint kyber.Point

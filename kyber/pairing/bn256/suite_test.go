@@ -406,3 +406,13 @@ func TestNegPairAll(t *testing.T) {
 	require.True(t, pair2.Equal(pair3))
 	require.True(t, pair3.Equal(pair4))
 }
+
+func TestPairingCheck(t *testing.T) {
+	suite := NewSuite()
+	require.True(t, suite.PairingCheck(nil, nil))
+	a := suite.G1().Scalar().Pick(random.New())
+	p1a := suite.G1().Point().Mul(a, nil)
+	p2a := suite.G2().Point().Mul(suite.G1().Scalar().Neg(a), nil)
+	require.True(t, suite.PairingCheck([]kyber.Point{p1a, suite.G1().Point().Base()}, []kyber.Point{suite.G2().Point().Base(), p2a}))
+	require.False(t, suite.PairingCheck([]kyber.Point{p1a}, []kyber.Point{suite.G2().Point().Base()}))
+}

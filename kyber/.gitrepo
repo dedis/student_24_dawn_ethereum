@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/dedis/kyber
+	branch = v3.0.14
+	commit = 44f07e3eab7be2cec048d3020e5e133b92e03096
+	parent = ff78aa988734af91fa3b3b8412c68a96e89908f1
+	method = merge
+	cmdver = 0.4.6

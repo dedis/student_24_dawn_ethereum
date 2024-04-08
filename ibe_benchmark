@@ -1,0 +1,6 @@
+goos: linux
+goarch: arm64
+pkg: github.com/ethereum/go-ethereum/f3b
+BenchmarkVerifyIdentity/Variant=Slow-4         	      72	  14123778 ns/op
+BenchmarkVerifyIdentity/Variant=Fast-4         	     122	   9710434 ns/op
+BenchmarkRecoverSecret-4                       	     171	   6950496 ns/op

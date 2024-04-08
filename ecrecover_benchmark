@@ -1,0 +1,4 @@
+goos: linux
+goarch: arm64
+pkg: github.com/ethereum/go-ethereum/core/vm
+BenchmarkPrecompiledEcrecover/-Gas=3000-4         	    3528	    293862 ns/op	      3000 gas/op	        10.20 mgas/s	    1464 B/op	     13 allocs/op

@@ -11,6 +11,8 @@ import (
 
 type point struct{ l, gas float64 }
 
+const GasPerMs = 30
+
 func readPoints(filename string) ([]point, error) {
 	f, err := os.Open(filename)
 	if err != nil {
@@ -31,9 +33,9 @@ func readPoints(filename string) ([]point, error) {
 		return nil, fmt.Errorf("missing l column")
 	}
 
-	gasIndex := slices.Index(headers, "gas/op")
-	if gasIndex < 0 {
-		return nil, fmt.Errorf("missing gas/op column")
+	tIndex := slices.Index(headers, "sec/op")
+	if tIndex < 0 {
+		return nil, fmt.Errorf("missing ms/op column")
 	}
 
 	for {
@@ -48,10 +50,11 @@ func readPoints(filename string) ([]point, error) {
 		if err != nil {
 			return nil, err
 		}
-		gas, err := strconv.ParseFloat(row[gasIndex], 64)
+		t, err := strconv.ParseFloat(row[tIndex], 64)
 		if err != nil {
 			return nil, err
 		}
+		gas := GasPerMs * 1e6 * t
 		points = append(points, point{l, gas})
 	}
 
@@ -61,23 +64,35 @@ func readPoints(filename string) ([]point, error) {
 func evalAt(points []point, x float64) (result float64) {
 	// Lagrange interpolation
 	for i := range points {
-		l := 1.0
+		r := 1.0
 		for j := range points {
 			if i != j {
-				l *= (x - points[j].l) / (points[i].l - points[j].l)
+				r *= (x - points[j].l) / (points[i].l - points[j].l)
 			}
 		}
-		result += points[i].gas * l
+		result += points[i].gas * r
 	}
 	return
 }
 
 func Main() error {
-	for _, filename := range os.Args[1:] {
-		points, err := readPoints(filename)
+	rows := []struct{label, filename string}{
+		{"ChaCha20-HMAC-SHA256", "benchmarks/cae/chacha20-hmac-sha256.csv"},
+		{"AES-CTR-HMAC-SHA256", "benchmarks/cae/aes256ctr-hmac-sha256.csv"},
+		{"RK-ChaCha20-Poly1305", "benchmarks/cae/rk-chacha20-poly1305.csv"},
+		{"RK-AES-GCM", "benchmarks/cae/rk-aes256-gcm.csv"},
+		{"ChaCha20-Poly1305", "benchmarks/cae/chacha20-poly1305.csv"},
+		{"AES-GCM", "benchmarks/cae/aes256-gcm.csv"},
+		{"ChaCha20", "benchmarks/cae/chacha20.csv"},
+		{"ChaCha12", "benchmarks/cae/chacha12.csv"},
+		{"ChaCha8", "benchmarks/cae/chacha8.csv"},
+	}
+	for _, row := range rows {
+		points, err :=  readPoints(row.filename)
 		if err != nil {
 			return err
 		}
+
 		a := evalAt(points, 0)
 		b := evalAt(points, 1) - a
 		// f(2) = 4*c + 2*b + a
@@ -86,9 +101,9 @@ func Main() error {
 			return fmt.Errorf("expected affine polynomial!")
 		}
 
-		fmt.Printf("%s: f(x) = %.3fx + %.3f\n", filename, b, a)
+		fmt.Printf("%s & $f(x) = %.3fx + %.3f$\n", row.label, b, a)
+		fmt.Println("\\\\") // LaTeX row delimiter
 	}
-
 	return nil
 }
 

@@ -11,7 +11,7 @@ import (
 
 type point struct{ l, gas float64 }
 
-const GasPerMs = 30
+const GasPerMs = 10.2
 
 func readPoints(filename string) ([]point, error) {
 	f, err := os.Open(filename)
@@ -35,7 +35,7 @@ func readPoints(filename string) ([]point, error) {
 
 	tIndex := slices.Index(headers, "sec/op")
 	if tIndex < 0 {
-		return nil, fmt.Errorf("missing ms/op column")
+		return nil, fmt.Errorf("missing sec/op column")
 	}
 
 	for {

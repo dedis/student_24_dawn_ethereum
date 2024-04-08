@@ -2,6 +2,8 @@ module go.dedis.ch/dela
 
 go 1.19
 
+replace go.dedis.ch/kyber/v3 => ../kyber/
+
 require (
 	github.com/dedis/debugtools v0.0.0-20221206213939-0bc3bacd3042
 	github.com/golang/protobuf v1.5.2

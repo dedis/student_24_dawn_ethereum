@@ -4,6 +4,8 @@ go 1.21.6
 
 replace go.dedis.ch/dela => ./dela/
 
+replace go.dedis.ch/kyber/v3 => ./kyber/
+
 replace github.com/ethereum/go-ethereum => ./go-ethereum/
 
 require (
@@ -98,6 +100,7 @@ require (
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/genproto v0.0.0-20230530153820-e85fd2cbaebc // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc // indirect
 	google.golang.org/grpc v1.55.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect

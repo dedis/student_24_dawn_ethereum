@@ -111,3 +111,5 @@ require (
 )
 
 replace go.dedis.ch/dela => ../dela/
+
+replace go.dedis.ch/kyber/v3 => ../kyber/

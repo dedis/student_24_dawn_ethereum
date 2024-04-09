@@ -11,6 +11,8 @@ replace github.com/ethereum/go-ethereum => ./go-ethereum/
 require (
 	github.com/ethereum/go-ethereum v0.0.0-00010101000000-000000000000
 	go.dedis.ch/dela v0.0.0-00010101000000-000000000000
+	golang.org/x/perf v0.0.0-20240305160248-5eefbfdba9dd
+	gonum.org/v1/gonum v0.11.0
 )
 
 require (
@@ -93,7 +95,6 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/net v0.22.0 // indirect
-	golang.org/x/perf v0.0.0-20240305160248-5eefbfdba9dd // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect

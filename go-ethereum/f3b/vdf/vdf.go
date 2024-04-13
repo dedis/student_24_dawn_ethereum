@@ -54,9 +54,9 @@ func Proof(label []byte, n *big.Int, steps uint64) (l *big.Int, π *big.Int) {
 	var tmp big.Int
 	g := deriveInitial(label, n)
 	x := new(big.Int).Set(g)
-	κ := uint64(100) // TODO: set based on steps?
+	κ := uint64(10) // TODO: set based on steps?
 	// FIXME: assumes κ divides steps
-	// TODO: γ?
+	// TODO: γ? O(sqrt(t)) memory
 	memo := make([]big.Int, (steps + κ - 1) / κ)
 	for i := uint64(0); i < steps; i++ {
 		if i % κ == 0 {
@@ -69,8 +69,8 @@ func Proof(label []byte, n *big.Int, steps uint64) (l *big.Int, π *big.Int) {
 	l = sampleL(g, x)
 	x.SetUint64(1)
 	b := new(big.Int)
-	for i := range memo {
-		b.Exp(common.Big2, tmp.SetUint64(steps  - (κ*(uint64(i)+1))), l)
+	for i := uint64(0); i < (steps + κ - 1) / κ; i++ {
+		b.Exp(common.Big2, tmp.SetUint64(steps  - (κ*(i+1))), l)
 		b.Mul(b, tmp.SetUint64(1 << κ))
 		b.Div(b, l)
 		c := &memo[i] // g**(2**(κ*i)) mod n

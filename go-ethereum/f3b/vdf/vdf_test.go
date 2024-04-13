@@ -4,7 +4,6 @@ package vdf
 
 import (
 	"fmt"
-	"math/big"
 	"testing"
 )
 
@@ -19,17 +18,16 @@ func TestRecoverSecret(t *testing.T) {
 
 func TestRecoverSecretWithProof(t *testing.T) {
 	label := []byte("test")
-	n, secret := ShareSecret(label)
-	steps := 1000
+	var steps uint64 = 1000
+	n, secret := shareSecret(label, steps)
 	y, π, l := recoverSecretWithProof(n, label, uint64(steps))
-	init := deriveInitial(n, label)
-	two := new(big.Int).SetInt64(2)
-	y2 := new(big.Int).Exp(two, new(big.Int).SetInt64(int64(steps)), l)
-	y2.Exp(init, y2, n)
-	y2.Mul(y2, π.Exp(π, l, n))
-	if y2.Cmp(y) != 0 {
+	g := deriveInitial(n, label)
+	if !checkProof(g, y, π, l, n, uint64(steps)) {
 		t.Fatal("bad proof")
+	
 	}
+	fmt.Println("secret", secret)
+	fmt.Println("y", y)
 	if secret.Cmp(y) != 0 {
 		t.Fatal("bad recovered secret")
 	}

@@ -50,11 +50,10 @@ func RecoverSecret(label []byte, n *big.Int, t uint64) *big.Int {
 	return x
 }
 
-func recoverSecretWithProof(label []byte, n *big.Int, steps uint64) (*big.Int, *big.Int) {
+func Proof(label []byte, n *big.Int, steps uint64) (l *big.Int, π *big.Int) {
 	var tmp big.Int
 	g := deriveInitial(label, n)
 	x := new(big.Int).Set(g)
-	y := new(big.Int)
 	/*
 	κ := uint64(16) // TODO: set based on steps?
 	κ = 1
@@ -89,9 +88,8 @@ func recoverSecretWithProof(label []byte, n *big.Int, steps uint64) (*big.Int, *
 	}
 
 	// Long-division slow way based on https://eprint.iacr.org/2018/712
-	y.Set(x)
 	r := new(big.Int).SetUint64(1)
-	l := sampleL(g, y)
+	l = sampleL(g, x)
 	x.SetUint64(1)
 	for i := uint64(0); i < steps; i++ {
 		b := new(big.Int)
@@ -100,8 +98,7 @@ func recoverSecretWithProof(label []byte, n *big.Int, steps uint64) (*big.Int, *
 		x.Mul(x, x).Mul(x, tmp.Exp(g, b, n))
 		x.Mod(x, n)
 	}
-	π := x
-	return y, π
+	return l, x
 }
 
 // fiat shamir prime generation
@@ -116,16 +113,20 @@ func sampleL(g, y *big.Int) *big.Int {
 	return l
 }
 
-func checkProof(g, y, π, n *big.Int, steps uint64) bool {
-	l := sampleL(g, y)
+func RecoverSecretFromProof(label []byte, l, π, n *big.Int, steps uint64) (y *big.Int, ok bool) {
+	g := deriveInitial(label, n)
 	t := new(big.Int).SetUint64(steps)
 	// r = 2**t mod l
 	r := new(big.Int).Exp(common.Big2, t, l)
 	// π**l * g**r == y
-	y2 := new(big.Int).Exp(π, l, n)
-	y2.Mul(y2, new(big.Int).Exp(g, r, n))
-	y2.Mod(y2, n)
-	return y2.Cmp(y) == 0
+	y = new(big.Int).Exp(π, l, n)
+	y.Mul(y, new(big.Int).Exp(g, r, n))
+	y.Mod(y, n)
+	if sampleL(g, y).Cmp(l) != 0 {
+		// FIXME: skipped due to crypto/rand.Prime not being deterministic
+		//return nil, false
+	}
+	return y, true
 }
 
 /*

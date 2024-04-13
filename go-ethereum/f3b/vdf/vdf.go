@@ -54,7 +54,7 @@ func Proof(label []byte, n *big.Int, steps uint64) (l *big.Int, π *big.Int) {
 	var tmp big.Int
 	g := deriveInitial(label, n)
 	x := new(big.Int).Set(g)
-	κ := uint64(10) // TODO: set based on steps?
+	κ := uint64(100) // TODO: set based on steps?
 	// FIXME: assumes κ divides steps
 	// TODO: γ?
 	memo := make([]big.Int, (steps + κ - 1) / κ)

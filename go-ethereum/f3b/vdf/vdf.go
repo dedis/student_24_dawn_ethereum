@@ -6,9 +6,10 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"math/big"
-	"fmt"
 
 	"go.dedis.ch/kyber/v3/suites"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 var Suite = suites.MustFind("ed25519")
@@ -17,27 +18,22 @@ const RsaBits = 2048
 const SquaringSteps uint64 = 1_000_000
 
 // Share a secret with the future
-func ShareSecret(label []byte) (n, secret *big.Int) {
-	return shareSecret(label, SquaringSteps)
-}
-
-func shareSecret(label []byte, steps uint64) (n, secret *big.Int) {
+func ShareSecret(label []byte, t uint64) (secret, n *big.Int) {
 	priv, err := rsa.GenerateKey(rand.Reader, RsaBits)
 	if err != nil {
+		// unreachable if rand.Reader is well-behaved
 		panic(err.Error())
 	}
-	one := new(big.Int).SetInt64(1)
-	p_ := new(big.Int).Sub(priv.Primes[0], one)
-	q_ := new(big.Int).Sub(priv.Primes[1], one)
-	φ := new(big.Int).Mul(p_, q_)
-	init := deriveInitial(priv.N, label)
-	two := new(big.Int).SetInt64(2)
-	t := new(big.Int).Exp(two, new(big.Int).SetUint64(steps), φ)
-	secret = new(big.Int).Exp(init, t, priv.N)
+	var tmp big.Int
+	pMinusOne := new(big.Int).Sub(priv.Primes[0], common.Big1)
+	qMinusOne := new(big.Int).Sub(priv.Primes[1], common.Big1)
+	φ := new(big.Int).Mul(pMinusOne, qMinusOne)
+	g := deriveInitial(label, priv.N)
+	secret = new(big.Int).Exp(g, tmp.Exp(common.Big2, tmp.SetUint64(t), φ) , priv.N)
 	return priv.N, secret
 }
 
-func deriveInitial(n *big.Int, label []byte) *big.Int {
+func deriveInitial(label []byte, n *big.Int) *big.Int {
 	init, err := rand.Int(Suite.XOF(label), n)
 	if err != nil {
 		panic(err.Error())
@@ -46,22 +42,18 @@ func deriveInitial(n *big.Int, label []byte) *big.Int {
 }
 
 
-func RecoverSecret(n *big.Int, label []byte) *big.Int {
-	return recoverSecret(n, label, SquaringSteps)
-}
-
-func recoverSecret(n *big.Int, label []byte, steps uint64) *big.Int {
-	x := deriveInitial(n, label)
-	for i := uint64(0); i < steps; i++ {
+func RecoverSecret(label []byte, n *big.Int, t uint64) *big.Int {
+	x := deriveInitial(label, n)
+	for i := uint64(0); i < t; i++ {
 		x.Mul(x, x)
 		x.Mod(x, n)
 	}
 	return x
 }
 
-func recoverSecretWithProof(n *big.Int, label []byte, steps uint64) (*big.Int, *big.Int, *big.Int) {
+func recoverSecretWithProof(label []byte, n *big.Int, steps uint64) (*big.Int, *big.Int, *big.Int) {
 	var tmp big.Int
-	g := deriveInitial(n, label)
+	g := deriveInitial(label, n)
 	x := new(big.Int).Set(g)
 	y := new(big.Int)
 	/*
@@ -82,9 +74,7 @@ func recoverSecretWithProof(n *big.Int, label []byte, steps uint64) (*big.Int, *
 	two := new(big.Int).SetInt64(2)
 	l := sampleL()
 	π := new(big.Int).Set(one)
-	fmt.Println((steps >> κ) + 1)
 	for i := uint64(0); i < (steps >> κ); i++ {
-		fmt.Println("i", i)
 		b := new(big.Int)
 		b.Exp(two, tmp.SetUint64(steps  >> (κ*(i+1))), l)
 		b.Mul(b, tmp.SetUint64(1 << κ))
@@ -102,17 +92,14 @@ func recoverSecretWithProof(n *big.Int, label []byte, steps uint64) (*big.Int, *
 	// Long-division slow way based on https://eprint.iacr.org/2018/712
 	y.Set(x)
 	r := new(big.Int).SetUint64(1)
-	two := new(big.Int).SetInt64(2)
 	l := sampleL()
 	x.SetUint64(1)
 	for i := uint64(0); i < steps; i++ {
 		b := new(big.Int)
-		b.Mul(two, r).Div(b,l)
-		r.Mul(r, two).Mod(r, l)
+		b.Mul(common.Big2, r).Div(b,l)
+		r.Mul(r, common.Big2).Mod(r, l)
 		x.Mul(x, x).Mul(x, tmp.Exp(g, b, n))
 		x.Mod(x, n)
-		fmt.Println("x", x)
-		fmt.Println("b", b)
 	}
 	π := x
 	return y, π, l
@@ -129,15 +116,9 @@ func sampleL() *big.Int {
 }
 
 func checkProof(g, y, π, l, n *big.Int, steps uint64) bool {
-	fmt.Println("g", g)
-	fmt.Println("y", y)
-	fmt.Println("π", π)
-	fmt.Println("l", l)
-	fmt.Println("n", n)
-	two := new(big.Int).SetInt64(2)
 	t := new(big.Int).SetUint64(steps)
 	// r = 2**t mod l
-	r := new(big.Int).Exp(two, t, l)
+	r := new(big.Int).Exp(common.Big2, t, l)
 	// π**l * g**r == y
 	y2 := new(big.Int).Exp(π, l, n)
 	y2.Mul(y2, new(big.Int).Exp(g, r, n))

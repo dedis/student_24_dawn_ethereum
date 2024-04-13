@@ -106,7 +106,7 @@ func sampleL(g, y *big.Int) *big.Int {
 	kBits := 128
 	xof := Suite.XOF(g.Bytes())
 	xof.Write(y.Bytes())
-	l, err := rand.Prime(xof, kBits+1)
+	l, err := DeterministicPrime(xof, kBits+1)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -123,8 +123,7 @@ func RecoverSecretFromProof(label []byte, l, π, n *big.Int, steps uint64) (y *b
 	y.Mul(y, new(big.Int).Exp(g, r, n))
 	y.Mod(y, n)
 	if sampleL(g, y).Cmp(l) != 0 {
-		// FIXME: skipped due to crypto/rand.Prime not being deterministic
-		//return nil, false
+		return nil, false
 	}
 	return y, true
 }

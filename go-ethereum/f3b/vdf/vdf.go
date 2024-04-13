@@ -54,48 +54,28 @@ func Proof(label []byte, n *big.Int, steps uint64) (l *big.Int, π *big.Int) {
 	var tmp big.Int
 	g := deriveInitial(label, n)
 	x := new(big.Int).Set(g)
-	/*
-	κ := uint64(16) // TODO: set based on steps?
-	κ = 1
+	κ := uint64(10) // TODO: set based on steps?
+	// FIXME: assumes κ divides steps
 	// TODO: γ?
-	memo := make([]big.Int, (steps + 1<<κ - 1) >> κ)
+	memo := make([]big.Int, (steps + κ - 1) / κ)
 	for i := uint64(0); i < steps; i++ {
-		if i % (1<<κ) == 0 {
-			memo[i >> κ].Set(x)
+		if i % κ == 0 {
+			memo[i / κ].Set(x)
 		}
 		x.Mul(x, x)
 		x.Mod(x, n)
 	}
-	for b := uint64(0): b < 1 << κ; b++ {
-		r.Mul(s.Mul(b,s))
-	one := new(big.Int).SetInt64(1)
-	two := new(big.Int).SetInt64(2)
-	l := sampleL()
-	π := new(big.Int).Set(one)
-	for i := uint64(0); i < (steps >> κ); i++ {
-		b := new(big.Int)
-		b.Exp(two, tmp.SetUint64(steps  >> (κ*(i+1))), l)
+
+	l = sampleL(g, x)
+	x.SetUint64(1)
+	b := new(big.Int)
+	for i := range memo {
+		b.Exp(common.Big2, tmp.SetUint64(steps  - (κ*(uint64(i)+1))), l)
 		b.Mul(b, tmp.SetUint64(1 << κ))
 		b.Div(b, l)
 		c := &memo[i] // g**(2**(κ*i)) mod n
 		b.Exp(c, b, n)
-		π.Mul(π, b)
-	}
-	*/
-	for i := uint64(0); i < steps; i++ {
-		x.Mul(x, x)
-		x.Mod(x, n)
-	}
-
-	// Long-division slow way based on https://eprint.iacr.org/2018/712
-	r := new(big.Int).SetUint64(1)
-	l = sampleL(g, x)
-	x.SetUint64(1)
-	for i := uint64(0); i < steps; i++ {
-		b := new(big.Int)
-		b.Mul(common.Big2, r).Div(b,l)
-		r.Mul(r, common.Big2).Mod(r, l)
-		x.Mul(x, x).Mul(x, tmp.Exp(g, b, n))
+		x.Mul(x, b)
 		x.Mod(x, n)
 	}
 	return l, x
@@ -127,24 +107,3 @@ func RecoverSecretFromProof(label []byte, l, π, n *big.Int, steps uint64) (y *b
 	}
 	return y, true
 }
-
-/*
-func prove(n, g, y, t *big.Int) (*big.Int, *big.Int) {
-	one := new(big.Int).SetInt64(1)
-	p_ := new(big.Int).Sub(priv.Primes[0], one)
-	q_ := new(big.Int).Sub(priv.Primes[1], one)
-	φ := new(big.Int).Mul(p_, q_)
-	init := deriveInitial(priv.N, label)
-	two := new(big.Int).SetInt64(2)
-	t := new(big.Int).Exp(two, new(big.Int).SetUint64(SquaringSteps), φ)
-	y := new(big.Int).Exp(init, t, priv.N)
-
-	// proof
-	l := sampleL()
-	π := new(big.Int).Lsh(one, uint(steps))
-	π.Div(π, l)
-	π.Exp(init, π, priv.N)
-
-	return y, π
-}
-*/

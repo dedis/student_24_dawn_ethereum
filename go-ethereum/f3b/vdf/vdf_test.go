@@ -8,21 +8,21 @@ import (
 )
 
 func TestRecoverSecret(t *testing.T) {
-	const steps uint64 = 1000
+	const log2t = 10
 	label := []byte("test")
-	n, secret := ShareSecret(label, steps)
-	rsecret := RecoverSecret(label, n, steps)
+	n, secret := ShareSecret(label, log2t)
+	rsecret := RecoverSecret(label, n, log2t)
 	if secret.Cmp(rsecret) != 0 {
 		t.Fatal("bad recovered secret")
 	}
 }
 
 func TestRecoverSecretFromProof(t *testing.T) {
-	const steps uint64 = 1000
+	const log2t = 10
 	label := []byte("test")
-	n, secret := ShareSecret(label, steps)
-	l, π := Proof(label, n, steps)
-	y, ok := RecoverSecretFromProof(label, l, π, n, steps) 
+	n, secret := ShareSecret(label, log2t)
+	l, π := Proof(label, n, log2t)
+	y, ok := RecoverSecretFromProof(label, l, π, n, log2t) 
 	if !ok {
 		t.Fatal("bad proof")
 	
@@ -33,40 +33,40 @@ func TestRecoverSecretFromProof(t *testing.T) {
 }
 
 func BenchmarkRecoverSecret(b *testing.B) {
-	for steps := uint64(100); steps <= 1_000_000; steps *= 10 {
-		b.Run(fmt.Sprintf("Steps=%d", steps), func(b *testing.B) {
+	for log2t := 5; log2t <= 20; log2t += 5 {
+		b.Run(fmt.Sprintf("Steps=%d", log2t), func(b *testing.B) {
 			label := []byte("test")
-			n, _ := ShareSecret(label, steps)
+			n, _ := ShareSecret(label, log2t)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				RecoverSecret(label, n, steps)
+				RecoverSecret(label, n, log2t)
 			}
 		})
 	}
 }
 
 func BenchmarkRecoverSecretFromProof(b *testing.B) {
-	for steps := uint64(100); steps <= 1_000_000; steps *= 10 {
-		b.Run(fmt.Sprintf("Steps=%d", steps), func(b *testing.B) {
+	for log2t := 5; log2t <= 20; log2t += 5 {
+		b.Run(fmt.Sprintf("Steps=%d", log2t), func(b *testing.B) {
 			label := []byte("test")
-			n, _ := ShareSecret(label, steps)
-			l, π := Proof(label, n, steps)
+			n, _ := ShareSecret(label, log2t)
+			l, π := Proof(label, n, log2t)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				RecoverSecretFromProof(label, l, π, n, steps)
+				RecoverSecretFromProof(label, l, π, n, log2t)
 			}
 		})
 	}
 }
 
 func BenchmarkProof(b *testing.B) {
-	for steps := uint64(100); steps <= 1_000_000; steps *= 10 {
-		b.Run(fmt.Sprintf("Steps=%d", steps), func(b *testing.B) {
+	for log2t := 5; log2t <= 20; log2t += 5 {
+		b.Run(fmt.Sprintf("Steps=%d", log2t), func(b *testing.B) {
 			label := []byte("test")
-			n, _ := ShareSecret(label, steps)
+			n, _ := ShareSecret(label, log2t)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				_, _ = Proof(label, n, steps)
+				_, _ = Proof(label, n, log2t)
 			}
 		})
 	}

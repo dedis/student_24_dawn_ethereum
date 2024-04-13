@@ -15,7 +15,6 @@ import (
 var Suite = suites.MustFind("ed25519")
 
 const RsaBits = 2048
-const SquaringSteps uint64 = 1_000_000
 
 // Share a secret with the future
 func ShareSecret(label []byte, t uint64) (secret, n *big.Int) {
@@ -51,7 +50,7 @@ func RecoverSecret(label []byte, n *big.Int, t uint64) *big.Int {
 	return x
 }
 
-func recoverSecretWithProof(label []byte, n *big.Int, steps uint64) (*big.Int, *big.Int, *big.Int) {
+func recoverSecretWithProof(label []byte, n *big.Int, steps uint64) (*big.Int, *big.Int) {
 	var tmp big.Int
 	g := deriveInitial(label, n)
 	x := new(big.Int).Set(g)
@@ -92,7 +91,7 @@ func recoverSecretWithProof(label []byte, n *big.Int, steps uint64) (*big.Int, *
 	// Long-division slow way based on https://eprint.iacr.org/2018/712
 	y.Set(x)
 	r := new(big.Int).SetUint64(1)
-	l := sampleL()
+	l := sampleL(g, y)
 	x.SetUint64(1)
 	for i := uint64(0); i < steps; i++ {
 		b := new(big.Int)
@@ -102,20 +101,23 @@ func recoverSecretWithProof(label []byte, n *big.Int, steps uint64) (*big.Int, *
 		x.Mod(x, n)
 	}
 	π := x
-	return y, π, l
+	return y, π
 }
 
-func sampleL() *big.Int {
-	// FIXME: fiat shamir
+// fiat shamir prime generation
+func sampleL(g, y *big.Int) *big.Int {
 	kBits := 128
-	l, err := rand.Prime(rand.Reader, kBits+1)
+	xof := Suite.XOF(g.Bytes())
+	xof.Write(y.Bytes())
+	l, err := rand.Prime(xof, kBits+1)
 	if err != nil {
 		panic(err.Error())
 	}
 	return l
 }
 
-func checkProof(g, y, π, l, n *big.Int, steps uint64) bool {
+func checkProof(g, y, π, n *big.Int, steps uint64) bool {
+	l := sampleL(g, y)
 	t := new(big.Int).SetUint64(steps)
 	// r = 2**t mod l
 	r := new(big.Int).Exp(common.Big2, t, l)

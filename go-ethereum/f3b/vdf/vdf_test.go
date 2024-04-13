@@ -21,9 +21,9 @@ func TestRecoverSecretWithProof(t *testing.T) {
 	const steps uint64 = 1000
 	label := []byte("test")
 	n, secret := ShareSecret(label, steps)
-	y, π, l := recoverSecretWithProof(label, n, steps)
+	y, π := recoverSecretWithProof(label, n, steps)
 	g := deriveInitial(label, n)
-	if !checkProof(g, y, π, l, n, steps) {
+	if !checkProof(g, y, π, n, steps) {
 		t.Fatal("bad proof")
 	
 	}

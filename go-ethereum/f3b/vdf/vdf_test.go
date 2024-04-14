@@ -10,7 +10,7 @@ import (
 func TestRecoverSecret(t *testing.T) {
 	const log2t = 10
 	label := []byte("test")
-	n, secret := ShareSecret(label, log2t)
+	secret, n := ShareSecret(label, log2t)
 	rsecret := RecoverSecret(label, n, log2t)
 	if secret.Cmp(rsecret) != 0 {
 		t.Fatal("bad recovered secret")
@@ -20,7 +20,7 @@ func TestRecoverSecret(t *testing.T) {
 func TestRecoverSecretFromProof(t *testing.T) {
 	const log2t = 10
 	label := []byte("test")
-	n, secret := ShareSecret(label, log2t)
+	secret, n := ShareSecret(label, log2t)
 	l, π := Proof(label, n, log2t)
 	y, ok := RecoverSecretFromProof(label, l, π, n, log2t) 
 	if !ok {

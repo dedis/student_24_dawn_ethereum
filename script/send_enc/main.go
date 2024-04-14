@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/binary"
 	"flag"
 	"fmt"
 	"math/big"
@@ -14,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/cae"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/f3b"
+	"github.com/ethereum/go-ethereum/f3b/vdf"
 	"github.com/ethereum/go-ethereum/log"
 )
 
@@ -35,28 +34,15 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 		return err
 	}
 
-	dkgcli := f3b.NewDkgCli()
-
-	pk, err := dkgcli.GetPublicKey()
-	if err != nil {
-		return err
-	}
-	label := binary.BigEndian.AppendUint64(from.Address.Bytes(), nonce)
-	U, secret := f3b.ShareSecret(pk, label)
+	vdfLabel := []byte{}
+	secret, n := vdf.ShareSecret(vdfLabel, types.Log2t)
 
 	plaintext := append(to.Bytes(), calldata...)
 	ciphertext := make([]byte, len(plaintext))
 	tag := make([]byte, cae.Selected.TagLen())
-	seed, err := secret.MarshalBinary()
-	if err != nil {
-		return err
-	}
-	log.Info("Enc()", "label", label, "U", U, "secret", secret, "seed", seed)
+	seed := secret.Bytes()
+	log.Info("Enc()", "secret", secret, "seed", seed)
 	err = cae.Selected.Encrypt(ciphertext, tag, seed, plaintext)
-	if err != nil {
-		return err
-	}
-	encKey, err := U.MarshalBinary()
 	if err != nil {
 		return err
 	}
@@ -69,7 +55,7 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 		Value:      val,
 		Ciphertext: ciphertext,
 		Tag:        tag,
-		EncKey:     encKey,
+		EncKey:     n.Bytes(),
 	}
 	tx := types.NewTx(enc)
 

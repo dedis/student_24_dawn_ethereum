@@ -23,32 +23,13 @@ verbosely() {
 	eval "$@"
 }
 
-tmux neww -d env LLVL=info dkgcli --config $tempdir/dela/node1 start --routing tree --listen tcp://127.0.0.1:2001
-tmux neww -d env LLVL=info dkgcli --config $tempdir/dela/node2 start --routing tree --listen tcp://127.0.0.1:2002
-tmux neww -d env LLVL=info dkgcli --config $tempdir/dela/node3 start --routing tree --listen tcp://127.0.0.1:2003
-sleep 1
-
-dkgcli --config $tempdir/dela/node2 minogrpc join --address //127.0.0.1:2001 $(dkgcli --config $tempdir/dela/node1 minogrpc token)
-dkgcli --config $tempdir/dela/node3 minogrpc join --address //127.0.0.1:2001 $(dkgcli --config $tempdir/dela/node1 minogrpc token)
-                                   
-dkgcli --config $tempdir/dela/node1 dkg listen
-dkgcli --config $tempdir/dela/node2 dkg listen
-dkgcli --config $tempdir/dela/node3 dkg listen
-
-dkgcli --config $tempdir/dela/node1 dkg setup \
-    --authority $(cat $tempdir/dela/node1/dkgauthority) \
-    --authority $(cat $tempdir/dela/node2/dkgauthority) \
-    --authority $(cat $tempdir/dela/node3/dkgauthority) \
-    --threshold 2
-
-export F3B_DKG_PATH=$tempdir/dela/node1
 export GETH_DATADIR=$tempdir/ethereum
 export ETH_RPC_URL=http://localhost:8545
 
 verbosely 'geth -datadir "$GETH_DATADIR" init clique.json'
 
 cp keystore/$coinbase $GETH_DATADIR/keystore
-tmux neww -d env F3B_DKG_PATH="$F3B_DKG_PATH" geth -datadir "$GETH_DATADIR" -dev -http
+tmux neww -d geth -datadir "$GETH_DATADIR" -dev -http
 
 # wait for geth to start
 while ! cast block-number 2> /dev/null; do
@@ -65,7 +46,7 @@ verbosely 'cast send --async --keystore $ETH_KEYSTORE/$deployer --from $deployer
 
 # send an encrypted bid
 verbosely 'go run ./script/send_enc -sender $address1 -value 1 $auction_contract $(cast sig "bid()")'
-verbosely 'go run ./script/send_enc -sender $address2 -value 2 $auction_contract $(cast sig "bid()")'
+#verbosely 'go run ./script/send_enc -sender $address2 -value 2 $auction_contract $(cast sig "bid()")'
 
 sleep 40
 

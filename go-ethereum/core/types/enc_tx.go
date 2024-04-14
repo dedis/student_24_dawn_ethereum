@@ -31,7 +31,7 @@ type EncryptedTx struct {
 	Value      *big.Int
 	Ciphertext []byte // Enc_k(to | data) symmetric encryption
 	Tag        []byte // MAC of Ciphertext
-	EncKey     []byte // The symmetric key k encrypted for the SMC
+	N          []byte // Public parameters for VDF key derivation
 	AccessList AccessList
 
 	// Signature values
@@ -46,7 +46,7 @@ func (tx *EncryptedTx) copy() TxData {
 		Nonce:      tx.Nonce,
 		Ciphertext: common.CopyBytes(tx.Ciphertext),
 		Tag:        common.CopyBytes(tx.Tag),
-		EncKey:     common.CopyBytes(tx.EncKey),
+		N:          common.CopyBytes(tx.N),
 		Gas:        tx.Gas,
 		// These are copied below.
 		AccessList: make(AccessList, len(tx.AccessList)),

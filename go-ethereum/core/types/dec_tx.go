@@ -18,8 +18,9 @@ type DecryptedTx struct {
 	To	 *common.Address
 	Data    []byte
 	AccessList AccessList
-	EncKey     []byte // The symmetric key k encrypted for the SMC
-	Reveal     []byte // witness data to help decrypt EncKey
+	N          []byte // Public parameters for VDF key derivation
+	L          []byte // challenge for the VDF key derivation proof
+	Π          []byte // response for the VDF key derivation proof
 
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`
@@ -33,8 +34,9 @@ func (tx *DecryptedTx) copy() TxData {
 		Nonce: tx.Nonce,
 		To:    copyAddressPtr(tx.To),
 		Data:  common.CopyBytes(tx.Data),
-		EncKey:   common.CopyBytes(tx.EncKey),
-		Reveal:   common.CopyBytes(tx.Reveal),
+		N:     common.CopyBytes(tx.N),
+		L:     common.CopyBytes(tx.L),
+		Π:     common.CopyBytes(tx.Π),
 		Gas:   tx.Gas,
 		// These are copied below.
 		AccessList: make(AccessList, len(tx.AccessList)),

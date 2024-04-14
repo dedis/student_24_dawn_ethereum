@@ -5,12 +5,15 @@ package types
 import (
 	"errors"
 	"encoding/binary"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/cae"
-	"github.com/ethereum/go-ethereum/f3b"
+	"github.com/ethereum/go-ethereum/f3b/vdf"
 	"github.com/ethereum/go-ethereum/log"
 )
+
+const Log2t = 15
 
 func (t *Transaction) Decrypt() (*Transaction, error) {
 	// Minimal signer for an encrypted transaction
@@ -28,41 +31,17 @@ func (t *Transaction) Decrypt() (*Transaction, error) {
 		return nil, errors.New("cannot decrypt a non-encrypted transaction")
 	}
 
-	dkgcli := f3b.NewDkgCli()
-
 	label := binary.BigEndian.AppendUint64(from.Bytes(), tx.Nonce)
-	U := f3b.Suite.G2().Point()
-	err = U.UnmarshalBinary(tx.EncKey)
-	if err != nil {
-		return nil, err
-	}
-	identityBytes, err := dkgcli.Extract(label)
-	if err != nil {
-		return nil, err
-	}
-
-	identity := f3b.Suite.G1().Point()
-	err = identity.UnmarshalBinary(identityBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	pk, err := dkgcli.GetPublicKey()
-	if err != nil {
-		return nil, err
-	}
-
-	ok = f3b.VerifyIdentity(pk, identity, label)
+	n := new(big.Int).SetBytes(tx.N)
+	l, π := vdf.Proof(label, n, Log2t)
+	secret, ok := vdf.RecoverSecretFromProof(label, l, π, n, Log2t)
 	if !ok {
-		return nil, errors.New("bad identity")
+		// NOTE: should not happen since it's our proof
+		return nil, errors.New("bad VDF proof")
 	}
 
-	secret := f3b.RecoverSecret(identity, U)
-	seed, err := secret.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-	log.Info("Decrypt()", "label", label, "U", U, "secret", secret, "seed", seed)
+	seed := secret.Bytes()
+	log.Info("Decrypt()", "label", label, "secret", secret, "seed", seed)
 
 	// TODO: if the ciphertext is too short, penalize the sender
 	plaintext := make([]byte, len(tx.Ciphertext))
@@ -84,8 +63,9 @@ func (t *Transaction) Decrypt() (*Transaction, error) {
 		Value:      tx.Value,
 		To:        &to,
 		Data:       data,
-		EncKey:     tx.EncKey,
-		Reveal:     identityBytes,
+		N:          tx.N,
+		L:          l.Bytes(),
+		Π:          π.Bytes(),
 
 		V: tx.V,
 		R: tx.R,
@@ -99,23 +79,22 @@ func (t *Transaction) Reencrypt() (*Transaction, error) {
 		return nil, errors.New("cannot reencrypt a non-decrypted transaction")
 	}
 
-	U := f3b.Suite.G2().Point()
-	err := U.UnmarshalBinary(tx.EncKey)
+	signer := NewLausanneSigner(t.ChainId())
+	from, err := Sender(signer, t)
 	if err != nil {
 		return nil, err
 	}
 
-	identity := f3b.Suite.G1().Point()
-	err = identity.UnmarshalBinary(tx.Reveal)
-	if err != nil {
-		return nil, err
+	label := binary.BigEndian.AppendUint64(from.Bytes(), tx.Nonce)
+	n := new(big.Int).SetBytes(tx.N)
+	l := new(big.Int).SetBytes(tx.L)
+	π := new(big.Int).SetBytes(tx.Π)
+	secret, ok := vdf.RecoverSecretFromProof(label, l, π, n, Log2t)
+	if !ok {
+		return nil, errors.New("bad VDF proof")
 	}
 
-	secret := f3b.RecoverSecret(identity, U)
-	seed, err := secret.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
+	seed := secret.Bytes()
 
 	plaintext := append(tx.To.Bytes(), tx.Data...)
 
@@ -135,7 +114,7 @@ func (t *Transaction) Reencrypt() (*Transaction, error) {
 		Value:      tx.Value,
 		Ciphertext: ciphertext,
 		Tag:        tag,
-		EncKey:     tx.EncKey,
+		N: 	    tx.N,
 
 		V: tx.V,
 		R: tx.R,

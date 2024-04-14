@@ -51,7 +51,7 @@ type txJSON struct {
 
 	// F3B Extensions
 	Key        *hexutil.Bytes `json:"key"`
-	EncKey     *hexutil.Bytes `json:"enc_key"`
+	N          *hexutil.Bytes `json:"n"`
 	Ciphertext *hexutil.Bytes `json:"ciphertext"`
 	Tag        *hexutil.Bytes `json:"tag"`
 }
@@ -113,7 +113,7 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		enc.V = (*hexutil.Big)(tx.V)
 		enc.R = (*hexutil.Big)(tx.R)
 		enc.S = (*hexutil.Big)(tx.S)
-		enc.EncKey = (*hexutil.Bytes)(&tx.EncKey)
+		enc.N = (*hexutil.Bytes)(&tx.N)
 	}
 
 	return json.Marshal(&enc)
@@ -335,9 +335,10 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 			return errors.New("missing required field 's' in transaction")
 		}
 		itx.S = (*big.Int)(dec.S)
-		if dec.Key != nil {
-			itx.EncKey = *dec.EncKey
+		if dec.N == nil {
+			return errors.New("missing required field 'n' in transaction")
 		}
+		itx.N = *dec.N
 		// withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0
 		// if withSignature {
 		// 	if err := sanityCheckSignature(itx.V, itx.R, itx.S, false); err != nil {

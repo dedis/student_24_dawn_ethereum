@@ -4,6 +4,7 @@ package types
 
 import (
 	"errors"
+	"encoding/binary"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -31,17 +32,17 @@ func (t *Transaction) Decrypt() (*Transaction, error) {
 		return nil, errors.New("cannot decrypt a non-encrypted transaction")
 	}
 
-	vdfLabel := []byte{}
+	label := binary.BigEndian.AppendUint64(from.Bytes(), tx.Nonce)
 	n := new(big.Int).SetBytes(tx.EncKey)
-	l, π := vdf.Proof(vdfLabel, n, Log2t)
-	secret, ok := vdf.RecoverSecretFromProof(vdfLabel, l, π, n, Log2t)
+	l, π := vdf.Proof(label, n, Log2t)
+	secret, ok := vdf.RecoverSecretFromProof(label, l, π, n, Log2t)
 	if !ok {
 		// NOTE: should not happen since it's our proof
 		return nil, errors.New("bad VDF proof")
 	}
 
 	seed := secret.Bytes()
-	log.Info("Decrypt()", "label", vdfLabel, "secret", secret, "seed", seed)
+	log.Info("Decrypt()", "label", label, "secret", secret, "seed", seed)
 
 	// TODO: if the ciphertext is too short, penalize the sender
 	plaintext := make([]byte, len(tx.Ciphertext))
@@ -51,7 +52,7 @@ func (t *Transaction) Decrypt() (*Transaction, error) {
 		return nil, err
 	}
 
-	reveal, err := rlp.EncodeToBytes([]*big.Int{l, π})
+	reveal, err := rlp.EncodeToBytes([][]byte{from.Bytes(), secret.Bytes(), π.Bytes()})
 	if err != nil {
 		return nil, err
 	}
@@ -83,13 +84,16 @@ func (t *Transaction) Reencrypt() (*Transaction, error) {
 		return nil, errors.New("cannot reencrypt a non-decrypted transaction")
 	}
 
-	vdfLabel := []byte{}
-	reveal := []*big.Int{}
+	reveal := [][]byte{}
 	rlp.DecodeBytes(tx.Reveal, &reveal)
+	from := reveal[0]
+	l := new(big.Int).SetBytes(reveal[1])
+	π := new(big.Int).SetBytes(reveal[2])
+
+	label := binary.BigEndian.AppendUint64(from, tx.Nonce)
+
 	n := new(big.Int).SetBytes(tx.EncKey)
-	l := reveal[0]
-	π := reveal[1]
-	secret, ok := vdf.RecoverSecretFromProof(vdfLabel, l, π, n, Log2t)
+	secret, ok := vdf.RecoverSecretFromProof(label, l, π, n, Log2t)
 	if !ok {
 		return nil, errors.New("bad VDF proof")
 	}

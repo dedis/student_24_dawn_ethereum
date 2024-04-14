@@ -46,7 +46,7 @@ verbosely 'cast send --async --keystore $ETH_KEYSTORE/$deployer --from $deployer
 
 # send an encrypted bid
 verbosely 'go run ./script/send_enc -sender $address1 -value 1 $auction_contract $(cast sig "bid()")'
-#verbosely 'go run ./script/send_enc -sender $address2 -value 2 $auction_contract $(cast sig "bid()")'
+verbosely 'go run ./script/send_enc -sender $address2 -value 2 $auction_contract $(cast sig "bid()")'
 
 sleep 40
 

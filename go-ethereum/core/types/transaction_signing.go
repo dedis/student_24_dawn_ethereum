@@ -236,7 +236,7 @@ func (s lausanneSigner) Hash(tx *Transaction) (hash common.Hash) {
 					tx.Value(),
 					enc_tx.inner.(*EncryptedTx).Ciphertext,
 					enc_tx.inner.(*EncryptedTx).Tag,
-					enc_tx.inner.(*EncryptedTx).N,
+					enc_tx.inner.(*EncryptedTx).EncKey,
 					tx.AccessList(),
 				})
 		case EncryptedTxType:
@@ -251,7 +251,7 @@ func (s lausanneSigner) Hash(tx *Transaction) (hash common.Hash) {
 					tx.Value(),
 					tx.inner.(*EncryptedTx).Ciphertext,
 					tx.inner.(*EncryptedTx).Tag,
-					tx.inner.(*EncryptedTx).N,
+					tx.inner.(*EncryptedTx).EncKey,
 					tx.AccessList(),
 				})
 			default:

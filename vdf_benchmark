@@ -1,0 +1,21 @@
+goos: linux
+goarch: arm64
+pkg: github.com/ethereum/go-ethereum/f3b/vdf
+BenchmarkRecoverSecret/log2t=5-4    	    3166	    393173 ns/op
+BenchmarkRecoverSecret/log2t=10-4   	      93	  12171674 ns/op
+BenchmarkRecoverSecret/log2t=15-4   	       3	 380009289 ns/op
+BenchmarkRecoverSecret/log2t=20-4   	       1	12248974207 ns/op
+BenchmarkRecoverSecretFromProof/log2t=5-4         	     738	   1566541 ns/op
+BenchmarkRecoverSecretFromProof/log2t=10-4        	     220	   5367137 ns/op
+BenchmarkRecoverSecretFromProof/log2t=15-4        	     196	   6000732 ns/op
+BenchmarkRecoverSecretFromProof/log2t=20-4        	     228	   5641654 ns/op
+BenchmarkRecoverSecretFromProof/log2t=25-4        	     246	   5116423 ns/op
+BenchmarkRecoverSecretFromProof/log2t=30-4        	     208	   5820037 ns/op
+BenchmarkRecoverSecretFromProof/log2t=35-4        	     232	   6474093 ns/op
+BenchmarkRecoverSecretFromProof/log2t=40-4        	     223	   6037084 ns/op
+BenchmarkRecoverSecretFromProof/log2t=45-4        	     220	   4870254 ns/op
+BenchmarkRecoverSecretFromProof/log2t=50-4        	     206	   5722464 ns/op
+BenchmarkProof/log2t=5-4                          	     610	   1799930 ns/op
+BenchmarkProof/log2t=10-4                         	      40	  30568204 ns/op
+BenchmarkProof/log2t=15-4                         	       2	 974866555 ns/op
+BenchmarkProof/log2t=20-4                         	       1	31077595600 ns/op

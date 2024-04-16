@@ -30,10 +30,10 @@ func Main() error {
 		case *benchfmt.Result:
 			name, parts := r.Name.Parts()
 			algorithm := string(name)
-			var log2t string
+			var log2t int
 			for _, p := range parts {
 				if v, ok := bytes.CutPrefix(p, []byte("/log2t=")); ok {
-					log2t = string(v)
+					fmt.Sscan(string(v), &log2t)
 				}
 			}
 			if writers[algorithm] == nil {
@@ -44,13 +44,13 @@ func Main() error {
 				w := csv.NewWriter(f)
 				w.Comma = '\t'
 				writers[algorithm] = w
-				w.Write([]string{"log2t", "sec/op"})
+				w.Write([]string{"t", "sec/op"})
 			}
 			secPerOp, ok := r.Value("sec/op")
 			if !ok {
 				return errors.New("missing measurement: sec/op")
 			}
-			writers[algorithm].Write([]string{log2t, fmt.Sprintf("%g", secPerOp)})
+			writers[algorithm].Write([]string{fmt.Sprint(1 << log2t), fmt.Sprint(secPerOp)})
 		}
 	}
 

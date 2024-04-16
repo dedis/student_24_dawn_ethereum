@@ -10,7 +10,7 @@ import (
 func TestRecoverSecret(t *testing.T) {
 	const log2t = 10
 	label := []byte("test")
-	secret, n := ShareSecret(label, log2t)
+	secret, _, _, n := ShareSecret(label, log2t)
 	rsecret := RecoverSecret(label, n, log2t)
 	if secret.Cmp(rsecret) != 0 {
 		t.Fatal("bad recovered secret")
@@ -20,8 +20,7 @@ func TestRecoverSecret(t *testing.T) {
 func TestRecoverSecretFromProof(t *testing.T) {
 	const log2t = 10
 	label := []byte("test")
-	secret, n := ShareSecret(label, log2t)
-	l, π := Proof(label, n, log2t)
+	secret, l, π, n := ShareSecret(label, log2t)
 	y, ok := RecoverSecretFromProof(label, l, π, n, log2t) 
 	if !ok {
 		t.Fatal("bad proof")
@@ -36,7 +35,7 @@ func BenchmarkRecoverSecret(b *testing.B) {
 	for log2t := 5; log2t <= 20; log2t += 5 {
 		b.Run(fmt.Sprintf("log2t=%d", log2t), func(b *testing.B) {
 			label := []byte("test")
-			n, _ := ShareSecret(label, log2t)
+			n, _, _, _ := ShareSecret(label, log2t)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				RecoverSecret(label, n, log2t)
@@ -46,11 +45,10 @@ func BenchmarkRecoverSecret(b *testing.B) {
 }
 
 func BenchmarkRecoverSecretFromProof(b *testing.B) {
-	for log2t := 5; log2t <= 20; log2t += 5 {
+	for log2t := 5; log2t <= 50; log2t += 5 {
 		b.Run(fmt.Sprintf("log2t=%d", log2t), func(b *testing.B) {
 			label := []byte("test")
-			n, _ := ShareSecret(label, log2t)
-			l, π := Proof(label, n, log2t)
+			n, l, π, _ := ShareSecret(label, log2t)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				RecoverSecretFromProof(label, l, π, n, log2t)
@@ -63,7 +61,7 @@ func BenchmarkProof(b *testing.B) {
 	for log2t := 5; log2t <= 20; log2t += 5 {
 		b.Run(fmt.Sprintf("log2t=%d", log2t), func(b *testing.B) {
 			label := []byte("test")
-			n, _ := ShareSecret(label, log2t)
+			n, _, _, _ := ShareSecret(label, log2t)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				_, _ = Proof(label, n, log2t)

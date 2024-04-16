@@ -18,7 +18,7 @@ var Suite = suites.MustFind("ed25519")
 const RsaBits = 2048
 
 // Share a secret with the future
-func ShareSecret(label []byte, log2t int) (secret, n *big.Int) {
+func ShareSecret(label []byte, log2t int) (secret, l, π, n *big.Int) {
 	priv, err := rsa.GenerateKey(rand.Reader, RsaBits)
 	if err != nil {
 		// unreachable if rand.Reader is well-behaved
@@ -27,11 +27,18 @@ func ShareSecret(label []byte, log2t int) (secret, n *big.Int) {
 	var tmp big.Int
 	pMinusOne := new(big.Int).Sub(priv.Primes[0], common.Big1)
 	qMinusOne := new(big.Int).Sub(priv.Primes[1], common.Big1)
+	n = priv.N
 	φ := new(big.Int).Mul(pMinusOne, qMinusOne)
 	g := deriveInitial(label, priv.N)
 	secret = new(big.Int).Exp(g, tmp.Exp(common.Big2, tmp.SetUint64(1 << log2t), φ) , priv.N)
 	log.Info("Sharing secret", "label", label, "n", priv.N, "log2t", log2t)
-	return secret, priv.N
+	t := big.NewInt(1 << log2t)
+	l = sampleL(g, secret)
+	r := new(big.Int).Exp(common.Big2, t, l)
+	q := new(big.Int)
+	q.Exp(common.Big2, t, φ).Sub(q, r).Mul(q,tmp.ModInverse(l, φ)).Mod(q, φ)
+	π = new(big.Int).Exp(g, q, priv.N)
+	return secret, l, π, priv.N
 }
 
 func deriveInitial(label []byte, n *big.Int) *big.Int {

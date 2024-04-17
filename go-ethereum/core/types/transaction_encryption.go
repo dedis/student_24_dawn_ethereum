@@ -52,7 +52,7 @@ func (t *Transaction) Decrypt() (*Transaction, error) {
 		return nil, err
 	}
 
-	reveal, err := rlp.EncodeToBytes([][]byte{from.Bytes(), secret.Bytes(), π.Bytes()})
+	reveal, err := rlp.EncodeToBytes([][]byte{from.Bytes(), l.Bytes(), π.Bytes()})
 	if err != nil {
 		return nil, err
 	}
@@ -95,6 +95,7 @@ func (t *Transaction) Reencrypt() (*Transaction, error) {
 	n := new(big.Int).SetBytes(tx.EncKey)
 	secret, ok := vdf.RecoverSecretFromProof(label, l, π, n, Log2t)
 	if !ok {
+		log.Error("bad vdf proof", "label", label, "l", l, "π", π, "n", n, "Log2t", Log2t)
 		return nil, errors.New("bad VDF proof")
 	}
 

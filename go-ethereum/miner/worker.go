@@ -17,6 +17,7 @@
 package miner
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/big"
@@ -99,6 +100,7 @@ type environment struct {
 	receipts []*types.Receipt
 	uncles   map[common.Hash]*types.Header
 	shadowTxs []*types.Transaction
+	vdfWorkers map[common.Hash]*vdfWorker
 }
 
 // copy creates a deep copy of environment.
@@ -773,6 +775,7 @@ func (w *worker) makeEnv(parent *types.Block, header *types.Header, coinbase com
 		family:    mapset.NewSet(),
 		header:    header,
 		uncles:    make(map[common.Hash]*types.Header),
+		vdfWorkers: make(map[common.Hash]*vdfWorker),
 	}
 	// when 08 is processed ancestors contain 07 (quick block)
 	for _, ancestor := range w.chain.GetBlocksFromHash(parent.Hash(), 7) {
@@ -888,7 +891,14 @@ func (w *worker) commitTransactions(env *environment, txs *types.TransactionsByP
 
 		// F3B: decrypt the transaction if necessary
 		if tx.Type() == types.EncryptedTxType {
-			tx, err = tx.Decrypt()
+			w, ok := env.vdfWorkers[tx.Hash()]
+			if !ok {
+				log.Error("VDF worker not found", "tx", tx.Hash().String())
+				txs.Pop()
+				continue
+			}
+			tx, err = w.Wait()
+			//delete(env.vdfWorkers, tx.Hash())
 			if err != nil {
 				// FIXME this shouldn't happen
 				log.Error("Unexpected decryption error", "err", err)
@@ -1099,6 +1109,21 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 	}
 	for _, tx := range remoteTxs {
 		shadowTxs = append(shadowTxs, tx...)
+	}
+
+	// F3B: start VDF computations for the transaction if necessary
+	for _, tx := range shadowTxs {
+		if tx.Type() == types.EncryptedTxType {
+			if _, ok := env.vdfWorkers[tx.Hash()]; ok {
+				continue
+			}
+			log.Info("starting vdf", "tx", tx.Hash().String())
+			w, err := startVdf(tx, context.TODO())
+			if err != nil {
+				log.Error("start vdf", "err", err)
+			}
+			env.vdfWorkers[tx.Hash()] = w
+		}
 	}
 
 	log.Debug("selected shadow txs", "txs", shadowTxs)

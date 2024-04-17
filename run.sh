@@ -2,7 +2,8 @@
 
 set -e
 
-tmux set -g remain-on-exit failed
+tmux set -g remain-on-exit failed ||
+tmux set -g remain-on-exit on
 
 tempdir=$(mktemp -dt f3b.XXXXXX)
 cleanup() {

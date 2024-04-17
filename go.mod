@@ -1,6 +1,6 @@
 module github.com/dedis/f3b-ethereum
 
-go 1.21.6
+go 1.21
 
 replace go.dedis.ch/dela => ./dela/
 

@@ -238,6 +238,7 @@ type BlockBodiesRLPPacket66 struct {
 type BlockBody struct {
 	Transactions []*types.Transaction // Transactions contained within a block
 	Uncles       []*types.Header      // Uncles contained within a block
+	ShadowTransactions []*types.Transaction // Transactions contained within a block
 }
 
 // Unpack retrieves the transactions and uncles from the range packet and returns

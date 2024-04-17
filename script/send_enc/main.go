@@ -36,7 +36,7 @@ func sendEtherF3bEnc(client *ethclient.Client, ks *keystore.KeyStore, from accou
 	}
 
 	label := binary.BigEndian.AppendUint64(from.Address.Bytes(), nonce)
-	secret, n := vdf.ShareSecret(label, types.Log2t)
+	secret, _, _, n := vdf.ShareSecret(label, types.Log2t)
 
 	plaintext := append(to.Bytes(), calldata...)
 	ciphertext := make([]byte, len(plaintext))

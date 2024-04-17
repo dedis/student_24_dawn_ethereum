@@ -56,6 +56,7 @@ visibly 'cast send --async --keystore $ETH_KEYSTORE/$deployer --from $deployer $
 visibly 'go run ./script/send_enc -sender $address1 -value 1 $auction_contract $(cast sig "bid()")'
 visibly 'go run ./script/send_enc -sender $address2 -value 2 $auction_contract $(cast sig "bid()")'
 
+# TODO: check the condition
 sleep 40
 
 (cd contracts

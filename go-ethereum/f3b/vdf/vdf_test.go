@@ -32,7 +32,7 @@ func TestRecoverSecretFromProof(t *testing.T) {
 }
 
 func BenchmarkRecoverSecret(b *testing.B) {
-	for log2t := 5; log2t <= 20; log2t += 5 {
+	for log2t := 5; log2t <= 20; log2t++ {
 		b.Run(fmt.Sprintf("log2t=%d", log2t), func(b *testing.B) {
 			label := []byte("test")
 			n, _, _, _ := ShareSecret(label, log2t)

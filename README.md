@@ -3,23 +3,23 @@ Delayed-execution Ethereum client.
 Based on previous work by Shufan Wang.
 
 # Architecture
-`dela/` is a modified version of `dela`.
-`go-ethereum/` is a modified version of `go-ethereum v1.10.23` which integrates with `dela`.
+`smc/` contains the Secret Management Committee code and provides the `dkgcli` command.
+`go-ethereum/` is a modified version of `go-ethereum v1.10.23` which integrates with the SMC.
 
 # Design (WIP)
 
 - [x] When creating a transaction, the user agent IBE-encrypts the calldata with dela.
 - [x] The IBE label is sender address concatenated with big-endian 64-bit nonce
 - [x] The ciphertext is authenticated (HMAC-SHA256, encrypt-then-MAC)
-- [ ] The chain only accepts encrypted transactions
+- [x] ~~The chain only accepts encrypted transactions~~ delayed execution for all transactions
 - [x] The `to` address is encrypted
-- [ ] The transaction receipt contains a symmetric encryption key
+- [ ] ~~The transaction receipt contains a symmetric encryption key~~
 - [ ] The execution layer can direct the SMC node to release an encryption label only after the transaction is finalized.
-- [ ] TDH2, PVSS, beacon IBE options maybe
+- [ ] ~~TDH2, PVSS, beacon IBE options maybe~~ sticking to pairings for compact decryption proofs
 - [ ] Direct contract creation doesn't work ? (nil address thing)
 
 # Running
-Run `setup.sh` to build and install to `$GOPATH` the modified `dela and `go-ethereum`.
+Run `setup.sh` to build and install `smc` and the modified `go-ethereum` to `$GOPATH`.
 
 Make sure [Foundry](https://getfoundry.sh/) is installed.
 Run `git submodule update --init --recursive contracts` to make sure the foundry dependencies are ready.

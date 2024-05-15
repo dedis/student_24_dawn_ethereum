@@ -44,7 +44,7 @@ contract OvercollateralizedAuctions {
     function commitBid(uint256 auctionId, bytes32 commit) external {
         Auction storage auction = auctions[auctionId];
 
-        require(block.timestamp < auction.commitDeadline, "deadline");
+        require(block.timestamp < auction.commitDeadline, "late");
 
         require(auction.bidToken.transferFrom(msg.sender, address(this), auction.maxBid));
 
@@ -55,11 +55,11 @@ contract OvercollateralizedAuctions {
     function revealBid(uint256 auctionId, bytes32 blinding, uint256 amount) external {
         Auction storage auction = auctions[auctionId];
 
-        require(block.timestamp >= auction.commitDeadline);
-        require(block.timestamp < auction.revealDeadline);
+        require(block.timestamp >= auction.commitDeadline, "early");
+        require(block.timestamp < auction.revealDeadline, "late");
 
-        bytes32 commit = keccak256(abi.encode(blinding, amount));
-        require(auction.commits[msg.sender] == commit);
+        bytes32 commit = keccak256(abi.encode(blinding, msg.sender, amount));
+        require(auction.commits[msg.sender] == commit, "commit");
         auction.commits[msg.sender] = "";
 
         if (amount > auction.highestAmount) {
@@ -77,7 +77,7 @@ contract OvercollateralizedAuctions {
     function settle(uint256 auctionId) external {
         Auction storage auction = auctions[auctionId];
 
-        require(block.timestamp >= auction.revealDeadline);
+        require(block.timestamp >= auction.revealDeadline, "early");
         require(address(auction.collection) != address(0));
 
         auction.bidToken.transfer(auction.proceedsReceiver, auction.highestAmount);

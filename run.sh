@@ -45,23 +45,36 @@ while ! cast block-number 2> /dev/null; do
 	sleep 1
 done
 
+export ADDRESSES_FILE=$tempdir/addresses
 (cd contracts
-	visibly 'forge create --keystore "$ETH_KEYSTORE/$deployer" --from $deployer Auction'
+	visibly 'forge script --keystore "$ETH_KEYSTORE/$deployer" --sender $deployer -f $ETH_RPC_URL --broadcast script/Setup.s.sol'
 )
+auctions_address=$(jq -r .auctions <$ADDRESSES_FILE)
+weth_address=$(jq -r .weth <$ADDRESSES_FILE)
+collection_address=$(jq -r .collection <$ADDRESSES_FILE)
 
-auction_contract=0xef434c1405f66997CBf4a04FDDed518C28a6a013
+generate_blinding_factor() {
+	# recipe for a random bytes32 by repurposing key generation
+	# h/t https://github.com/joejordan/foundry-random
+	cast wallet new -j | jq -r '.[0].private_key'
+}
 
-visibly 'cast send --async --keystore $ETH_KEYSTORE/$deployer --from $deployer $auction_contract "start()"'
+# wrap ether
+cast send --keystore $ETH_KEYSTORE/$address1 --from $address1 --value $(cast to-wei 10) $weth_address
+cast send --keystore $ETH_KEYSTORE/$address1 --from $address1 $weth_address 'approve(address,uint256)' $auctions_address $(cast to-wei 10)
 
-# send an encrypted bid
-visibly 'go run ./script/send_enc -sender $address1 -value 1 $auction_contract $(cast sig "bid()")'
-visibly 'go run ./script/send_enc -sender $address2 -value 2 $auction_contract $(cast sig "bid()")'
+# start auction
+cast send --keystore $ETH_KEYSTORE/$deployer --from $deployer $collection_address "approve(address,uint256)" $auctions_address 1
+visibly 'cast send --keystore $ETH_KEYSTORE/$deployer --from $deployer $auctions_address "startAuction(address collection, uint256 tokenId, address bidToken, address proceedsReceiver)" $collection_address 1 $weth_address $(cast address-zero)'
+auction_id=0 # FIXME: hardcoded
 
-# TODO: check the condition
-sleep 40
-
+# bid 1
+blinding1=$(generate_blinding_factor)
+amount1=$(cast to-wei 1)
 (cd contracts
-	visibly 'forge script --broadcast -f $ETH_RPC_URL --keystore "$ETH_KEYSTORE/$deployer" --sender $deployer script/CloseAuction.s.sol'
+forge script --keystore "$ETH_KEYSTORE/$address1" --sender $address1 -f $ETH_RPC_URL --broadcast script/CommitBid.s.sol --sig 'run(address,uint,bytes32,uint)' $auctions_address $auction_id $blinding1 $amount1
 )
-
-bash
+sleep 60
+cast send --keystore $ETH_KEYSTORE/$address1 --from $address1 $auctions_address 'revealBid(uint256,bytes32,uint256)' $auction_id $blinding1 $amount1
+sleep 60
+cast call --trace $auctions_address 'settle(uint256)' $auction_id

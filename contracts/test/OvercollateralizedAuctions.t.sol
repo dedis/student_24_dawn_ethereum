@@ -2,20 +2,10 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {MockERC721} from "forge-std/mocks/MockERC721.sol";
-import {MockERC20} from "forge-std/mocks/MockERC20.sol";
-import {OvercollateralizedAuctions} from "../src/OvercollateralizedAuctions.sol";
+import {OvercollateralizedAuctions} from "src/OvercollateralizedAuctions.sol";
+import {Collection} from "src/Collection.sol";
 import {IERC721} from "forge-std/interfaces/IERC721.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
-
-contract Collection is MockERC721 {
-    constructor() {
-        initialize("Daredevil Iguana Squad", "DDIS");
-        for (uint256 i = 0; i < 10; i++) {
-            _mint(msg.sender, i);
-        }
-    }
-}
 
 contract OvercollateralizedAuctionsTest is Test {
     OvercollateralizedAuctions auctions;
@@ -29,7 +19,7 @@ contract OvercollateralizedAuctionsTest is Test {
     function setUp() public {
         auctions = new OvercollateralizedAuctions();
         collection = IERC721(address(new Collection()));
-        bidToken = IERC20(address(new MockERC20()));
+        bidToken = IERC20(address(deployMockERC20("I owe you", "IOU", 18)));
 
         deal(address(bidToken), bidder1, 10 ether);
         vm.prank(bidder1);
@@ -54,7 +44,7 @@ contract OvercollateralizedAuctionsTest is Test {
         auctions.commitBid(auctionId, commit);
     }
 
-    function doReveal(uint256 auctionId, address bidder, bytes32 blinding, uint amount) internal {
+    function doReveal(uint256 auctionId, address bidder, bytes32 blinding, uint256 amount) internal {
         vm.prank(bidder);
         auctions.revealBid(auctionId, blinding, amount);
     }
@@ -74,8 +64,8 @@ contract OvercollateralizedAuctionsTest is Test {
         uint256 auctionId = startAuction(tokenId);
         uint256 amount = 1 ether;
         (, bytes32 commit) = prepareCommit(bidder1, amount);
-	skip(10 seconds);
-	vm.expectRevert(bytes("late"));
+        skip(60 seconds);
+        vm.expectRevert(bytes("late"));
         doCommit(auctionId, bidder1, commit);
     }
 
@@ -85,7 +75,7 @@ contract OvercollateralizedAuctionsTest is Test {
         uint256 amount = 1 ether;
         (bytes32 blinding, bytes32 commit) = prepareCommit(bidder1, amount);
         doCommit(auctionId, bidder1, commit);
-	skip(10 seconds);
+        skip(60 seconds);
         doReveal(auctionId, bidder1, blinding, amount);
         assertEq(bidToken.balanceOf(address(auctions)), amount);
         assertEq(bidToken.balanceOf(bidder1), 10 ether - amount);
@@ -97,8 +87,8 @@ contract OvercollateralizedAuctionsTest is Test {
         uint256 amount = 1 ether;
         (bytes32 blinding, bytes32 commit) = prepareCommit(bidder1, amount);
         doCommit(auctionId, bidder1, commit);
-	skip(1 seconds);
-	vm.expectRevert("early");
+        skip(1 seconds);
+        vm.expectRevert("early");
         doReveal(auctionId, bidder1, blinding, amount);
     }
 
@@ -108,8 +98,8 @@ contract OvercollateralizedAuctionsTest is Test {
         uint256 amount = 1 ether;
         (bytes32 blinding, bytes32 commit) = prepareCommit(bidder1, amount);
         doCommit(auctionId, bidder1, commit);
-	skip(20 seconds);
-	vm.expectRevert(bytes("late"));
+        skip(120 seconds);
+        vm.expectRevert(bytes("late"));
         doReveal(auctionId, bidder1, blinding, amount);
     }
 
@@ -119,8 +109,8 @@ contract OvercollateralizedAuctionsTest is Test {
         uint256 amount = 1 ether;
         (bytes32 blinding, bytes32 commit) = prepareCommit(bidder1, amount);
         doCommit(auctionId, bidder1, commit);
-	skip(10 seconds);
-	vm.expectRevert("commit");
+        skip(60 seconds);
+        vm.expectRevert("commit");
         doReveal(auctionId, bidder1, blinding, amount - 1);
     }
 
@@ -128,11 +118,11 @@ contract OvercollateralizedAuctionsTest is Test {
         uint256 tokenId = 2;
         uint256 auctionId = startAuction(tokenId);
         uint256 amount = 1 ether;
-	// Scenario: bidder2 sniffs bidder1's commit and wants to copy the bid
+        // Scenario: bidder2 sniffs bidder1's commit and wants to copy the bid
         (bytes32 blinding, bytes32 commit) = prepareCommit(bidder1, amount);
         doCommit(auctionId, bidder2, commit);
-	skip(10 seconds);
-	vm.expectRevert("commit");
+        skip(60 seconds);
+        vm.expectRevert("commit");
         doReveal(auctionId, bidder2, blinding, amount);
     }
 
@@ -142,13 +132,13 @@ contract OvercollateralizedAuctionsTest is Test {
         uint256 amount = 1 ether;
         (bytes32 blinding, bytes32 commit) = prepareCommit(bidder1, amount);
         doCommit(auctionId, bidder1, commit);
-	skip(10 seconds);
+        skip(60 seconds);
         doReveal(auctionId, bidder1, blinding, amount);
-	skip(10 seconds);
-	auctions.settle(auctionId);
+        skip(60 seconds);
+        auctions.settle(auctionId);
         assertEq(bidToken.balanceOf(address(auctions)), 0);
         assertEq(bidToken.balanceOf(bidder1), 10 ether - amount);
-	assertEq(collection.ownerOf(tokenId), bidder1);
+        assertEq(collection.ownerOf(tokenId), bidder1);
     }
 
     function testSettleTwoBids(bool outOfOrderReveal) public {
@@ -160,19 +150,19 @@ contract OvercollateralizedAuctionsTest is Test {
         doCommit(auctionId, bidder1, commit1);
         (bytes32 blinding2, bytes32 commit2) = prepareCommit(bidder2, amount2);
         doCommit(auctionId, bidder2, commit2);
-	skip(10 seconds);
-	if (outOfOrderReveal) {
-        doReveal(auctionId, bidder2, blinding2, amount2);
-        doReveal(auctionId, bidder1, blinding1, amount1);
-	} else {
-        doReveal(auctionId, bidder1, blinding1, amount1);
-        doReveal(auctionId, bidder2, blinding2, amount2);
-	}
-	skip(10 seconds);
-	auctions.settle(auctionId);
+        skip(60 seconds);
+        if (outOfOrderReveal) {
+            doReveal(auctionId, bidder2, blinding2, amount2);
+            doReveal(auctionId, bidder1, blinding1, amount1);
+        } else {
+            doReveal(auctionId, bidder1, blinding1, amount1);
+            doReveal(auctionId, bidder2, blinding2, amount2);
+        }
+        skip(60 seconds);
+        auctions.settle(auctionId);
         assertEq(bidToken.balanceOf(address(auctions)), 0);
         assertEq(bidToken.balanceOf(bidder1), 10 ether);
         assertEq(bidToken.balanceOf(bidder2), 10 ether - amount2);
-	assertEq(collection.ownerOf(tokenId), bidder2);
+        assertEq(collection.ownerOf(tokenId), bidder2);
     }
 }

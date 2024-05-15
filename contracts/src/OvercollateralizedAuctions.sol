@@ -20,7 +20,7 @@ contract OvercollateralizedAuctions {
 
     Auction[] public auctions;
 
-    uint256 constant delay = 10 seconds;
+    uint256 constant delay = 60 seconds;
 
     function startAuction(IERC721 collection, uint256 tokenId, IERC20 bidToken, address proceedsReceiver)
         external
@@ -36,9 +36,13 @@ contract OvercollateralizedAuctions {
         auction.proceedsReceiver = proceedsReceiver;
         auction.commitDeadline = block.timestamp + delay;
         auction.revealDeadline = auction.commitDeadline + delay;
-        auction.maxBid = 10 ether; // TODO
+        auction.maxBid = 10 ether; // FIXME: hardcoded
 
         collection.transferFrom(msg.sender, address(this), auction.tokenId);
+    }
+
+    function computeCommitment(bytes32 blinding, address bidder, uint256 amount) public pure returns (bytes32 commit) {
+        commit = keccak256(abi.encode(blinding, bidder, amount));
     }
 
     function commitBid(uint256 auctionId, bytes32 commit) external {
@@ -58,7 +62,7 @@ contract OvercollateralizedAuctions {
         require(block.timestamp >= auction.commitDeadline, "early");
         require(block.timestamp < auction.revealDeadline, "late");
 
-        bytes32 commit = keccak256(abi.encode(blinding, msg.sender, amount));
+        bytes32 commit = computeCommitment(blinding, msg.sender, amount);
         require(auction.commits[msg.sender] == commit, "commit");
         auction.commits[msg.sender] = "";
 

@@ -7,6 +7,7 @@ import (
 	"go.dedis.ch/dela"
 
 	"go.dedis.ch/dela/crypto/bls"
+	"go.dedis.ch/dela/crypto/ed25519"
 	"go.dedis.ch/f3b/smc/dkg"
 
 	"go.dedis.ch/dela/crypto"
@@ -16,7 +17,6 @@ import (
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/pairing"
 	"go.dedis.ch/kyber/v3/share"
-	kyber_bls "go.dedis.ch/kyber/v3/sign/bls"
 	"go.dedis.ch/kyber/v3/sign/tbls"
 	"go.dedis.ch/kyber/v3/suites"
 	"golang.org/x/net/context"
@@ -33,8 +33,8 @@ const failedStreamCreation = "failed to create stream: %v"
 const unexpectedStreamStop = "stream stopped unexpectedly: %v"
 
 // suite is the Kyber suite for Pedersen.
-var suite = suites.MustFind("bn256.G2")
-var pairingSuite = suite.(pairing.Suite)
+var suite = suites.MustFind("Ed25519")
+var pairingSuite = suites.MustFind("bn256.G2").(pairing.Suite)
 
 var (
 	// protocolNameSetup denotes the value of the protocol span tag associated
@@ -69,7 +69,9 @@ type Pedersen struct {
 func NewPedersen(m mino.Mino) (*Pedersen, kyber.Point) {
 	factory := types.NewMessageFactory(m.GetAddressFactory())
 
-	privkey, pubkey := kyber_bls.NewKeyPair(pairingSuite, suite.RandomStream())
+	
+	privkey := suite.Scalar().Pick(suite.RandomStream())
+	pubkey := suite.Point().Mul(privkey, nil)
 
 	return &Pedersen{
 		privKey: privkey,
@@ -129,12 +131,12 @@ func (a *Actor) Setup(co crypto.CollectiveAuthority, threshold int) (kyber.Point
 		addrs = append(addrs, addrIter.GetNext())
 
 		pubkey := pubkeyIter.GetNext()
-		blsKey, ok := pubkey.(bls.PublicKey)
+		edKey, ok := pubkey.(ed25519.PublicKey)
 		if !ok {
-			return nil, xerrors.Errorf("expected bls.PublicKey, got '%T'", pubkey)
+			return nil, xerrors.Errorf("expected ed25519.PublicKey, got '%T'", pubkey)
 		}
 
-		pubkeys = append(pubkeys, blsKey.GetPoint())
+		pubkeys = append(pubkeys, edKey.GetPoint())
 	}
 
 	message := types.NewStart(threshold, addrs, pubkeys)
@@ -218,7 +220,7 @@ func (a *Actor) Extract(label []byte) ([]byte, error) {
 		return nil, xerrors.Errorf("failed to send decrypt request: %v", err)
 	}
 
-	pubPoly := share.NewPubPoly(suite, nil, a.startRes.Commits)
+	pubPoly := share.NewPubPoly(pairingSuite.G2(), nil, a.startRes.Commits)
 
 	var n = len(addrs)
 	var t = a.startRes.getThreshold()
@@ -241,7 +243,7 @@ func (a *Actor) Extract(label []byte) ([]byte, error) {
 		sigShares[i] = signReply.Share
 	}
 
-	signature, err := tbls.Recover(suite.(pairing.Suite), pubPoly, label, sigShares, t, n)
+	signature, err := tbls.Recover(pairingSuite, pubPoly, label, sigShares, t, n)
 	if err != nil {
 		return []byte{}, xerrors.Errorf("failed to recover signature: %v", err)
 	}
@@ -281,12 +283,13 @@ func (a *Actor) Reshare(co crypto.CollectiveAuthority, thresholdNew int) error {
 
 		pubkey := pubkeyIter.GetNext()
 
-		blsKey, ok := pubkey.(bls.PublicKey)
+		edKey, ok := pubkey.(ed25519.PublicKey)
 		if !ok {
-			return xerrors.Errorf("expected bls.PublicKey, got '%T'", pubkey)
+			return xerrors.Errorf("expected ed25519.PublicKey, got '%T'", pubkey)
 		}
 
-		pubkeysNew = append(pubkeysNew, blsKey.GetPoint())
+
+		pubkeysNew = append(pubkeysNew, edKey.GetPoint())
 	}
 
 	// Get the union of the new members and the old members

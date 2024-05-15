@@ -282,7 +282,7 @@ func TestDecodeAuthority_badUnmarshalPubkey(t *testing.T) {
 	}
 
 	_, _, err := decodeAuthority(ctx, pubKey)
-	require.EqualError(t, err, "failed to decode pubkey: bn256.G2: not enough data")
+	require.EqualError(t, err, "failed to decode pubkey: invalid Ed25519 curve point")
 }
 
 func TestReshareAction_noActor(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	"go.dedis.ch/dela"
 	"go.dedis.ch/dela/crypto"
 	"go.dedis.ch/dela/crypto/bls"
+	"go.dedis.ch/dela/crypto/ed25519"
 	"go.dedis.ch/dela/testing/fake"
 	"go.dedis.ch/dela/mino"
 	"go.dedis.ch/dela/mino/minogrpc"
@@ -45,9 +46,9 @@ func TestPedersen_Setup(t *testing.T) {
 	actor.rpc = rpc
 
 	_, err = actor.Setup(fakeAuthority, 0)
-	require.EqualError(t, err, "expected bls.PublicKey, got 'fake.PublicKey'")
+	require.EqualError(t, err, "expected ed25519.PublicKey, got 'fake.PublicKey'")
 
-	fakeAuthority = fake.NewAuthority(2, bls.Generate)
+	fakeAuthority = fake.NewAuthority(2, ed25519.NewSigner)
 
 	_, err = actor.Setup(fakeAuthority, 1)
 	require.EqualError(t, err, fake.Err("failed to send start"))
@@ -91,8 +92,8 @@ func TestPedersen_GetPublicKey(t *testing.T) {
 
 func TestPedersen_Extract(t *testing.T) {
 	priShares := []*share.PriShare{
-		&share.PriShare{0, suite.Scalar().Pick(suite.RandomStream())},
-		&share.PriShare{1, suite.Scalar().Pick(suite.RandomStream())},
+		&share.PriShare{0, bn256.NewSuite().G2().Scalar().Pick(suite.RandomStream())},
+		&share.PriShare{1, bn256.NewSuite().G2().Scalar().Pick(suite.RandomStream())},
 	}
 	priPoly, err := share.RecoverPriPoly(bn256.NewSuite().G2(), priShares, 2, 2)
 	require.NoError(t, err)
@@ -227,7 +228,7 @@ func Test_Reshare_WrongPK(t *testing.T) {
 	co := fake.NewAuthority(1, fake.NewSigner)
 
 	err := a.Reshare(co, 0)
-	require.EqualError(t, err, "expected bls.PublicKey, got 'fake.PublicKey'")
+	require.EqualError(t, err, "expected ed25519.PublicKey, got 'fake.PublicKey'")
 }
 
 func Test_Reshare_BadRPC(t *testing.T) {
@@ -338,5 +339,5 @@ type fakeSigner struct {
 
 // GetPublicKey implements crypto.Signer
 func (s fakeSigner) GetPublicKey() crypto.PublicKey {
-	return bls.NewPublicKeyFromPoint(s.pubkey)
+	return ed25519.NewPublicKeyFromPoint(s.pubkey)
 }

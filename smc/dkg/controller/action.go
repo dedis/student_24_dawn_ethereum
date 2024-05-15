@@ -16,13 +16,11 @@ import (
 	"go.dedis.ch/f3b/smc/dkg"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/suites"
-	"go.dedis.ch/kyber/v3/pairing"
 	"golang.org/x/xerrors"
 )
 
 // suite is the Kyber suite for Pedersen.
-var suite = suites.MustFind("BN256.G2")
-var pairingSuite = suite.(pairing.Suite)
+var suite = suites.MustFind("Ed25519")
 
 const separator = ":"
 const authconfig = "dkgauthority"

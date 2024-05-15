@@ -14,7 +14,7 @@ import (
 )
 
 // suite is the Kyber suite for Pedersen.
-var suite = suites.MustFind("bn256.G2")
+var suite = suites.MustFind("Ed25519")
 
 func TestMessageFormat_Start_Encode(t *testing.T) {
 	start := types.NewStart(1, []mino.Address{fake.NewAddress(0)}, []kyber.Point{suite.Point()})
@@ -171,7 +171,7 @@ func TestMessageFormat_Decode(t *testing.T) {
 
 	_, err = format.Decode(ctx, []byte(`{"Start":{"PublicKeys":[[]]}}`))
 	require.EqualError(t, err,
-		"couldn't unmarshal public key: bn256.G2: not enough data")
+		"couldn't unmarshal public key: invalid Ed25519 curve point")
 
 	badCtx := serde.WithFactory(ctx, types.AddrKey{}, nil)
 	_, err = format.Decode(badCtx, []byte(`{"Start":{}}`))
@@ -196,7 +196,7 @@ func TestMessageFormat_Decode(t *testing.T) {
 	data = []byte(`{"StartDone":{"PublicKey":[]}}`)
 	_, err = format.Decode(ctx, data)
 	require.EqualError(t, err,
-		"couldn't unmarshal public key: bn256.G2: not enough data")
+		"couldn't unmarshal public key: invalid Ed25519 curve point")
 
 	// Decode sign request messages.
 	data = []byte(`{"ExtractRequest":{}}`)
@@ -247,11 +247,11 @@ func TestMessageFormat_Decode_StartResharing(t *testing.T) {
 
 	_, err = format.Decode(ctx, []byte(`{"StartResharing":{"PubkeysNew":[[]]}}`))
 	require.EqualError(t, err,
-		"couldn't unmarshal new public key: bn256.G2: not enough data")
+		"couldn't unmarshal new public key: invalid Ed25519 curve point")
 
 	_, err = format.Decode(ctx, []byte(`{"StartResharing":{"PubkeysOld":[[]]}}`))
 	require.EqualError(t, err,
-		"couldn't unmarshal old public key: bn256.G2: not enough data")
+		"couldn't unmarshal old public key: invalid Ed25519 curve point")
 }
 
 func TestMessageFormat_Decode_Reshare(t *testing.T) {
@@ -273,13 +273,13 @@ func TestMessageFormat_Decode_Reshare(t *testing.T) {
 	require.Equal(t, expected.GetDeal(), reshare.(types.Reshare).GetDeal())
 
 	_, err = format.Decode(ctx, []byte(`{"Reshare":{"PublicCoeff":[[]]}}`))
-	require.EqualError(t, err, "couldn't unmarshal public coeff key: bn256.G2: not enough data")
+	require.EqualError(t, err, "couldn't unmarshal public coeff key: invalid Ed25519 curve point")
 }
 
 // -----------------------------------------------------------------------------
 // Utility functions
 
-const testPoint = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+const testPoint = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
 type badPoint struct {
 	kyber.Point

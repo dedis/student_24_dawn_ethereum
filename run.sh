@@ -53,28 +53,6 @@ auctions_address=$(jq -r .auctions <$ADDRESSES_FILE)
 weth_address=$(jq -r .weth <$ADDRESSES_FILE)
 collection_address=$(jq -r .collection <$ADDRESSES_FILE)
 
-generate_blinding_factor() {
-	# recipe for a random bytes32 by repurposing key generation
-	# h/t https://github.com/joejordan/foundry-random
-	cast wallet new -j | jq -r '.[0].private_key'
-}
+export MNEMONIC="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 
-# wrap ether
-cast send --keystore $ETH_KEYSTORE/$address1 --from $address1 --value $(cast to-wei 10) $weth_address
-cast send --keystore $ETH_KEYSTORE/$address1 --from $address1 $weth_address 'approve(address,uint256)' $auctions_address $(cast to-wei 10)
-
-# start auction
-cast send --keystore $ETH_KEYSTORE/$deployer --from $deployer $collection_address "approve(address,uint256)" $auctions_address 1
-visibly 'cast send --keystore $ETH_KEYSTORE/$deployer --from $deployer $auctions_address "startAuction(address collection, uint256 tokenId, address bidToken, address proceedsReceiver)" $collection_address 1 $weth_address $(cast address-zero)'
-auction_id=0 # FIXME: hardcoded
-
-# bid 1
-blinding1=$(generate_blinding_factor)
-amount1=$(cast to-wei 1)
-(cd contracts
-forge script --keystore "$ETH_KEYSTORE/$address1" --sender $address1 -f $ETH_RPC_URL --broadcast script/CommitBid.s.sol --sig 'run(address,uint,bytes32,uint)' $auctions_address $auction_id $blinding1 $amount1
-)
-sleep 60
-cast send --keystore $ETH_KEYSTORE/$address1 --from $address1 $auctions_address 'revealBid(uint256,bytes32,uint256)' $auction_id $blinding1 $amount1
-sleep 60
-cast call --trace $auctions_address 'settle(uint256)' $auction_id
+go run ./script/auction_scenario

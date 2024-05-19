@@ -56,4 +56,4 @@ auctions_address=$(jq -r .auctions <$ADDRESSES_FILE)
 weth_address=$(jq -r .weth <$ADDRESSES_FILE)
 collection_address=$(jq -r .collection <$ADDRESSES_FILE)
 
-go run ./script/auction_scenario
+visibly 'go run ./script/auction_scenario'

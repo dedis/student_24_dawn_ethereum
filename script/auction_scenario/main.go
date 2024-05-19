@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -67,7 +68,11 @@ type Scenario struct {
 	ChainID *big.Int
 	Wallet  *hdwallet.Wallet
 	Addresses Addresses
+
 	WETH *bindings.WETH
+	Auctions *bindings.OvercollateralizedAuctions
+	Collection *bindings.Collection
+
 	StartAuctionReady sync.WaitGroup
 }
 
@@ -104,7 +109,48 @@ func (s *Scenario) bidderScriptPrepare(account accounts.Account) (*bind.Transact
 	}
 	transactOpts.Value = nil
 
-	tx, err := s.WETH.Approve(transactOpts, s.Addresses["auctions"], maxBid)
+	_, err = s.checkSuccess(s.WETH.Approve(transactOpts, s.Addresses["auctions"], maxBid))
+	if err != nil {
+		return nil, err
+	}
+
+	return transactOpts, nil
+}
+
+func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
+	// TODO
+	return nil
+}
+
+func (s *Scenario) operatorScript() error {
+	ks := keystore.NewKeyStore("keystore/", keystore.StandardScryptN, keystore.StandardScryptP)
+	transactOpts := new(bind.TransactOpts)
+	transactOpts.From = common.HexToAddress("0x280F6B48E4d9aEe0Efdb04EeBe882023357f6434")
+	transactOpts.Signer = func(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
+		from := accounts.Account{Address: addr}
+		if err := ks.Unlock(from, ""); err != nil {
+			return nil, err
+		}
+		return ks.SignTx(from, tx, s.ChainID)
+	}
+	transactOpts.Context = s.Context
+
+	tokenId := common.Big1
+	_, err := s.checkSuccess(s.Collection.Approve(transactOpts, s.Addresses["auctions"], tokenId))
+	if err != nil {
+		return err
+	}
+
+	s.StartAuctionReady.Wait()
+	_, err = s.checkSuccess(s.Auctions.StartAuction(transactOpts, s.Addresses["collection"], tokenId, s.Addresses["weth"], common.Address{}))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Scenario) checkSuccess(tx *types.Transaction, err error) (*types.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
@@ -120,14 +166,9 @@ func (s *Scenario) bidderScriptPrepare(account accounts.Account) (*bind.Transact
 	if rcpt.Status != types.ReceiptStatusSuccessful {
 		return nil, fmt.Errorf("transaction failed")
 	}
-
-	return transactOpts, nil
+	return tx, nil
 }
 
-func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
-	// TODO
-	return nil
-}
 
 func Main() error {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -160,6 +201,17 @@ func Main() error {
 		return err
 	}
 
+	auctions, err := bindings.NewOvercollateralizedAuctions(addresses["auctions"], client)
+	if err != nil {
+		return err
+	}
+
+	collection, err := bindings.NewCollection(addresses["collection"], client)
+	if err != nil {
+		return err
+	}
+
+
 	s := Scenario{
 		Context: ctx,
 		Client:  client,
@@ -167,6 +219,8 @@ func Main() error {
 		Wallet:  wallet,
 		Addresses: addresses,
 		WETH:    weth,
+		Auctions: auctions,
+		Collection: collection,
 	}
 
 	nBidders := 10
@@ -180,7 +234,5 @@ func Main() error {
 		go s.bidderScript(account)
 	}
 
-	s.StartAuctionReady.Wait()
-
-	return nil
+	return s.operatorScript()
 }

@@ -75,8 +75,6 @@ type Scenario struct {
 	Collection *bindings.Collection
 
 	BiddersReady sync.WaitGroup
-	AuctionId *big.Int
-	AuctionStarted chan struct{}
 }
 
 func (s *Scenario) bidderScript(account accounts.Account) {
@@ -123,7 +121,11 @@ func (s *Scenario) bidderScriptPrepare(account accounts.Account) (*bind.Transact
 }
 
 func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
-	<-s.AuctionStarted
+	auctionStarted, err := s.waitForAuction()
+	if err != nil {
+		return err
+	}
+
 	var blinding [32]byte
 	rand.Read(blinding[:])
 	amount := common.Big3 // FIXME: hardcoded
@@ -133,18 +135,33 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 		return err
 	}
 
-	_, err = s.checkSuccess(s.Auctions.CommitBid(transactOpts, s.AuctionId, commit))
+	_, err = s.checkSuccess(s.Auctions.CommitBid(transactOpts, auctionStarted.AuctionId, commit))
 	log.Info("bid committed")
 
-	time.Sleep(60 * time.Second)
-	_, err = s.checkSuccess(s.Auctions.RevealBid(transactOpts, s.AuctionId, blinding, amount))
+	time.Sleep(time.Unix(int64(auctionStarted.CommitDeadline),0).Sub(time.Now()))
+	_, err = s.checkSuccess(s.Auctions.RevealBid(transactOpts, auctionStarted.AuctionId, blinding, amount))
 	log.Info("bid revealed")
 
 	return nil
 }
 
+func (s *Scenario) waitForAuction() (*bindings.OvercollateralizedAuctionsAuctionStarted, error) {
+	for {
+		it, err := s.Auctions.FilterAuctionStarted(&bind.FilterOpts{Start: 0, End: nil, Context: s.Context})
+		if err != nil {
+			return nil, err
+		}
+
+		for it.Next() {
+			return it.Event, nil
+		}
+		if it.Error() != nil {
+			return nil, err
+		}
+	}
+}
+
 func (s *Scenario) operatorScript() error {
-	s.AuctionStarted = make(chan struct{})
 	ks := keystore.NewKeyStore("keystore/", keystore.StandardScryptN, keystore.StandardScryptP)
 	transactOpts := new(bind.TransactOpts)
 	transactOpts.From = common.HexToAddress("0x280F6B48E4d9aEe0Efdb04EeBe882023357f6434")
@@ -170,12 +187,13 @@ func (s *Scenario) operatorScript() error {
 		return err
 	}
 
-	s.AuctionId = common.Big0 // FIXME: hardcoded
-	close(s.AuctionStarted)
-
 	log.Info("auction started")
 
-	time.Sleep(120 * time.Second)
+	auctionStarted, err := s.waitForAuction()
+	if err != nil {
+		return err
+	}
+	time.Sleep(time.Unix(int64(auctionStarted.RevealDeadline), 0).Sub(time.Now()))
 
 	return nil
 }

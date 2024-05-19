@@ -10,17 +10,19 @@ contract OvercollateralizedAuctions {
         uint256 tokenId;
         IERC20 bidToken;
         address proceedsReceiver;
-        uint256 commitDeadline;
-        uint256 revealDeadline;
+        uint64 commitDeadline;
+        uint64 revealDeadline;
         uint256 maxBid;
         uint256 highestAmount;
         address highestBidder;
         mapping(address => bytes32) commits;
     }
 
+    event AuctionStarted(uint256 auctionId, IERC721 collection, uint256 tokenId, IERC20 bidToken, address proceedsReceiver, uint64 commitDeadline, uint64 revealDeadline, uint256 maxBid);
+
     Auction[] public auctions;
 
-    uint256 constant delay = 60 seconds;
+    uint64 constant delay = 60 seconds;
 
     function startAuction(IERC721 collection, uint256 tokenId, IERC20 bidToken, address proceedsReceiver)
         external
@@ -34,11 +36,13 @@ contract OvercollateralizedAuctions {
         auction.tokenId = tokenId;
         auction.bidToken = bidToken;
         auction.proceedsReceiver = proceedsReceiver;
-        auction.commitDeadline = block.timestamp + delay;
-        auction.revealDeadline = auction.commitDeadline + delay;
+        auction.commitDeadline = uint64(block.timestamp) + delay;
+        auction.revealDeadline = uint64(auction.commitDeadline) + delay;
         auction.maxBid = 10 ether; // FIXME: hardcoded
 
         collection.transferFrom(msg.sender, address(this), auction.tokenId);
+
+	emit AuctionStarted(auctionId, collection, tokenId, bidToken, proceedsReceiver, auction.commitDeadline, auction.revealDeadline, auction.maxBid);
     }
 
     function computeCommitment(bytes32 blinding, address bidder, uint256 amount) public pure returns (bytes32 commit) {

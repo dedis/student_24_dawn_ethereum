@@ -71,6 +71,9 @@ func Main() error {
 		Difficulty: big.NewInt(1),
 		Alloc:      alloc,
 	}
+
+	//genesis.Config.LausanneBlock = common.Big0
+
 	obj, err := json.Marshal(genesis)
 	if err != nil {
 		return err

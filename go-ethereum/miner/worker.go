@@ -1091,7 +1091,7 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 	}
 
 	// F3B rules: fill shadow block, use last finalize shadow block for regular block
-	if w.chainConfig.IsLausanne(w.current.header.Number) {
+	if w.chainConfig.IsLausanne(env.header.Number) {
 	log.Info("building shadow block")
 	pendingEncryptedTxs := core.RetrieveShadowTransactions(w.chain, types.EncryptedBlockDelay)
 

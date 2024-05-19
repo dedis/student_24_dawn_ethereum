@@ -1080,7 +1080,7 @@ func (w *worker) prepareWork(genParams *generateParams) (*environment, error) {
 // be customized with the plugin in the future.
 func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 	// Split the pending transactions into locals and remotes
-	// Fill the shadow block with all available pending transactions.
+	// Fill the block with all available pending transactions.
 	pending := w.eth.TxPool().Pending(true)
 	localTxs, remoteTxs := make(map[common.Address]types.Transactions), pending
 	for _, account := range w.eth.TxPool().Locals() {
@@ -1090,9 +1090,12 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		}
 	}
 
+	// F3B rules: fill shadow block, use last finalize shadow block for regular block
+	if w.chainConfig.IsLausanne(w.current.header.Number) {
+	log.Info("building shadow block")
 	pendingEncryptedTxs := core.RetrieveShadowTransactions(w.chain, types.EncryptedBlockDelay)
 
-	log.Debug("retrived shadow txs", "txs", pendingEncryptedTxs)
+	log.Debug("retrieved shadow txs", "txs", pendingEncryptedTxs)
 	if len(pendingEncryptedTxs) > 0 {
 		txs := types.NewEncryptedTxsByConsensus(env.signer, pendingEncryptedTxs)
 		if err := w.commitTransactions(env, txs, interrupt); err != nil {
@@ -1128,6 +1131,21 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 
 	log.Debug("selected shadow txs", "txs", shadowTxs)
 	env.shadowTxs = shadowTxs
+	} else {
+	// pre-Lausanne block building
+	if len(localTxs) > 0 {
+		txs := types.NewTransactionsByPriceAndNonce(env.signer, localTxs, env.header.BaseFee)
+		if err := w.commitTransactions(env, txs, interrupt); err != nil {
+			return err
+		}
+	}
+	if len(remoteTxs) > 0 {
+		txs := types.NewTransactionsByPriceAndNonce(env.signer, remoteTxs, env.header.BaseFee)
+		if err := w.commitTransactions(env, txs, interrupt); err != nil {
+			return err
+		}
+	}
+	}
 
 	return nil
 }

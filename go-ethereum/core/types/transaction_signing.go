@@ -40,8 +40,10 @@ type sigCache struct {
 func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 	var signer Signer
 	switch {
-	case config.IsLondon(blockNumber):
+	case config.IsLausanne(blockNumber):
 		signer = NewLausanneSigner(config.ChainID)
+	case config.IsLondon(blockNumber):
+		signer = NewLondonSigner(config.ChainID)
 	case config.IsBerlin(blockNumber):
 		signer = NewEIP2930Signer(config.ChainID)
 	case config.IsEIP155(blockNumber):
@@ -63,8 +65,11 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 // have the current block number available, use MakeSigner instead.
 func LatestSigner(config *params.ChainConfig) Signer {
 	if config.ChainID != nil {
-		if config.LondonBlock != nil {
+		if config.LausanneBlock != nil {
 			return NewLausanneSigner(config.ChainID)
+		}
+		if config.LondonBlock != nil {
+			return NewLondonSigner(config.ChainID)
 		}
 		if config.BerlinBlock != nil {
 			return NewEIP2930Signer(config.ChainID)
@@ -173,6 +178,7 @@ type Signer interface {
 type lausanneSigner struct{ londonSigner }
 
 // NewLausanneSigner returns a signer that accepts
+// - F3B encryptable transactions
 // - EIP-1559 dynamic fee transactions
 // - EIP-2930 access list transactions,
 // - EIP-155 replay protected transactions, and

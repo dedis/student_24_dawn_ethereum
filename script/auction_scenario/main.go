@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"math/big"
 	"io"
@@ -73,7 +74,9 @@ type Scenario struct {
 	Auctions *bindings.OvercollateralizedAuctions
 	Collection *bindings.Collection
 
-	StartAuctionReady sync.WaitGroup
+	BiddersReady sync.WaitGroup
+	AuctionId *big.Int
+	AuctionStarted chan struct{}
 }
 
 func (s *Scenario) bidderScript(account accounts.Account) {
@@ -83,12 +86,12 @@ func (s *Scenario) bidderScript(account accounts.Account) {
 		err = s.bidderScriptBid(transactOpts)
 	}
 	if err != nil {
-		fmt.Printf("bidder failed: %v\n", err)
+		log.Error("bidder failed", "err", err)
 	}
 }
 
 func (s *Scenario) bidderScriptPrepare(account accounts.Account) (*bind.TransactOpts, error) {
-	defer s.StartAuctionReady.Done()
+	defer s.BiddersReady.Done()
 
 	privkey, err := s.Wallet.PrivateKey(account)
 	if err != nil {
@@ -114,15 +117,34 @@ func (s *Scenario) bidderScriptPrepare(account accounts.Account) (*bind.Transact
 		return nil, err
 	}
 
+	log.Info("bidder ready")
+
 	return transactOpts, nil
 }
 
 func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
-	// TODO
+	<-s.AuctionStarted
+	var blinding [32]byte
+	rand.Read(blinding[:])
+	amount := common.Big3 // FIXME: hardcoded
+	callOpts := &bind.CallOpts{Context: s.Context, From: transactOpts.From}
+	commit, err := s.Auctions.ComputeCommitment(callOpts, blinding, transactOpts.From, amount)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.checkSuccess(s.Auctions.CommitBid(transactOpts, s.AuctionId, commit))
+	log.Info("bid committed")
+
+	time.Sleep(60 * time.Second)
+	_, err = s.checkSuccess(s.Auctions.RevealBid(transactOpts, s.AuctionId, blinding, amount))
+	log.Info("bid revealed")
+
 	return nil
 }
 
 func (s *Scenario) operatorScript() error {
+	s.AuctionStarted = make(chan struct{})
 	ks := keystore.NewKeyStore("keystore/", keystore.StandardScryptN, keystore.StandardScryptP)
 	transactOpts := new(bind.TransactOpts)
 	transactOpts.From = common.HexToAddress("0x280F6B48E4d9aEe0Efdb04EeBe882023357f6434")
@@ -141,11 +163,19 @@ func (s *Scenario) operatorScript() error {
 		return err
 	}
 
-	s.StartAuctionReady.Wait()
+	s.BiddersReady.Wait()
+
 	_, err = s.checkSuccess(s.Auctions.StartAuction(transactOpts, s.Addresses["collection"], tokenId, s.Addresses["weth"], common.Address{}))
 	if err != nil {
 		return err
 	}
+
+	s.AuctionId = common.Big0 // FIXME: hardcoded
+	close(s.AuctionStarted)
+
+	log.Info("auction started")
+
+	time.Sleep(120 * time.Second)
 
 	return nil
 }
@@ -224,7 +254,7 @@ func Main() error {
 	}
 
 	nBidders := 10
-	s.StartAuctionReady.Add(nBidders)
+	s.BiddersReady.Add(nBidders)
 	it := accounts.DefaultIterator(hdwallet.DefaultBaseDerivationPath)
 	for i := 0; i < nBidders; i++ {
 		account, err := s.Wallet.Derive(it(), true)

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"time"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -35,7 +36,9 @@ func main() {
 	}
 }
 
-func LoadAddresses() (map[string]common.Address, error) {
+type Addresses map[string]common.Address
+
+func LoadAddresses() (Addresses, error) {
 	addressesFile := os.Getenv("ADDRESSES_FILE")
 	var obj map[string]string
 	f, err := os.Open(addressesFile)
@@ -50,7 +53,7 @@ func LoadAddresses() (map[string]common.Address, error) {
 	if err := json.Unmarshal(data, &obj); err != nil {
 		return nil, err
 	}
-	addresses := make(map[string]common.Address, len(obj))
+	addresses := make(Addresses, len(obj))
 	for k, v := range obj {
 		addresses[k] = common.HexToAddress(v)
 	}
@@ -58,14 +61,83 @@ func LoadAddresses() (map[string]common.Address, error) {
 	return addresses, nil
 }
 
+type Scenario struct {
+	Context context.Context
+	Client  *ethclient.Client
+	ChainID *big.Int
+	Wallet  *hdwallet.Wallet
+	Addresses Addresses
+	WETH *bindings.WETH
+	StartAuctionReady sync.WaitGroup
+}
+
+func (s *Scenario) bidderScript(account accounts.Account) {
+	transactOpts, err := s.bidderScriptPrepare(account)
+	// Auction starts
+	if err == nil {
+		err = s.bidderScriptBid(transactOpts)
+	}
+	if err != nil {
+		fmt.Printf("bidder failed: %v\n", err)
+	}
+}
+
+func (s *Scenario) bidderScriptPrepare(account accounts.Account) (*bind.TransactOpts, error) {
+	defer s.StartAuctionReady.Done()
+
+	privkey, err := s.Wallet.PrivateKey(account)
+	if err != nil {
+		return nil, err
+	}
+
+	transactOpts, err := bind.NewKeyedTransactorWithChainID(privkey, s.ChainID)
+	if err != nil {
+		return nil, err
+	}
+	transactOpts.Context = s.Context
+
+	maxBid, _ := new(big.Int).SetString("10000000000000000000", 10)
+	transactOpts.Value = maxBid
+	_, err = s.WETH.Deposit(transactOpts)
+	if err != nil {
+		return nil, err
+	}
+	transactOpts.Value = nil
+
+	tx, err := s.WETH.Approve(transactOpts, s.Addresses["auctions"], maxBid)
+	if err != nil {
+		return nil, err
+	}
+
+	var rcpt *types.Receipt
+	for {
+		rcpt, err = s.Client.TransactionReceipt(s.Context, tx.Hash())
+		if err == nil {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	if rcpt.Status != types.ReceiptStatusSuccessful {
+		return nil, fmt.Errorf("transaction failed")
+	}
+
+	return transactOpts, nil
+}
+
+func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
+	// TODO
+	return nil
+}
+
 func Main() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	client, err := ethclient.Dial(os.Getenv("ETH_RPC_URL"))
 	if err != nil {
 		return err
 	}
 	defer client.Close()
-
-	ctx := context.Background()
 
 	chainID, err := client.ChainID(context.Background())
 	if err != nil {
@@ -78,54 +150,37 @@ func Main() error {
 		return err
 	}
 
-	account, err := wallet.Derive(accounts.DefaultBaseDerivationPath, true)
-	if err != nil {
-		return err
-	}
-
-	privkey, err := wallet.PrivateKey(account)
-	if err != nil {
-		return err
-	}
-
 	addresses, err := LoadAddresses()
 	if err != nil {
 		return err
 	}
 
-	contract, err := bindings.NewWETH(addresses["weth"], client)
+	weth, err := bindings.NewWETH(addresses["weth"], client)
 	if err != nil {
 		return err
 	}
 
-	transactOpts, err := bind.NewKeyedTransactorWithChainID(privkey, chainID)
-	if err != nil {
-		return err
-	}
-	weth := bindings.WETHSession{Contract: contract, TransactOpts: *transactOpts}
-	maxBid, _ := new(big.Int).SetString("10000000000000000000", 10)
-	weth.TransactOpts.Value = maxBid
-	tx, err := weth.Deposit()
-	if err != nil {
-		return err
-	}
-	weth.TransactOpts.Value = nil
-
-	tx, err = weth.Approve(addresses["auctions"], maxBid)
-	if err != nil {
-		return err
+	s := Scenario{
+		Context: ctx,
+		Client:  client,
+		ChainID: chainID,
+		Wallet:  wallet,
+		Addresses: addresses,
+		WETH:    weth,
 	}
 
-	var rcpt *types.Receipt
-	for i := 0; i < 2000; i++ {
-		rcpt, err = client.TransactionReceipt(ctx, tx.Hash())
-		if err == nil {
-			break
+	nBidders := 10
+	s.StartAuctionReady.Add(nBidders)
+	it := accounts.DefaultIterator(hdwallet.DefaultBaseDerivationPath)
+	for i := 0; i < nBidders; i++ {
+		account, err := s.Wallet.Derive(it(), true)
+		if err != nil {
+			return err
 		}
-		time.Sleep(500 * time.Millisecond)
+		go s.bidderScript(account)
 	}
 
-	fmt.Println(rcpt)
+	s.StartAuctionReady.Wait()
 
 	return nil
 }

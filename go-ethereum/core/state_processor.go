@@ -84,6 +84,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	// 	panic("unequal transaction length and receipts")
 	// }
 	beneficiary = RetrieveShadowCoinbase(p.bc, types.EncryptedBlockDelay)
+	_ = beneficiary
 	for i, tx := range block.Transactions() {
 		signer := types.MakeSigner(p.config, header.Number)
 		msg, err := tx.AsMessage(signer, header.BaseFee)
@@ -93,10 +94,10 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 
 		statedb.Prepare(tx.Hash(), i)
 
-		blockContext := NewEVMBlockContext(header, p.bc, &beneficiary)
+		blockContext := NewEVMBlockContext(header, p.bc, nil)
 		vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, p.config, cfg)
 
-		receipt, err = applyTransaction(msg, p.config, &beneficiary, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv)
+		receipt, err = applyTransaction(msg, p.config, nil, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv)
 
 		if err != nil {
 			return nil, nil, 0, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)

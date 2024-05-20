@@ -4,7 +4,9 @@ pragma solidity ^0.8.13;
 import {IERC721} from "forge-std/interfaces/IERC721.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
-contract SimpleAuctions {
+import {Auctions} from "./Auctions.sol";
+
+contract SimpleAuctions is Auctions {
     struct Auction {
         IERC721 collection;
         uint256 tokenId;
@@ -14,15 +16,6 @@ contract SimpleAuctions {
         uint256 highestAmount;
         address highestBidder;
     }
-
-    event AuctionStarted(
-        uint256 auctionId,
-        IERC721 collection,
-        uint256 tokenId,
-        IERC20 bidToken,
-        address proceedsReceiver,
-        uint64 deadline
-    );
 
     Auction[] public auctions;
 
@@ -44,7 +37,16 @@ contract SimpleAuctions {
 
         collection.transferFrom(msg.sender, address(this), auction.tokenId);
 
-        emit AuctionStarted(auctionId, collection, tokenId, bidToken, proceedsReceiver, auction.deadline);
+        emit AuctionStarted(
+            auctionId,
+            collection,
+            tokenId,
+            bidToken,
+            proceedsReceiver,
+            auction.deadline,
+            auction.deadline,
+            type(uint256).max
+        );
     }
 
     function bid(uint256 auctionId, uint256 amount) external {

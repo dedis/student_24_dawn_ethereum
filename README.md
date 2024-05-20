@@ -3,7 +3,7 @@ Delayed-execution Ethereum client.
 Based on previous work by Shufan Wang.
 
 # Architecture
-`smc/` contains the Secret Management Committee code and provides the `dkgcli` command.
+`smc/` contains the Secret Management Committee code and provides the `smccli` command.
 `go-ethereum/` is a modified version of `go-ethereum v1.10.23` which integrates with the SMC.
 
 # Design (WIP)

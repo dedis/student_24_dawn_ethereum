@@ -4,7 +4,9 @@ pragma solidity ^0.8.13;
 import {IERC721} from "forge-std/interfaces/IERC721.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
-contract OvercollateralizedAuctions {
+import {Auctions} from "./Auctions.sol";
+
+contract OvercollateralizedAuctions is Auctions {
     struct Auction {
         IERC721 collection;
         uint256 tokenId;
@@ -17,17 +19,6 @@ contract OvercollateralizedAuctions {
         address highestBidder;
         mapping(address => bytes32) commits;
     }
-
-    event AuctionStarted(
-        uint256 auctionId,
-        IERC721 collection,
-        uint256 tokenId,
-        IERC20 bidToken,
-        address proceedsReceiver,
-        uint64 commitDeadline,
-        uint64 revealDeadline,
-        uint256 maxBid
-    );
 
     Auction[] public auctions;
 

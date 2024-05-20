@@ -77,7 +77,9 @@ func Main() error {
 		Alloc:      alloc,
 	}
 
-	//genesis.Config.LausanneBlock = common.Big0
+	if os.Getenv("F3B_PROTOCOL") != "" {
+		genesis.Config.LausanneBlock = common.Big0
+	}
 
 	obj, err := json.Marshal(genesis)
 	if err != nil {

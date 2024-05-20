@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto/cae"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/f3b"
@@ -83,6 +84,9 @@ func value(value *big.Int) func(*bind.TransactOpts) {
 
 func encrypt(encryptTx f3b.EncryptFn) func(*bind.TransactOpts) {
 	return func(transactOpts *bind.TransactOpts) {
+		if encryptTx == nil {
+			return
+		}
 		prevSigner := transactOpts.Signer
 		transactOpts.Signer = func(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
 			tx, err := encryptTx(addr, tx)
@@ -100,10 +104,13 @@ type Scenario struct {
 	ChainID *big.Int
 	Wallet  *hdwallet.Wallet
 	Addresses Addresses
+	F3bProtocol string
 	Encrypt f3b.EncryptFn
 
 	WETH *bindings.WETH
+	Auctions *bindings.Auctions
 	OvercollateralizedAuctions *bindings.OvercollateralizedAuctions
+	SimpleAuctions *bindings.SimpleAuctions
 	Collection *bindings.Collection
 
 	BiddersReady sync.WaitGroup
@@ -156,9 +163,10 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 		return err
 	}
 
+	amount := common.Big3 // FIXME: hardcoded
+	if s.OvercollateralizedAuctions != nil {
 	var blinding [32]byte
 	rand.Read(blinding[:])
-	amount := common.Big3 // FIXME: hardcoded
 	callOpts := &bind.CallOpts{Context: s.Context, From: transactOpts.From}
 	commit, err := s.OvercollateralizedAuctions.ComputeCommitment(callOpts, blinding, transactOpts.From, amount)
 	if err != nil {
@@ -166,18 +174,32 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 	}
 
 	_, err = s.checkSuccess(s.OvercollateralizedAuctions.CommitBid(transactOpts, auctionStarted.AuctionId, commit))
+	if err != nil {
+		return err
+	}
 	log.Info("bid committed")
 
 	time.Sleep(time.Unix(int64(auctionStarted.CommitDeadline),0).Sub(time.Now()))
 	_, err = s.checkSuccess(s.OvercollateralizedAuctions.RevealBid(transactOpts, auctionStarted.AuctionId, blinding, amount))
+	if err != nil {
+		return err
+	}
 	log.Info("bid revealed")
+} else {
+	_, err = s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(s.Encrypt)), auctionStarted.AuctionId, amount))
+	if err != nil {
+		return err
+	}
+	log.Info("bid sent")
+}
+
 
 	return nil
 }
 
-func (s *Scenario) waitForAuction() (*bindings.OvercollateralizedAuctionsAuctionStarted, error) {
+func (s *Scenario) waitForAuction() (*bindings.AuctionsAuctionStarted, error) {
 	for {
-		it, err := s.OvercollateralizedAuctions.FilterAuctionStarted(&bind.FilterOpts{Start: 0, End: nil, Context: s.Context})
+		it, err := s.Auctions.FilterAuctionStarted(&bind.FilterOpts{Start: 0, End: nil, Context: s.Context})
 		if err != nil {
 			return nil, err
 		}
@@ -212,7 +234,7 @@ func (s *Scenario) operatorScript() error {
 
 	s.BiddersReady.Wait()
 
-	_, err = s.checkSuccess(s.OvercollateralizedAuctions.StartAuction(transactOpts, s.Addresses["collection"], tokenId, s.Addresses["weth"], common.Address{}))
+	_, err = s.checkSuccess(s.Auctions.StartAuction(transactOpts, s.Addresses["collection"], tokenId, s.Addresses["weth"], common.Address{}))
 	if err != nil {
 		return err
 	}
@@ -279,7 +301,7 @@ func Main() error {
 		return err
 	}
 
-	overcollateralizedAuctions, err := bindings.NewOvercollateralizedAuctions(addresses["auctions"], client)
+	auctions, err := bindings.NewAuctions(addresses["auctions"], client)
 	if err != nil {
 		return err
 	}
@@ -289,7 +311,7 @@ func Main() error {
 		return err
 	}
 
-
+	f3bProtocol := os.Getenv("F3B_PROTOCOL")
 	s := Scenario{
 		Context: ctx,
 		Client:  client,
@@ -297,8 +319,32 @@ func Main() error {
 		Wallet:  wallet,
 		Addresses: addresses,
 		WETH:    weth,
-		OvercollateralizedAuctions: overcollateralizedAuctions,
+		Auctions: auctions,
 		Collection: collection,
+		F3bProtocol: f3bProtocol,
+	}
+
+	if f3bProtocol == "" {
+		// no encryption, have to use overcollateralization
+		s.OvercollateralizedAuctions, err = bindings.NewOvercollateralizedAuctions(addresses["auctions"], client)
+	} else {
+		s.SimpleAuctions, err = bindings.NewSimpleAuctions(addresses["auctions"], client)
+	}
+	if err != nil {
+		return err
+	}
+
+	switch f3bProtocol {
+	case "":
+		// nothing to prepare
+	case "tpke":
+		tpke, err := f3b.NewTPKE(cae.Selected)
+		if err != nil {
+			return err
+		}
+		s.Encrypt = tpke.EncryptTx
+	default:
+		return fmt.Errorf("unknown F3B protocol: %s", f3bProtocol)
 	}
 
 	nBidders := 10

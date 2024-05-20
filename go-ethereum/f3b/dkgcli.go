@@ -20,16 +20,16 @@ func getEnv(name string) string {
 	return value
 }
 
-type DkgCli struct {
+type SmcCli struct {
 	configPath string
 }
 
-func NewDkgCli() *DkgCli {
+func NewSmcCli() *SmcCli {
 	configPath := filepath.Clean(getEnv("F3B_DKG_PATH"))
-	return &DkgCli{configPath: configPath}
+	return &SmcCli{configPath: configPath}
 }
 
-func (d *DkgCli) GetPublicKey() (kyber.Point, error) {
+func (d *SmcCli) GetPublicKey() (kyber.Point, error) {
 	pkBytes, err := d.run("get-public-key")
 	if err != nil {
 		return nil, err
@@ -43,16 +43,16 @@ func (d *DkgCli) GetPublicKey() (kyber.Point, error) {
 	return pk, nil
 }
 
-func (d *DkgCli) Extract(label []byte) ([]byte, error) {
+func (d *SmcCli) Extract(label []byte) ([]byte, error) {
 	return d.run("extract", "--label", hex.EncodeToString(label))
 }
 
-func (d *DkgCli) run(args ...string) ([]byte, error) {
+func (d *SmcCli) run(args ...string) ([]byte, error) {
 	args = append([]string{"--config", d.configPath, "dkg"}, args...)
-	output, err := exec.Command("dkgcli", args...).Output()
+	output, err := exec.Command("smccli", args...).Output()
 
 	if exitError, ok := err.(*exec.ExitError); ok {
-		log.Printf("dkgcli stderr:\n%s", exitError.Stderr)
+		log.Printf("smccli stderr:\n%s", exitError.Stderr)
 	}
 	if err != nil {
 		return nil, err

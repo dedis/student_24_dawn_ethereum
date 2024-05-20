@@ -10,6 +10,8 @@ import (
 	db "go.dedis.ch/dela/core/store/kv/controller"
 	dkg "go.dedis.ch/f3b/smc/dkg/controller"
 	mino "go.dedis.ch/dela/mino/minogrpc/controller"
+
+	_ "go.dedis.ch/f3b/smc/dkg/json"
 )
 
 func main() {

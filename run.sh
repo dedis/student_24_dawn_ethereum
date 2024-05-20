@@ -30,12 +30,15 @@ producer_datadir=$tempdir/producer
 producer_nodekey="e74976d3e1d9069b85d6659038105fe601696a0ddcb63f0407b11328e341a47c"
 producer_addr="enode://3d1bb945ae2e250f5fe23f6da3f150b1af4d425bd280bdbfc3e7626ae4625cac2cfb3a59469b67528765a50237c0f434bc3cebcb63118b21949e4139de6b9fb1@127.0.0.1:30303"
 
+export F3B_PROTOCOL=tpke
+
 export MNEMONIC="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 go run ./script/write_genesis > $tempdir/clique.json
 
 geth -datadir "$producer_datadir" -verbosity 1 init $tempdir/clique.json
 
-if [ -n "$SMC_ON" ]; then
+case "$F3B_PROTOCOL" in
+	tpke | tibe )
 tmux neww -d env LLVL=info smccli --config $tempdir/dela/node1 start --routing tree --listen tcp://127.0.0.1:2001
 tmux neww -d env LLVL=info smccli --config $tempdir/dela/node2 start --routing tree --listen tcp://127.0.0.1:2002
 tmux neww -d env LLVL=info smccli --config $tempdir/dela/node3 start --routing tree --listen tcp://127.0.0.1:2003
@@ -53,9 +56,10 @@ smccli --config $tempdir/dela/node1 dkg setup \
     --authority $(cat $tempdir/dela/node2/dkgauthority) \
     --authority $(cat $tempdir/dela/node3/dkgauthority) \
     --threshold 2
-
 export F3B_DKG_PATH=$tempdir/dela/node1
-fi
+    ;;
+esac
+
 
 cp keystore/$coinbase $producer_datadir/keystore
 tmux neww -d env F3B_DKG_PATH="$F3B_DKG_PATH" geth -datadir "$producer_datadir" -nodiscover -mine -password /dev/null -unlock $coinbase -nodekeyhex $producer_nodekey -nat none

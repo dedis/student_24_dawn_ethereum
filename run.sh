@@ -35,8 +35,30 @@ go run ./script/write_genesis > $tempdir/clique.json
 
 geth -datadir "$producer_datadir" -verbosity 1 init $tempdir/clique.json
 
+if [ -n "$SMC_ON" ]; then
+tmux neww -d env LLVL=info smccli --config $tempdir/dela/node1 start --routing tree --listen tcp://127.0.0.1:2001
+tmux neww -d env LLVL=info smccli --config $tempdir/dela/node2 start --routing tree --listen tcp://127.0.0.1:2002
+tmux neww -d env LLVL=info smccli --config $tempdir/dela/node3 start --routing tree --listen tcp://127.0.0.1:2003
+sleep 1
+
+smccli --config $tempdir/dela/node2 minogrpc join --address //127.0.0.1:2001 $(smccli --config $tempdir/dela/node1 minogrpc token)
+smccli --config $tempdir/dela/node3 minogrpc join --address //127.0.0.1:2001 $(smccli --config $tempdir/dela/node1 minogrpc token)
+                                   
+smccli --config $tempdir/dela/node1 dkg listen
+smccli --config $tempdir/dela/node2 dkg listen
+smccli --config $tempdir/dela/node3 dkg listen
+
+smccli --config $tempdir/dela/node1 dkg setup \
+    --authority $(cat $tempdir/dela/node1/dkgauthority) \
+    --authority $(cat $tempdir/dela/node2/dkgauthority) \
+    --authority $(cat $tempdir/dela/node3/dkgauthority) \
+    --threshold 2
+
+export F3B_DKG_PATH=$tempdir/dela/node1
+fi
+
 cp keystore/$coinbase $producer_datadir/keystore
-tmux neww -d geth -datadir "$producer_datadir" -nodiscover -mine -password /dev/null -unlock $coinbase -nodekeyhex $producer_nodekey -nat none
+tmux neww -d env F3B_DKG_PATH="$F3B_DKG_PATH" geth -datadir "$producer_datadir" -nodiscover -mine -password /dev/null -unlock $coinbase -nodekeyhex $producer_nodekey -nat none
 
 observer_datadir=$tempdir/observer
 geth -datadir "$observer_datadir" -verbosity 1 init $tempdir/clique.json

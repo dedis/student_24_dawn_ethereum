@@ -4,18 +4,15 @@ pragma solidity ^0.8.13;
 import {IERC721} from "forge-std/interfaces/IERC721.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
-contract OvercollateralizedAuctions {
+contract SimpleAuctions {
     struct Auction {
         IERC721 collection;
         uint256 tokenId;
         IERC20 bidToken;
         address proceedsReceiver;
-        uint64 commitDeadline;
-        uint64 revealDeadline;
-        uint256 maxBid;
+        uint64 deadline;
         uint256 highestAmount;
         address highestBidder;
-        mapping(address => bytes32) commits;
     }
 
     event AuctionStarted(
@@ -24,9 +21,7 @@ contract OvercollateralizedAuctions {
         uint256 tokenId,
         IERC20 bidToken,
         address proceedsReceiver,
-        uint64 commitDeadline,
-        uint64 revealDeadline,
-        uint256 maxBid
+        uint64 deadline
     );
 
     Auction[] public auctions;
@@ -45,65 +40,32 @@ contract OvercollateralizedAuctions {
         auction.tokenId = tokenId;
         auction.bidToken = bidToken;
         auction.proceedsReceiver = proceedsReceiver;
-        auction.commitDeadline = uint64(block.timestamp) + delay;
-        auction.revealDeadline = uint64(auction.commitDeadline) + delay;
-        auction.maxBid = 10 ether; // FIXME: hardcoded
+        auction.deadline = uint64(block.timestamp) + delay;
 
         collection.transferFrom(msg.sender, address(this), auction.tokenId);
 
-        emit AuctionStarted(
-            auctionId,
-            collection,
-            tokenId,
-            bidToken,
-            proceedsReceiver,
-            auction.commitDeadline,
-            auction.revealDeadline,
-            auction.maxBid
-        );
+        emit AuctionStarted(auctionId, collection, tokenId, bidToken, proceedsReceiver, auction.deadline);
     }
 
-    function computeCommitment(bytes32 blinding, address bidder, uint256 amount) public pure returns (bytes32 commit) {
-        commit = keccak256(abi.encode(blinding, bidder, amount));
-    }
-
-    function commitBid(uint256 auctionId, bytes32 commit) external {
+    function bid(uint256 auctionId, uint256 amount) external {
         Auction storage auction = auctions[auctionId];
 
-        require(block.timestamp < auction.commitDeadline, "late");
-
-        require(auction.bidToken.transferFrom(msg.sender, address(this), auction.maxBid));
-
-        // NOTE: bidders can self-grief by overwriting their commit
-        auction.commits[msg.sender] = commit;
-    }
-
-    function revealBid(uint256 auctionId, bytes32 blinding, uint256 amount) external {
-        Auction storage auction = auctions[auctionId];
-
-        require(block.timestamp >= auction.commitDeadline, "early");
-        require(block.timestamp < auction.revealDeadline, "late");
-
-        bytes32 commit = computeCommitment(blinding, msg.sender, amount);
-        require(auction.commits[msg.sender] == commit, "commit");
-        auction.commits[msg.sender] = "";
+        require(block.timestamp < auction.deadline, "late");
 
         if (amount > auction.highestAmount) {
             address prevHighestBidder = auction.highestBidder;
             uint256 prevHighestAmount = auction.highestAmount;
             auction.highestBidder = msg.sender;
             auction.highestAmount = amount;
-            auction.bidToken.transfer(msg.sender, auction.maxBid - amount);
+            auction.bidToken.transferFrom(msg.sender, address(this), amount);
             auction.bidToken.transfer(prevHighestBidder, prevHighestAmount);
-        } else {
-            auction.bidToken.transfer(msg.sender, auction.maxBid);
         }
     }
 
     function settle(uint256 auctionId) external {
         Auction storage auction = auctions[auctionId];
 
-        require(block.timestamp >= auction.revealDeadline, "early");
+        require(block.timestamp >= auction.deadline, "early");
         require(address(auction.collection) != address(0));
 
         auction.bidToken.transfer(auction.proceedsReceiver, auction.highestAmount);

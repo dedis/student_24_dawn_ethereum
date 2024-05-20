@@ -19,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/f3b"
 	"github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/dedis/f3b-ethereum/bindings"
 )
@@ -63,15 +64,46 @@ func LoadAddresses() (Addresses, error) {
 	return addresses, nil
 }
 
+// Ad-hoc functional options on TransactOpts
+// https://commandcenter.blogspot.com/2014/01/self-referential-functions-and-design.html
+func with(transactOpts *bind.TransactOpts, mods ...func(*bind.TransactOpts)) *bind.TransactOpts {
+	ret := new(bind.TransactOpts)
+	*ret = *transactOpts
+	for _, f := range mods {
+		f(ret)
+	}
+	return ret
+}
+
+func value(value *big.Int) func(*bind.TransactOpts) {
+	return func(transactOpts *bind.TransactOpts) {
+		transactOpts.Value = value
+	}
+}
+
+func encrypt(encryptTx f3b.EncryptFn) func(*bind.TransactOpts) {
+	return func(transactOpts *bind.TransactOpts) {
+		prevSigner := transactOpts.Signer
+		transactOpts.Signer = func(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			tx, err := encryptTx(addr, tx)
+			if err != nil {
+				return nil, err
+			}
+			return prevSigner(addr, tx)
+		}
+	}
+}
+
 type Scenario struct {
 	Context context.Context
 	Client  *ethclient.Client
 	ChainID *big.Int
 	Wallet  *hdwallet.Wallet
 	Addresses Addresses
+	Encrypt f3b.EncryptFn
 
 	WETH *bindings.WETH
-	Auctions *bindings.OvercollateralizedAuctions
+	OvercollateralizedAuctions *bindings.OvercollateralizedAuctions
 	Collection *bindings.Collection
 
 	BiddersReady sync.WaitGroup
@@ -103,12 +135,10 @@ func (s *Scenario) bidderScriptPrepare(account accounts.Account) (*bind.Transact
 	transactOpts.Context = s.Context
 
 	maxBid, _ := new(big.Int).SetString("10000000000000000000", 10)
-	transactOpts.Value = maxBid
-	_, err = s.WETH.Deposit(transactOpts)
+	_, err = s.WETH.Deposit(with(transactOpts, value(maxBid)))
 	if err != nil {
 		return nil, err
 	}
-	transactOpts.Value = nil
 
 	_, err = s.checkSuccess(s.WETH.Approve(transactOpts, s.Addresses["auctions"], maxBid))
 	if err != nil {
@@ -130,16 +160,16 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 	rand.Read(blinding[:])
 	amount := common.Big3 // FIXME: hardcoded
 	callOpts := &bind.CallOpts{Context: s.Context, From: transactOpts.From}
-	commit, err := s.Auctions.ComputeCommitment(callOpts, blinding, transactOpts.From, amount)
+	commit, err := s.OvercollateralizedAuctions.ComputeCommitment(callOpts, blinding, transactOpts.From, amount)
 	if err != nil {
 		return err
 	}
 
-	_, err = s.checkSuccess(s.Auctions.CommitBid(transactOpts, auctionStarted.AuctionId, commit))
+	_, err = s.checkSuccess(s.OvercollateralizedAuctions.CommitBid(transactOpts, auctionStarted.AuctionId, commit))
 	log.Info("bid committed")
 
 	time.Sleep(time.Unix(int64(auctionStarted.CommitDeadline),0).Sub(time.Now()))
-	_, err = s.checkSuccess(s.Auctions.RevealBid(transactOpts, auctionStarted.AuctionId, blinding, amount))
+	_, err = s.checkSuccess(s.OvercollateralizedAuctions.RevealBid(transactOpts, auctionStarted.AuctionId, blinding, amount))
 	log.Info("bid revealed")
 
 	return nil
@@ -147,7 +177,7 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 
 func (s *Scenario) waitForAuction() (*bindings.OvercollateralizedAuctionsAuctionStarted, error) {
 	for {
-		it, err := s.Auctions.FilterAuctionStarted(&bind.FilterOpts{Start: 0, End: nil, Context: s.Context})
+		it, err := s.OvercollateralizedAuctions.FilterAuctionStarted(&bind.FilterOpts{Start: 0, End: nil, Context: s.Context})
 		if err != nil {
 			return nil, err
 		}
@@ -182,7 +212,7 @@ func (s *Scenario) operatorScript() error {
 
 	s.BiddersReady.Wait()
 
-	_, err = s.checkSuccess(s.Auctions.StartAuction(transactOpts, s.Addresses["collection"], tokenId, s.Addresses["weth"], common.Address{}))
+	_, err = s.checkSuccess(s.OvercollateralizedAuctions.StartAuction(transactOpts, s.Addresses["collection"], tokenId, s.Addresses["weth"], common.Address{}))
 	if err != nil {
 		return err
 	}
@@ -249,7 +279,7 @@ func Main() error {
 		return err
 	}
 
-	auctions, err := bindings.NewOvercollateralizedAuctions(addresses["auctions"], client)
+	overcollateralizedAuctions, err := bindings.NewOvercollateralizedAuctions(addresses["auctions"], client)
 	if err != nil {
 		return err
 	}
@@ -267,7 +297,7 @@ func Main() error {
 		Wallet:  wallet,
 		Addresses: addresses,
 		WETH:    weth,
-		Auctions: auctions,
+		OvercollateralizedAuctions: overcollateralizedAuctions,
 		Collection: collection,
 	}
 

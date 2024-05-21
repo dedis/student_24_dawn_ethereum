@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/ethereum/go-ethereum/f3b/ibe"
+	"github.com/ethereum/go-ethereum/log"
 
 	"go.dedis.ch/kyber/v3"
 )
@@ -65,6 +66,7 @@ func (e *TPKE) RecoverSecret(label, encKey, reveal []byte) (seed []byte, err err
 		return nil, err
 	}
 
+	log.Info("Identity", "label", label, "reveal", reveal, "identity", identity)
 	if !ibe.VerifyIdentity(e.pk, identity, label) {
 		return nil, errors.New("bad identity")
 	}

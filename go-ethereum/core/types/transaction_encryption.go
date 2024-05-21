@@ -19,7 +19,8 @@ func (t *Transaction) Encrypt(from common.Address, f3bProtocol f3b.Protocol) (*T
 		return nil, err
 	}
 
-	// TODO: if the ciphertext is too short, penalize the sender
+	log.Info("Encrypting", "label", label, "encKey", encKey, "seed", seed)
+
 	plaintext := append(t.To().Bytes(), t.Data()...)
 	ciphertext := make([]byte, len(plaintext))
 	tag := make([]byte, cae.Selected.TagLen())
@@ -64,6 +65,7 @@ func (t *Transaction) Decrypt(f3bProtocol f3b.Protocol) (*Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Info("Reencrypting", "label", label, "enckey", tx.EncKey, "reveal", reveal, "seed", seed)
 
 	// TODO: if the ciphertext is too short, penalize the sender
 	plaintext := make([]byte, len(tx.Ciphertext))
@@ -102,11 +104,11 @@ func (t *Transaction) Reencrypt(protocol f3b.Protocol) (*Transaction, error) {
 	}
 
 	label := binary.BigEndian.AppendUint64(tx.From.Bytes(), tx.Nonce)
-	log.Info("Reencrypting", "label", label, "enckey", tx.EncKey, "reveal", tx.Reveal)
 	seed, err := protocol.RecoverSecret(label, tx.EncKey, tx.Reveal)
 	if err != nil {
 		return nil, err
 	}
+	log.Info("Reencrypting", "label", label, "enckey", tx.EncKey, "reveal", tx.Reveal, "seed", seed)
 
 	plaintext := append(tx.To.Bytes(), tx.Data...)
 	ciphertext := make([]byte, len(plaintext))

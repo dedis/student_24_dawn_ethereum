@@ -332,7 +332,7 @@ func Main() error {
 		return err
 	}
 
-	nBidders := 10
+	nBidders := 2
 	s.BiddersReady.Add(nBidders)
 	it := accounts.DefaultIterator(hdwallet.DefaultBaseDerivationPath)
 	for i := 0; i < nBidders; i++ {

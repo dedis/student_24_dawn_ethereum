@@ -15,6 +15,8 @@ func SelectedProtocol() Protocol {
 				panic(err)
 			}
 			protocol = tpke
+		case "vdf":
+			protocol = &VDF{}
 		case "":
 			protocol = nil
 		default:

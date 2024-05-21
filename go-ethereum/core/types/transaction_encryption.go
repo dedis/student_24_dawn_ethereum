@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/cae"
 	"github.com/ethereum/go-ethereum/f3b"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 func (t *Transaction) Encrypt(from common.Address, f3bProtocol f3b.Protocol) (*Transaction, error) {
@@ -59,7 +60,7 @@ func (t *Transaction) Decrypt(f3bProtocol f3b.Protocol) (*Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	seed, err := f3bProtocol.RecoverSecret(tx.EncKey, reveal)
+	seed, err := f3bProtocol.RecoverSecret(label, tx.EncKey, reveal)
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +87,7 @@ func (t *Transaction) Decrypt(f3bProtocol f3b.Protocol) (*Transaction, error) {
 		Data:       data,
 		EncKey:     tx.EncKey,
 		Reveal:     reveal,
+		From:       from,
 
 		V: tx.V,
 		R: tx.R,
@@ -99,7 +101,9 @@ func (t *Transaction) Reencrypt(protocol f3b.Protocol) (*Transaction, error) {
 		return nil, errors.New("cannot reencrypt a non-decrypted transaction")
 	}
 
-	seed, err := protocol.RecoverSecret(tx.EncKey, tx.Reveal)
+	label := binary.BigEndian.AppendUint64(tx.From.Bytes(), tx.Nonce)
+	log.Info("Reencrypting", "label", label, "enckey", tx.EncKey, "reveal", tx.Reveal)
+	seed, err := protocol.RecoverSecret(label, tx.EncKey, tx.Reveal)
 	if err != nil {
 		return nil, err
 	}

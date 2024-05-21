@@ -20,6 +20,7 @@ type DecryptedTx struct {
 	AccessList AccessList
 	EncKey     []byte // The symmetric key k encrypted for the SMC
 	Reveal     []byte // witness data to help decrypt EncKey
+	From       common.Address // the sender address, needed to properly reencrypt
 
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`
@@ -35,6 +36,7 @@ func (tx *DecryptedTx) copy() TxData {
 		Data:  common.CopyBytes(tx.Data),
 		EncKey:   common.CopyBytes(tx.EncKey),
 		Reveal:   common.CopyBytes(tx.Reveal),
+		From:     tx.From,
 		Gas:   tx.Gas,
 		// These are copied below.
 		AccessList: make(AccessList, len(tx.AccessList)),

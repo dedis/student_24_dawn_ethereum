@@ -79,6 +79,8 @@ const (
 	staleThreshold = 7
 )
 
+var vdfWorkers map[common.Hash]*vdfWorker = make(map[common.Hash]*vdfWorker)
+
 var (
 	errBlockInterruptedByNewHead  = errors.New("new head arrived while building block")
 	errBlockInterruptedByRecommit = errors.New("recommit interrupt while building block")
@@ -101,7 +103,6 @@ type environment struct {
 	receipts []*types.Receipt
 	uncles   map[common.Hash]*types.Header
 	shadowTxs []*types.Transaction
-	vdfWorkers map[common.Hash]*vdfWorker
 }
 
 // copy creates a deep copy of environment.
@@ -776,7 +777,6 @@ func (w *worker) makeEnv(parent *types.Block, header *types.Header, coinbase com
 		family:    mapset.NewSet(),
 		header:    header,
 		uncles:    make(map[common.Hash]*types.Header),
-		vdfWorkers: make(map[common.Hash]*vdfWorker),
 	}
 	// when 08 is processed ancestors contain 07 (quick block)
 	for _, ancestor := range w.chain.GetBlocksFromHash(parent.Hash(), 7) {
@@ -895,14 +895,14 @@ func (w *worker) commitTransactions(env *environment, txs *types.TransactionsByP
 		// F3B: decrypt the transaction if necessary
 		if tx.Type() == types.EncryptedTxType {
 			if f3bProtocol.IsVdf() {
-				w, ok := env.vdfWorkers[tx.Hash()]
+				w, ok := vdfWorkers[tx.Hash()]
 				if !ok {
 					log.Error("VDF worker not found", "tx", tx.Hash().String())
 					txs.Pop()
 					continue
 				}
 				tx, err = w.Wait()
-				//delete(env.vdfWorkers, tx.Hash())
+				//delete(vdfWorkers, tx.Hash())
 			} else {
 				tx, err = tx.Decrypt(f3bProtocol)
 			}
@@ -1121,18 +1121,21 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		shadowTxs = append(shadowTxs, tx...)
 	}
 
+
 	// F3B: start VDF computations for the transaction if necessary
-	for _, tx := range shadowTxs {
-		if tx.Type() == types.EncryptedTxType {
-			if _, ok := env.vdfWorkers[tx.Hash()]; ok {
-				continue
+	if f3bProtocol := f3b.SelectedProtocol(); f3bProtocol != nil && f3bProtocol.IsVdf() {
+		for _, tx := range shadowTxs {
+			if tx.Type() == types.EncryptedTxType {
+				if _, ok := vdfWorkers[tx.Hash()]; ok {
+					continue
+				}
+				w, err := startVdf(tx, context.TODO())
+				if err != nil {
+					log.Error("start vdf", "err", err)
+				}
+				vdfWorkers[tx.Hash()] = w
+				log.Info("starting vdf", "tx", tx.Hash().String(), "vdfWorkers", vdfWorkers)
 			}
-			log.Info("starting vdf", "tx", tx.Hash().String())
-			w, err := startVdf(tx, context.TODO())
-			if err != nil {
-				log.Error("start vdf", "err", err)
-			}
-			env.vdfWorkers[tx.Hash()] = w
 		}
 	}
 

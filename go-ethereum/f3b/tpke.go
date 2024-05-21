@@ -3,6 +3,8 @@
 package f3b
 
 import (
+	"errors"
+
 	"github.com/ethereum/go-ethereum/f3b/ibe"
 
 	"go.dedis.ch/kyber/v3"
@@ -50,7 +52,7 @@ func (e *TPKE) RevealSecret(label, encKey []byte) (reveal []byte, err error) {
 	return e.smccli.Extract(label)
 }
 
-func (e *TPKE) RecoverSecret(encKey, reveal []byte) (seed []byte, err error) {
+func (e *TPKE) RecoverSecret(label, encKey, reveal []byte) (seed []byte, err error) {
 	U := ibe.Suite.G2().Point()
 	err = U.UnmarshalBinary(encKey)
 	if err != nil {
@@ -63,11 +65,10 @@ func (e *TPKE) RecoverSecret(encKey, reveal []byte) (seed []byte, err error) {
 		return nil, err
 	}
 
-	/* FIXME: not possible to have the label due to circular dependency
 	if !ibe.VerifyIdentity(e.pk, identity, label) {
 		return nil, errors.New("bad identity")
 	}
-	*/
+	println("good identity")
 
 	secret := ibe.RecoverSecret(identity, U)
 	seed, err = secret.MarshalBinary()

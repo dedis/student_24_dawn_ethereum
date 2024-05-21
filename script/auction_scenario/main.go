@@ -17,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto/cae"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/f3b"
@@ -82,18 +81,20 @@ func value(value *big.Int) func(*bind.TransactOpts) {
 	}
 }
 
-func encrypt(encryptTx f3b.EncryptFn) func(*bind.TransactOpts) {
+func encrypt() func(*bind.TransactOpts) {
+	f3bProtocol := f3b.SelectedProtocol()
 	return func(transactOpts *bind.TransactOpts) {
-		if encryptTx == nil {
-			return
-		}
 		prevSigner := transactOpts.Signer
 		transactOpts.Signer = func(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			tx, err := encryptTx(addr, tx)
+			tx, err := tx.Encrypt(addr, f3bProtocol)
 			if err != nil {
 				return nil, err
 			}
-			return prevSigner(addr, tx)
+			tx, err = prevSigner(addr, tx)
+			
+			sender, err := types.Sender(types.NewLausanneSigner(big.NewInt(1337)), tx)
+			fmt.Println(addr, sender, err)
+			return tx, err
 		}
 	}
 }
@@ -104,8 +105,6 @@ type Scenario struct {
 	ChainID *big.Int
 	Wallet  *hdwallet.Wallet
 	Addresses Addresses
-	F3bProtocol string
-	Encrypt f3b.EncryptFn
 
 	WETH *bindings.WETH
 	Auctions *bindings.Auctions
@@ -186,7 +185,7 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 	}
 	log.Info("bid revealed")
 } else {
-	_, err = s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(s.Encrypt)), auctionStarted.AuctionId, amount))
+	_, err = s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt()), auctionStarted.AuctionId, amount))
 	if err != nil {
 		return err
 	}
@@ -311,7 +310,7 @@ func Main() error {
 		return err
 	}
 
-	f3bProtocol := os.Getenv("F3B_PROTOCOL")
+	f3bProtocol := f3b.SelectedProtocol()
 	s := Scenario{
 		Context: ctx,
 		Client:  client,
@@ -321,10 +320,9 @@ func Main() error {
 		WETH:    weth,
 		Auctions: auctions,
 		Collection: collection,
-		F3bProtocol: f3bProtocol,
 	}
 
-	if f3bProtocol == "" {
+	if f3bProtocol == nil {
 		// no encryption, have to use overcollateralization
 		s.OvercollateralizedAuctions, err = bindings.NewOvercollateralizedAuctions(addresses["auctions"], client)
 	} else {
@@ -332,19 +330,6 @@ func Main() error {
 	}
 	if err != nil {
 		return err
-	}
-
-	switch f3bProtocol {
-	case "":
-		// nothing to prepare
-	case "tpke":
-		tpke, err := f3b.NewTPKE(cae.Selected)
-		if err != nil {
-			return err
-		}
-		s.Encrypt = tpke.EncryptTx
-	default:
-		return fmt.Errorf("unknown F3B protocol: %s", f3bProtocol)
 	}
 
 	nBidders := 10

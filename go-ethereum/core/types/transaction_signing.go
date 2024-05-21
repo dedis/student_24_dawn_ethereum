@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/f3b"
 )
 
 var ErrInvalidChainId = errors.New("invalid chain id for signer")
@@ -227,7 +228,7 @@ func (s lausanneSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *b
 func (s lausanneSigner) Hash(tx *Transaction) (hash common.Hash) {
 	switch tx.Type() {
 		case DecryptedTxType:
-			enc_tx, err := tx.Reencrypt()
+			enc_tx, err := tx.Reencrypt(f3b.SelectedProtocol())
 			if err != nil {
 				panic(err)
 			}

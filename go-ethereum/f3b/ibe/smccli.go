@@ -1,6 +1,6 @@
 // Copyright EPFL DEDIS
 
-package f3b
+package ibe
 
 import (
 	"encoding/hex"

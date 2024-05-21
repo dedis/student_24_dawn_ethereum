@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/ethereum/go-ethereum/f3b"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/trie"
@@ -856,6 +857,8 @@ func (w *worker) commitTransactions(env *environment, txs *types.TransactionsByP
 	}
 	var coalescedLogs []*types.Log
 
+	f3bProtocol := f3b.SelectedProtocol()
+
 	for {
 		// In the following three cases, we will interrupt the execution of the transaction.
 		// (1) new head block event arrival, the interrupt signal is 1
@@ -891,14 +894,18 @@ func (w *worker) commitTransactions(env *environment, txs *types.TransactionsByP
 
 		// F3B: decrypt the transaction if necessary
 		if tx.Type() == types.EncryptedTxType {
-			w, ok := env.vdfWorkers[tx.Hash()]
-			if !ok {
-				log.Error("VDF worker not found", "tx", tx.Hash().String())
-				txs.Pop()
-				continue
+			if f3bProtocol.IsVdf() {
+				w, ok := env.vdfWorkers[tx.Hash()]
+				if !ok {
+					log.Error("VDF worker not found", "tx", tx.Hash().String())
+					txs.Pop()
+					continue
+				}
+				tx, err = w.Wait()
+				//delete(env.vdfWorkers, tx.Hash())
+			} else {
+				tx, err = tx.Decrypt(f3bProtocol)
 			}
-			tx, err = w.Wait()
-			//delete(env.vdfWorkers, tx.Hash())
 			if err != nil {
 				// FIXME this shouldn't happen
 				log.Error("Unexpected decryption error", "err", err)

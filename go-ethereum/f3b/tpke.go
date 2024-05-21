@@ -3,61 +3,81 @@
 package f3b
 
 import (
-	"encoding/binary"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto/cae"
+	"github.com/ethereum/go-ethereum/f3b/ibe"
 
 	"go.dedis.ch/kyber/v3"
 )
 
-type EncryptFn func(from common.Address, tx *types.Transaction) (*types.Transaction, error)
-
 type TPKE struct {
-	cae cae.Scheme
 	pk kyber.Point
+	smccli *ibe.SmcCli
 }
 
-func NewTPKE(cae cae.Scheme) (*TPKE, error) {
-	smccli := NewSmcCli()
+func NewTPKE() (Protocol, error) {
+	smccli := ibe.NewSmcCli()
 
 	pk, err := smccli.GetPublicKey()
 	if err != nil {
 		return nil, err
 	}
 
-	return &TPKE{cae, pk}, nil
+	return &TPKE{pk, smccli}, nil
 }
 
-func (e *TPKE) EncryptTx(from common.Address, tx *types.Transaction) (*types.Transaction, error) {
-	label := binary.BigEndian.AppendUint64(from.Bytes(), tx.Nonce())
-	U, secret := ShareSecret(e.pk, label)
+func (e *TPKE) ShareSecret(label []byte) (seed, encKey []byte, err error) {
+	//label := binary.BigEndian.AppendUint64(from.Bytes(), tx.Nonce())
+	U, secret := ibe.ShareSecret(e.pk, label)
 
-	plaintext := append(tx.To().Bytes(), tx.Data()...)
-	ciphertext := make([]byte, len(plaintext))
-	tag := make([]byte, e.cae.TagLen())
-	seed, err := secret.MarshalBinary()
+	//plaintext := append(tx.To().Bytes(), tx.Data()...)
+	//ciphertext = make([]byte, len(plaintext))
+	//tag = make([]byte, e.cae.TagLen())
+	seed, err = secret.MarshalBinary()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	err = e.cae.Encrypt(ciphertext, tag, seed, plaintext)
+	//err = e.cae.Encrypt(ciphertext, tag, seed, plaintext)
+	//if err != nil {
+	//	return nil, err
+	//}
+	encKey, err = U.MarshalBinary()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	encKey, err := U.MarshalBinary()
+	return
+}
+
+func (e *TPKE) RevealSecret(label, encKey []byte) (reveal []byte, err error) {
+	return e.smccli.Extract(label)
+}
+
+func (e *TPKE) RecoverSecret(encKey, reveal []byte) (seed []byte, err error) {
+	U := ibe.Suite.G2().Point()
+	err = U.UnmarshalBinary(encKey)
 	if err != nil {
 		return nil, err
 	}
 
-	return types.NewTx(&types.EncryptedTx{
-		ChainID:    tx.ChainId(),
-		Nonce:      tx.Nonce(),
-		GasFeeCap:  tx.GasPrice(),
-		Gas:        tx.Gas(),
-		Value:      tx.Value(),
-		Ciphertext: ciphertext,
-		Tag:        tag,
-		EncKey:     encKey,
-	}), nil
+	identity := ibe.Suite.G1().Point()
+	err = identity.UnmarshalBinary(reveal)
+	if err != nil {
+		return nil, err
+	}
+
+	/* FIXME: not possible to have the label due to circular dependency
+	if !ibe.VerifyIdentity(e.pk, identity, label) {
+		return nil, errors.New("bad identity")
+	}
+	*/
+
+	secret := ibe.RecoverSecret(identity, U)
+	seed, err = secret.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}
+
+func (e *TPKE) IsVdf() bool {
+	return false
 }

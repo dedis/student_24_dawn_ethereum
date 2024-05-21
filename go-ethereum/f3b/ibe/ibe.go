@@ -1,6 +1,6 @@
 // Copyright EPFL DEDIS
 
-package f3b
+package ibe
 
 import (
 	"go.dedis.ch/kyber/v3"

@@ -62,11 +62,11 @@ esac
 
 
 cp keystore/$coinbase $producer_datadir/keystore
-tmux neww -d env F3B_DKG_PATH="$F3B_DKG_PATH" geth -datadir "$producer_datadir" -nodiscover -mine -password /dev/null -unlock $coinbase -nodekeyhex $producer_nodekey -nat none
+tmux neww -d env F3B_PROTOCOL="$F3B_PROTOCOL" F3B_DKG_PATH="$F3B_DKG_PATH" geth -datadir "$producer_datadir" -nodiscover -mine -password /dev/null -unlock $coinbase -nodekeyhex $producer_nodekey -nat none
 
 observer_datadir=$tempdir/observer
 geth -datadir "$observer_datadir" -verbosity 1 init $tempdir/clique.json
-tmux neww -d geth -datadir "$observer_datadir" -http -port 0 -authrpc.port 0 -bootnodes $producer_addr
+tmux neww -d env F3B_PROTOCOL="$F3B_PROTOCOL" F3B_DKG_PATH="$F3B_DKG_PATH" geth -datadir "$observer_datadir" -http -port 0 -authrpc.port 0 -bootnodes $producer_addr
 export ETH_RPC_URL=http://localhost:8545
 
 # wait for geth to start

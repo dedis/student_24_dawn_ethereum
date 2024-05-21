@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/f3b"
 )
 
 var (
@@ -379,7 +380,7 @@ func (tx *Transaction) Hash() common.Hash {
 	if tx.Type() == LegacyTxType {
 		h = rlpHash(tx.inner)
 	} else if tx.Type() == DecryptedTxType {
-		tx ,_ = tx.Reencrypt()
+		tx ,_ = tx.Reencrypt(f3b.SelectedProtocol())
 		h = prefixedRlpHash(tx.Type(), tx.inner)
 	} else {
 		h = prefixedRlpHash(tx.Type(), tx.inner)

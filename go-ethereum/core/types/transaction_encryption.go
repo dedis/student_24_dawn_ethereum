@@ -5,18 +5,41 @@ package types
 import (
 	"errors"
 	"encoding/binary"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/cae"
-	"github.com/ethereum/go-ethereum/f3b/vdf"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/f3b"
 )
 
-const Log2t = 15
+func (t *Transaction) Encrypt(from common.Address, f3bProtocol f3b.Protocol) (*Transaction, error) {
+	label := binary.BigEndian.AppendUint64(from.Bytes(), t.Nonce())
+	seed, encKey, err := f3bProtocol.ShareSecret(label)
+	if err != nil {
+		return nil, err
+	}
 
-func (t *Transaction) Decrypt() (*Transaction, error) {
+	// TODO: if the ciphertext is too short, penalize the sender
+	plaintext := append(t.To().Bytes(), t.Data()...)
+	ciphertext := make([]byte, len(plaintext))
+	tag := make([]byte, cae.Selected.TagLen())
+	err = cae.Selected.Encrypt(ciphertext, tag, seed, plaintext)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewTx(&EncryptedTx{
+		ChainID:    t.ChainId(),
+		Nonce:      t.Nonce(),
+		GasTipCap:  t.GasTipCap(),
+		GasFeeCap:  t.GasFeeCap(),
+		Gas:        t.Gas(),
+		Value:      t.Value(),
+		Ciphertext: ciphertext,
+		Tag:        tag,
+		EncKey:     encKey,
+	}), nil
+}
+func (t *Transaction) Decrypt(f3bProtocol f3b.Protocol) (*Transaction, error) {
 	// Minimal signer for an encrypted transaction
 	signer := NewLausanneSigner(t.ChainId())
 
@@ -25,34 +48,26 @@ func (t *Transaction) Decrypt() (*Transaction, error) {
 		return nil, err
 	}
 
-	 _ = from
-
 	tx, ok := t.inner.(*EncryptedTx)
 	if !ok {
 		return nil, errors.New("cannot decrypt a non-encrypted transaction")
 	}
 
-	label := binary.BigEndian.AppendUint64(from.Bytes(), tx.Nonce)
-	n := new(big.Int).SetBytes(tx.EncKey)
-	l, π := vdf.Proof(label, n, Log2t)
-	secret, ok := vdf.RecoverSecretFromProof(label, l, π, n, Log2t)
-	if !ok {
-		// NOTE: should not happen since it's our proof
-		return nil, errors.New("bad VDF proof")
-	}
 
-	seed := secret.Bytes()
-	log.Info("Decrypt()", "label", label, "secret", secret, "seed", seed)
+	label := binary.BigEndian.AppendUint64(from.Bytes(), tx.Nonce)
+	reveal, err := f3bProtocol.RevealSecret(label, tx.EncKey)
+	if err != nil {
+		return nil, err
+	}
+	seed, err := f3bProtocol.RecoverSecret(tx.EncKey, reveal)
+	if err != nil {
+		return nil, err
+	}
 
 	// TODO: if the ciphertext is too short, penalize the sender
 	plaintext := make([]byte, len(tx.Ciphertext))
 	err = cae.Selected.Decrypt(plaintext, seed, tx.Ciphertext, tx.Tag)
 	// TODO: if this is an authentication error, penalize the sender
-	if err != nil {
-		return nil, err
-	}
-
-	reveal, err := rlp.EncodeToBytes([][]byte{from.Bytes(), l.Bytes(), π.Bytes()})
 	if err != nil {
 		return nil, err
 	}
@@ -78,34 +93,21 @@ func (t *Transaction) Decrypt() (*Transaction, error) {
 	}), nil
 }
 
-func (t *Transaction) Reencrypt() (*Transaction, error) {
+func (t *Transaction) Reencrypt(protocol f3b.Protocol) (*Transaction, error) {
 	tx, ok := t.inner.(*DecryptedTx)
 	if !ok {
 		return nil, errors.New("cannot reencrypt a non-decrypted transaction")
 	}
 
-	reveal := [][]byte{}
-	rlp.DecodeBytes(tx.Reveal, &reveal)
-	from := reveal[0]
-	l := new(big.Int).SetBytes(reveal[1])
-	π := new(big.Int).SetBytes(reveal[2])
-
-	label := binary.BigEndian.AppendUint64(from, tx.Nonce)
-
-	n := new(big.Int).SetBytes(tx.EncKey)
-	secret, ok := vdf.RecoverSecretFromProof(label, l, π, n, Log2t)
-	if !ok {
-		log.Error("bad vdf proof", "label", label, "l", l, "π", π, "n", n, "Log2t", Log2t)
-		return nil, errors.New("bad VDF proof")
+	seed, err := protocol.RecoverSecret(tx.EncKey, tx.Reveal)
+	if err != nil {
+		return nil, err
 	}
 
-	seed := secret.Bytes()
-
 	plaintext := append(tx.To.Bytes(), tx.Data...)
-
 	ciphertext := make([]byte, len(plaintext))
 	tag := make([]byte, cae.Selected.TagLen())
-	err := cae.Selected.Encrypt(ciphertext, tag, seed, plaintext)
+	err = cae.Selected.Encrypt(ciphertext, tag, seed, plaintext)
 	if err != nil {
 		return nil, err
 	}

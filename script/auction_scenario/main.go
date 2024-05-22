@@ -96,6 +96,12 @@ func encrypt() func(*bind.TransactOpts) {
 	}
 }
 
+func gasLimit(limit uint64) func(*bind.TransactOpts) {
+	return func(transactOpts *bind.TransactOpts) {
+		transactOpts.GasLimit = limit
+	}
+}
+
 type Scenario struct {
 	Context context.Context
 	Client  *ethclient.Client
@@ -182,7 +188,9 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 	}
 	log.Info("bid revealed")
 } else {
-	_, err = s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt()), auctionStarted.AuctionId, amount))
+	// 21k base gas, bid itself should be ~68k, plus slack
+	const limit = 21_000 + 70_000 + 10_000;
+	_, err = s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(), gasLimit(limit)), auctionStarted.AuctionId, amount))
 	if err != nil {
 		return err
 	}

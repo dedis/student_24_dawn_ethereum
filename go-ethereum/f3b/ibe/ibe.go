@@ -14,10 +14,8 @@ type hashablePoint interface {
 	Hash([]byte) kyber.Point
 }
 
-var hashable = Suite.G1().Point().(hashablePoint)
-
 func HashToG1(label []byte) kyber.Point {
-	return hashable.Hash(label)
+	return Suite.G1().Point().(hashablePoint).Hash(label)
 }
 
 // Share a secret with the SMC pk by computing

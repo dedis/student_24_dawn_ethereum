@@ -19,7 +19,7 @@ func (t *Transaction) Encrypt(from common.Address, f3bProtocol f3b.Protocol) (*T
 		return nil, err
 	}
 
-	log.Info("Encrypting", "label", label, "encKey", encKey, "seed", seed)
+	log.Debug("Encrypting", "label", label, "encKey", encKey, "seed", seed)
 
 	plaintext := append(t.To().Bytes(), t.Data()...)
 	ciphertext := make([]byte, len(plaintext))
@@ -65,7 +65,7 @@ func (t *Transaction) Decrypt(f3bProtocol f3b.Protocol) (*Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Info("Decrypting", "label", label)
+	log.Debug("Decrypting", "label", label, "encKey", tx.EncKey, "seed", seed)
 
 	// TODO: if the ciphertext is too short, penalize the sender
 	plaintext := make([]byte, len(tx.Ciphertext))

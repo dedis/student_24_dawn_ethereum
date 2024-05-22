@@ -1121,6 +1121,16 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		shadowTxs = append(shadowTxs, tx...)
 	}
 
+	var totalGas uint64
+	for i, tx := range shadowTxs {
+		totalGas += tx.Gas()
+		// FIXME: might be DoSable if someone submits a gigantic tx
+		if totalGas > w.config.GasCeil {
+			shadowTxs = shadowTxs[:i]
+			break
+		}
+	}
+
 
 	// F3B: start VDF computations for the transaction if necessary
 	if f3bProtocol := f3b.SelectedProtocol(); f3bProtocol != nil && f3bProtocol.IsVdf() {

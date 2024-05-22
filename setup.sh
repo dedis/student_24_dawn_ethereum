@@ -1,7 +1,22 @@
 #!/bin/sh
 
-jq --version > /dev/null || { echo "Please install jq"; exit 1; }
+status=0
+if ! tmux -V > /dev/null; then
+	echo "Please install tmux"
+	status=1
+fi
+if ! jq --version > /dev/null; then
+	echo "Please install jq"
+	status=1
+fi
+if ! go version > /dev/null; then
+	echo "Please install go"
+	status=1
+else
+	go install github.com/ethereum/go-ethereum/cmd/geth \
+		github.com/ethereum/go-ethereum/cmd/abigen \
+		go.dedis.ch/f3b/smc/smccli \
+		|| status=1
+fi
 
-go install github.com/ethereum/go-ethereum/cmd/geth \
-           github.com/ethereum/go-ethereum/cmd/abigen \
-           go.dedis.ch/f3b/smc/smccli
+exit $status

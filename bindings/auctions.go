@@ -361,4 +361,3 @@ func (_Auctions *AuctionsFilterer) ParseAuctionStarted(log types.Log) (*Auctions
 	event.Raw = log
 	return event, nil
 }
-

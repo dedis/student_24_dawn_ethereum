@@ -514,4 +514,3 @@ func (_OvercollateralizedAuctions *OvercollateralizedAuctionsFilterer) ParseAuct
 	event.Raw = log
 	return event, nil
 }
-

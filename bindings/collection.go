@@ -1009,4 +1009,3 @@ func (_Collection *CollectionFilterer) ParseTransfer(log types.Log) (*Collection
 	event.Raw = log
 	return event, nil
 }
-

@@ -452,4 +452,3 @@ func (_SimpleAuctions *SimpleAuctionsFilterer) ParseAuctionStarted(log types.Log
 	event.Raw = log
 	return event, nil
 }
-

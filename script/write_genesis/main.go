@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"strconv"
 	"fmt"
 	"math/big"
 	"os"
@@ -32,13 +33,16 @@ func Main() error {
 	}
 
 	alloc := map[common.Address]core.GenesisAccount{
-		deployer: {Balance: big.NewInt(1000000000000000000)},
+		deployer: {Balance: big.NewInt(params.Ether)},
 	}
 
-	nAddresses := 10
-	amount, _ := new(big.Int).SetString("11000000000000000000", 10)
+	nBidders, err := strconv.Atoi(os.Getenv("NUM_BIDDERS"))
+	if err != nil {
+		return err
+	}
+	amount := new(big.Int).Mul(big.NewInt(11), big.NewInt(params.Ether))
 	it := accounts.DefaultIterator(hdwallet.DefaultBaseDerivationPath)
-	for i := 0; i < nAddresses; i++ {
+	for i := 0; i < nBidders; i++ {
 		account, err := wallet.Derive(it(), true)
 		if err != nil {
 			return err

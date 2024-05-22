@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"math/big"
+	"strconv"
 	"io"
 	"flag"
 	"fmt"
@@ -332,7 +333,10 @@ func Main() error {
 		return err
 	}
 
-	nBidders := 2
+	nBidders, err := strconv.Atoi(os.Getenv("NUM_BIDDERS"))
+	if err != nil {
+		return err
+	}
 	s.BiddersReady.Add(nBidders)
 	it := accounts.DefaultIterator(hdwallet.DefaultBaseDerivationPath)
 	for i := 0; i < nBidders; i++ {

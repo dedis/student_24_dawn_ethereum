@@ -65,7 +65,7 @@ func (t *Transaction) Decrypt(f3bProtocol f3b.Protocol) (*Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Info("Reencrypting", "label", label, "enckey", tx.EncKey, "reveal", reveal, "seed", seed)
+	log.Info("Decrypting", "label", label)
 
 	// TODO: if the ciphertext is too short, penalize the sender
 	plaintext := make([]byte, len(tx.Ciphertext))
@@ -108,7 +108,6 @@ func (t *Transaction) Reencrypt(protocol f3b.Protocol) (*Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Info("Reencrypting", "label", label, "enckey", tx.EncKey, "reveal", tx.Reveal, "seed", seed)
 
 	plaintext := append(tx.To.Bytes(), tx.Data...)
 	ciphertext := make([]byte, len(plaintext))

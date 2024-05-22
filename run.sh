@@ -31,7 +31,7 @@ producer_nodekey="e74976d3e1d9069b85d6659038105fe601696a0ddcb63f0407b11328e341a4
 producer_addr="enode://3d1bb945ae2e250f5fe23f6da3f150b1af4d425bd280bdbfc3e7626ae4625cac2cfb3a59469b67528765a50237c0f434bc3cebcb63118b21949e4139de6b9fb1@127.0.0.1:30303"
 
 export F3B_PROTOCOL=tpke
-export NUM_BIDDERS=100
+export NUM_BIDDERS=10
 
 export MNEMONIC="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 go run ./script/write_genesis > $tempdir/clique.json
@@ -86,4 +86,6 @@ collection_address=$(jq -r .collection <$ADDRESSES_FILE)
 visibly 'go run ./script/auction_scenario'
 
 auction_id=0 # FIXME: hardcoded
-cast call --trace $auctions_address 'settle(uint256)' $auction_id
+txhash=$(cast send --keystore "$ETH_KEYSTORE/$deployer" -f $deployer $auctions_address 'settle(uint256)' $auction_id --json | jq -r .transactionHash)
+echo $txhash
+cast run $txhash

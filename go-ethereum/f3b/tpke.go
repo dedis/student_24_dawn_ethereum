@@ -27,21 +27,16 @@ func NewTPKE() (Protocol, error) {
 	return &TPKE{pk, smccli}, nil
 }
 
-func (e *TPKE) ShareSecret(label []byte) (seed, encKey []byte, err error) {
-	//label := binary.BigEndian.AppendUint64(from.Bytes(), tx.Nonce())
+func (e *TPKE) ShareSecret(labelBytes []byte) (seed, encKey []byte, err error) {
+	var label ibe.Label
+	copy(label[:], labelBytes)
+
 	U, secret := ibe.ShareSecret(e.pk, label)
 
-	//plaintext := append(tx.To().Bytes(), tx.Data()...)
-	//ciphertext = make([]byte, len(plaintext))
-	//tag = make([]byte, e.cae.TagLen())
 	seed, err = secret.MarshalBinary()
 	if err != nil {
 		return nil, nil, err
 	}
-	//err = e.cae.Encrypt(ciphertext, tag, seed, plaintext)
-	//if err != nil {
-	//	return nil, err
-	//}
 	encKey, err = U.MarshalBinary()
 	if err != nil {
 		return nil, nil, err
@@ -49,11 +44,17 @@ func (e *TPKE) ShareSecret(label []byte) (seed, encKey []byte, err error) {
 	return
 }
 
-func (e *TPKE) RevealSecret(label, encKey []byte) (reveal []byte, err error) {
+func (e *TPKE) RevealSecret(labelBytes []byte, encKey []byte) (reveal []byte, err error) {
+	var label ibe.Label
+	copy(label[:], labelBytes)
+
 	return e.smccli.Extract(label)
 }
 
-func (e *TPKE) RecoverSecret(label, encKey, reveal []byte) (seed []byte, err error) {
+func (e *TPKE) RecoverSecret(labelBytes []byte, encKey, reveal []byte) (seed []byte, err error) {
+	var label ibe.Label
+	copy(label[:], labelBytes)
+
 	U := ibe.Suite.G2().Point()
 	err = U.UnmarshalBinary(encKey)
 	if err != nil {
@@ -70,7 +71,6 @@ func (e *TPKE) RecoverSecret(label, encKey, reveal []byte) (seed []byte, err err
 	if !ibe.VerifyIdentity(e.pk, identity, label) {
 		return nil, errors.New("bad identity")
 	}
-	println("good identity")
 
 	secret := ibe.RecoverSecret(identity, U)
 	seed, err = secret.MarshalBinary()

@@ -91,11 +91,7 @@ func encrypt() func(*bind.TransactOpts) {
 			if err != nil {
 				return nil, err
 			}
-			tx, err = prevSigner(addr, tx)
-			
-			sender, err := types.Sender(types.NewLausanneSigner(big.NewInt(1337)), tx)
-			fmt.Println(addr, sender, err)
-			return tx, err
+			return prevSigner(addr, tx)
 		}
 	}
 }

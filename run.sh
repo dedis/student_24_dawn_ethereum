@@ -75,6 +75,9 @@ while ! cast block-number 2> /dev/null; do
 	sleep 1
 done
 
+# do not duplicate mining work
+geth attach --exec 'miner.stop()' $observer_datadir/geth.ipc
+
 export ADDRESSES_FILE=$tempdir/addresses
 (cd contracts
 	visibly 'forge script --keystore "$ETH_KEYSTORE/$deployer" --sender $deployer -f $ETH_RPC_URL --broadcast script/Setup.s.sol'

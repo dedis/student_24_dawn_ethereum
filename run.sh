@@ -67,7 +67,7 @@ tmux neww -d env F3B_PROTOCOL="$F3B_PROTOCOL" F3B_DKG_PATH="$F3B_DKG_PATH" geth 
 
 observer_datadir=$tempdir/observer
 geth -datadir "$observer_datadir" -verbosity 1 init $tempdir/clique.json
-tmux neww -d env F3B_PROTOCOL="$F3B_PROTOCOL" F3B_DKG_PATH="$F3B_DKG_PATH" geth -datadir "$observer_datadir" -http -port 0 -authrpc.port 0 -bootnodes $producer_addr
+tmux neww -d env F3B_PROTOCOL="$F3B_PROTOCOL" F3B_DKG_PATH="$F3B_DKG_PATH" geth -datadir "$observer_datadir" -http -port 0 -authrpc.port 0 -ws -bootnodes $producer_addr
 export ETH_RPC_URL=http://localhost:8545
 
 # wait for geth to start

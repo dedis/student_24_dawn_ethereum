@@ -30,7 +30,7 @@ var (
 
 // SimpleAuctionsMetaData contains all meta data concerning the SimpleAuctions contract.
 var SimpleAuctionsMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"function\",\"name\":\"auctions\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"collection\",\"type\":\"address\",\"internalType\":\"contractIERC721\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"bidToken\",\"type\":\"address\",\"internalType\":\"contractIERC20\"},{\"name\":\"proceedsReceiver\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"deadline\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"highestAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"highestBidder\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"bid\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"settle\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"startAuction\",\"inputs\":[{\"name\":\"collection\",\"type\":\"address\",\"internalType\":\"contractIERC721\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"bidToken\",\"type\":\"address\",\"internalType\":\"contractIERC20\"},{\"name\":\"proceedsReceiver\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"AuctionStarted\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"collection\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"contractIERC721\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"bidToken\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"contractIERC20\"},{\"name\":\"proceedsReceiver\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"commitDeadline\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"revealDeadline\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"maxBid\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false}]",
+	ABI: "[{\"type\":\"function\",\"name\":\"auctions\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"collection\",\"type\":\"address\",\"internalType\":\"contractIERC721\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"bidToken\",\"type\":\"address\",\"internalType\":\"contractIERC20\"},{\"name\":\"proceedsReceiver\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"opening\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"deadline\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"highestAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"highestBidder\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"bid\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"settle\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"startAuction\",\"inputs\":[{\"name\":\"collection\",\"type\":\"address\",\"internalType\":\"contractIERC721\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"bidToken\",\"type\":\"address\",\"internalType\":\"contractIERC20\"},{\"name\":\"proceedsReceiver\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"AuctionStarted\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"collection\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"contractIERC721\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"bidToken\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"contractIERC20\"},{\"name\":\"proceedsReceiver\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"opening\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"commitDeadline\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"revealDeadline\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"maxBid\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false}]",
 }
 
 // SimpleAuctionsABI is the input ABI used to generate the binding from.
@@ -181,12 +181,13 @@ func (_SimpleAuctions *SimpleAuctionsTransactorRaw) Transact(opts *bind.Transact
 
 // Auctions is a free data retrieval call binding the contract method 0x571a26a0.
 //
-// Solidity: function auctions(uint256 ) view returns(address collection, uint256 tokenId, address bidToken, address proceedsReceiver, uint64 deadline, uint256 highestAmount, address highestBidder)
+// Solidity: function auctions(uint256 ) view returns(address collection, uint256 tokenId, address bidToken, address proceedsReceiver, uint64 opening, uint64 deadline, uint256 highestAmount, address highestBidder)
 func (_SimpleAuctions *SimpleAuctionsCaller) Auctions(opts *bind.CallOpts, arg0 *big.Int) (struct {
 	Collection       common.Address
 	TokenId          *big.Int
 	BidToken         common.Address
 	ProceedsReceiver common.Address
+	Opening          uint64
 	Deadline         uint64
 	HighestAmount    *big.Int
 	HighestBidder    common.Address
@@ -199,6 +200,7 @@ func (_SimpleAuctions *SimpleAuctionsCaller) Auctions(opts *bind.CallOpts, arg0 
 		TokenId          *big.Int
 		BidToken         common.Address
 		ProceedsReceiver common.Address
+		Opening          uint64
 		Deadline         uint64
 		HighestAmount    *big.Int
 		HighestBidder    common.Address
@@ -211,9 +213,10 @@ func (_SimpleAuctions *SimpleAuctionsCaller) Auctions(opts *bind.CallOpts, arg0 
 	outstruct.TokenId = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 	outstruct.BidToken = *abi.ConvertType(out[2], new(common.Address)).(*common.Address)
 	outstruct.ProceedsReceiver = *abi.ConvertType(out[3], new(common.Address)).(*common.Address)
-	outstruct.Deadline = *abi.ConvertType(out[4], new(uint64)).(*uint64)
-	outstruct.HighestAmount = *abi.ConvertType(out[5], new(*big.Int)).(**big.Int)
-	outstruct.HighestBidder = *abi.ConvertType(out[6], new(common.Address)).(*common.Address)
+	outstruct.Opening = *abi.ConvertType(out[4], new(uint64)).(*uint64)
+	outstruct.Deadline = *abi.ConvertType(out[5], new(uint64)).(*uint64)
+	outstruct.HighestAmount = *abi.ConvertType(out[6], new(*big.Int)).(**big.Int)
+	outstruct.HighestBidder = *abi.ConvertType(out[7], new(common.Address)).(*common.Address)
 
 	return *outstruct, err
 
@@ -221,12 +224,13 @@ func (_SimpleAuctions *SimpleAuctionsCaller) Auctions(opts *bind.CallOpts, arg0 
 
 // Auctions is a free data retrieval call binding the contract method 0x571a26a0.
 //
-// Solidity: function auctions(uint256 ) view returns(address collection, uint256 tokenId, address bidToken, address proceedsReceiver, uint64 deadline, uint256 highestAmount, address highestBidder)
+// Solidity: function auctions(uint256 ) view returns(address collection, uint256 tokenId, address bidToken, address proceedsReceiver, uint64 opening, uint64 deadline, uint256 highestAmount, address highestBidder)
 func (_SimpleAuctions *SimpleAuctionsSession) Auctions(arg0 *big.Int) (struct {
 	Collection       common.Address
 	TokenId          *big.Int
 	BidToken         common.Address
 	ProceedsReceiver common.Address
+	Opening          uint64
 	Deadline         uint64
 	HighestAmount    *big.Int
 	HighestBidder    common.Address
@@ -236,12 +240,13 @@ func (_SimpleAuctions *SimpleAuctionsSession) Auctions(arg0 *big.Int) (struct {
 
 // Auctions is a free data retrieval call binding the contract method 0x571a26a0.
 //
-// Solidity: function auctions(uint256 ) view returns(address collection, uint256 tokenId, address bidToken, address proceedsReceiver, uint64 deadline, uint256 highestAmount, address highestBidder)
+// Solidity: function auctions(uint256 ) view returns(address collection, uint256 tokenId, address bidToken, address proceedsReceiver, uint64 opening, uint64 deadline, uint256 highestAmount, address highestBidder)
 func (_SimpleAuctions *SimpleAuctionsCallerSession) Auctions(arg0 *big.Int) (struct {
 	Collection       common.Address
 	TokenId          *big.Int
 	BidToken         common.Address
 	ProceedsReceiver common.Address
+	Opening          uint64
 	Deadline         uint64
 	HighestAmount    *big.Int
 	HighestBidder    common.Address
@@ -386,15 +391,16 @@ type SimpleAuctionsAuctionStarted struct {
 	TokenId          *big.Int
 	BidToken         common.Address
 	ProceedsReceiver common.Address
+	Opening          uint64
 	CommitDeadline   uint64
 	RevealDeadline   uint64
 	MaxBid           *big.Int
 	Raw              types.Log // Blockchain specific contextual infos
 }
 
-// FilterAuctionStarted is a free log retrieval operation binding the contract event 0x3bab4ad29d487858b174244ae27b86da6c757e2779461dc416762cfc65ad8a28.
+// FilterAuctionStarted is a free log retrieval operation binding the contract event 0x43a0de591003148639e617086d0eeea238ad9ce99e6340e1905256ca602e8d31.
 //
-// Solidity: event AuctionStarted(uint256 auctionId, address collection, uint256 tokenId, address bidToken, address proceedsReceiver, uint64 commitDeadline, uint64 revealDeadline, uint256 maxBid)
+// Solidity: event AuctionStarted(uint256 auctionId, address collection, uint256 tokenId, address bidToken, address proceedsReceiver, uint64 opening, uint64 commitDeadline, uint64 revealDeadline, uint256 maxBid)
 func (_SimpleAuctions *SimpleAuctionsFilterer) FilterAuctionStarted(opts *bind.FilterOpts) (*SimpleAuctionsAuctionStartedIterator, error) {
 
 	logs, sub, err := _SimpleAuctions.contract.FilterLogs(opts, "AuctionStarted")
@@ -404,9 +410,9 @@ func (_SimpleAuctions *SimpleAuctionsFilterer) FilterAuctionStarted(opts *bind.F
 	return &SimpleAuctionsAuctionStartedIterator{contract: _SimpleAuctions.contract, event: "AuctionStarted", logs: logs, sub: sub}, nil
 }
 
-// WatchAuctionStarted is a free log subscription operation binding the contract event 0x3bab4ad29d487858b174244ae27b86da6c757e2779461dc416762cfc65ad8a28.
+// WatchAuctionStarted is a free log subscription operation binding the contract event 0x43a0de591003148639e617086d0eeea238ad9ce99e6340e1905256ca602e8d31.
 //
-// Solidity: event AuctionStarted(uint256 auctionId, address collection, uint256 tokenId, address bidToken, address proceedsReceiver, uint64 commitDeadline, uint64 revealDeadline, uint256 maxBid)
+// Solidity: event AuctionStarted(uint256 auctionId, address collection, uint256 tokenId, address bidToken, address proceedsReceiver, uint64 opening, uint64 commitDeadline, uint64 revealDeadline, uint256 maxBid)
 func (_SimpleAuctions *SimpleAuctionsFilterer) WatchAuctionStarted(opts *bind.WatchOpts, sink chan<- *SimpleAuctionsAuctionStarted) (event.Subscription, error) {
 
 	logs, sub, err := _SimpleAuctions.contract.WatchLogs(opts, "AuctionStarted")
@@ -441,9 +447,9 @@ func (_SimpleAuctions *SimpleAuctionsFilterer) WatchAuctionStarted(opts *bind.Wa
 	}), nil
 }
 
-// ParseAuctionStarted is a log parse operation binding the contract event 0x3bab4ad29d487858b174244ae27b86da6c757e2779461dc416762cfc65ad8a28.
+// ParseAuctionStarted is a log parse operation binding the contract event 0x43a0de591003148639e617086d0eeea238ad9ce99e6340e1905256ca602e8d31.
 //
-// Solidity: event AuctionStarted(uint256 auctionId, address collection, uint256 tokenId, address bidToken, address proceedsReceiver, uint64 commitDeadline, uint64 revealDeadline, uint256 maxBid)
+// Solidity: event AuctionStarted(uint256 auctionId, address collection, uint256 tokenId, address bidToken, address proceedsReceiver, uint64 opening, uint64 commitDeadline, uint64 revealDeadline, uint256 maxBid)
 func (_SimpleAuctions *SimpleAuctionsFilterer) ParseAuctionStarted(log types.Log) (*SimpleAuctionsAuctionStarted, error) {
 	event := new(SimpleAuctionsAuctionStarted)
 	if err := _SimpleAuctions.contract.UnpackLog(event, "AuctionStarted", log); err != nil {

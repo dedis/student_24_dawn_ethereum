@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"strconv"
 	"io"
-	"flag"
 	"fmt"
 	"os"
 	"time"
@@ -25,12 +24,6 @@ import (
 	"github.com/dedis/f3b-ethereum/bindings"
 )
 
-
-func usage() {
-	fmt.Println("Usage: send_enc [options] <to> [calldata]")
-	fmt.Println("issue an encrypted transaction to the given address with optional calldata")
-	flag.PrintDefaults()
-}
 
 func main() {
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
@@ -116,9 +109,11 @@ type Scenario struct {
 	Collection *bindings.Collection
 
 	BiddersReady sync.WaitGroup
+	BiddersDone sync.WaitGroup
 }
 
 func (s *Scenario) bidderScript(account accounts.Account) {
+	defer s.BiddersDone.Done()
 	transactOpts, err := s.bidderScriptPrepare(account)
 	// Auction starts
 	if err == nil {
@@ -167,6 +162,11 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 
 	amount := common.Big3 // FIXME: hardcoded
 	if s.OvercollateralizedAuctions != nil {
+	err = s.waitForBlockNumber(auctionStarted.Opening - 3)
+	if err != nil {
+		return err
+	}
+
 	var blinding [32]byte
 	rand.Read(blinding[:])
 	callOpts := &bind.CallOpts{Context: s.Context, From: transactOpts.From}
@@ -181,15 +181,23 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 	}
 	log.Info("bid committed")
 
-	time.Sleep(time.Unix(int64(auctionStarted.CommitDeadline),0).Sub(time.Now()))
+	err = s.waitForBlockNumber(auctionStarted.CommitDeadline)
+	if err != nil {
+		return err
+	}
+
 	_, err = s.checkSuccess(s.OvercollateralizedAuctions.RevealBid(transactOpts, auctionStarted.AuctionId, blinding, amount))
 	if err != nil {
 		return err
 	}
 	log.Info("bid revealed")
 } else {
-	// 21k base gas, bid itself should be ~68k, plus slack
-	const limit = 21_000 + 70_000 + 10_000;
+	err = s.waitForBlockNumber(auctionStarted.Opening) // account for latency
+	if err != nil {
+		return err
+	}
+	// 21k base gas, bid itself should be up to ~117k, plus slack
+	const limit = 21_000 + 120_000 + 10_000;
 	_, err = s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(), gasLimit(limit)), auctionStarted.AuctionId, amount))
 	if err != nil {
 		return err
@@ -202,6 +210,7 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 }
 
 func (s *Scenario) waitForAuction() (*bindings.AuctionsAuctionStarted, error) {
+	// FIXME: should use Watch instead of looping
 	for {
 		it, err := s.Auctions.FilterAuctionStarted(&bind.FilterOpts{Start: 0, End: nil, Context: s.Context})
 		if err != nil {
@@ -215,6 +224,33 @@ func (s *Scenario) waitForAuction() (*bindings.AuctionsAuctionStarted, error) {
 			return nil, err
 		}
 	}
+}
+
+func (s *Scenario) waitForBlockNumber(bn uint64) error {
+	// short path
+	cur, err := s.Client.BlockNumber(s.Context)
+	if cur >= bn {
+		return nil
+	}
+	ch := make(chan *types.Header)
+	sub, err := s.Client.SubscribeNewHead(s.Context, ch)
+	if err != nil {
+		return err
+	}
+	defer sub.Unsubscribe()
+
+	// in case of race condition
+	cur, err = s.Client.BlockNumber(s.Context)
+	if cur >= bn {
+		return nil
+	}
+
+	for block := range ch {
+		if block.Number.Cmp(big.NewInt(int64(bn))) >= 0 {
+			break
+		}
+	}
+	return nil
 }
 
 func (s *Scenario) operatorScript() error {
@@ -249,9 +285,8 @@ func (s *Scenario) operatorScript() error {
 	if err != nil {
 		return err
 	}
-	time.Sleep(time.Unix(int64(auctionStarted.RevealDeadline), 0).Sub(time.Now()))
 
-	return nil
+	return s.waitForBlockNumber(auctionStarted.CommitDeadline)
 }
 
 func (s *Scenario) checkSuccess(tx *types.Transaction, err error) (*types.Transaction, error) {
@@ -278,7 +313,7 @@ func Main() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	client, err := ethclient.Dial(os.Getenv("ETH_RPC_URL"))
+	client, err := ethclient.Dial("ws://localhost:8546")
 	if err != nil {
 		return err
 	}
@@ -342,6 +377,7 @@ func Main() error {
 		return err
 	}
 	s.BiddersReady.Add(nBidders)
+	s.BiddersDone.Add(nBidders)
 	it := accounts.DefaultIterator(hdwallet.DefaultBaseDerivationPath)
 	for i := 0; i < nBidders; i++ {
 		account, err := s.Wallet.Derive(it(), true)
@@ -350,6 +386,7 @@ func Main() error {
 		}
 		go s.bidderScript(account)
 	}
+	defer s.BiddersDone.Wait()
 
 	return s.operatorScript()
 }

@@ -12,6 +12,7 @@ contract OvercollateralizedAuctions is Auctions {
         uint256 tokenId;
         IERC20 bidToken;
         address proceedsReceiver;
+        uint64 opening;
         uint64 commitDeadline;
         uint64 revealDeadline;
         uint256 maxBid;
@@ -22,7 +23,7 @@ contract OvercollateralizedAuctions is Auctions {
 
     Auction[] public auctions;
 
-    uint64 constant delay = 60 seconds;
+    uint64 constant blockDelay = 2; // FIXME: hardcoded
 
     function startAuction(IERC721 collection, uint256 tokenId, IERC20 bidToken, address proceedsReceiver)
         external
@@ -36,8 +37,9 @@ contract OvercollateralizedAuctions is Auctions {
         auction.tokenId = tokenId;
         auction.bidToken = bidToken;
         auction.proceedsReceiver = proceedsReceiver;
-        auction.commitDeadline = uint64(block.timestamp) + delay;
-        auction.revealDeadline = uint64(auction.commitDeadline) + delay;
+        auction.opening = uint64(block.number);
+        auction.commitDeadline = auction.opening + blockDelay;
+        auction.revealDeadline = auction.commitDeadline + blockDelay;
         auction.maxBid = 10 ether; // FIXME: hardcoded
 
         collection.transferFrom(msg.sender, address(this), auction.tokenId);
@@ -48,6 +50,7 @@ contract OvercollateralizedAuctions is Auctions {
             tokenId,
             bidToken,
             proceedsReceiver,
+            auction.opening,
             auction.commitDeadline,
             auction.revealDeadline,
             auction.maxBid
@@ -61,7 +64,8 @@ contract OvercollateralizedAuctions is Auctions {
     function commitBid(uint256 auctionId, bytes32 commit) external {
         Auction storage auction = auctions[auctionId];
 
-        require(block.timestamp < auction.commitDeadline, "late");
+        require(block.number > auction.opening, "early");
+        require(block.number <= auction.commitDeadline, "late");
 
         require(auction.bidToken.transferFrom(msg.sender, address(this), auction.maxBid));
 
@@ -72,8 +76,8 @@ contract OvercollateralizedAuctions is Auctions {
     function revealBid(uint256 auctionId, bytes32 blinding, uint256 amount) external {
         Auction storage auction = auctions[auctionId];
 
-        require(block.timestamp >= auction.commitDeadline, "early");
-        require(block.timestamp < auction.revealDeadline, "late");
+        require(block.number > auction.commitDeadline, "early");
+        require(block.number <= auction.revealDeadline, "late");
 
         bytes32 commit = computeCommitment(blinding, msg.sender, amount);
         require(auction.commits[msg.sender] == commit, "commit");
@@ -94,7 +98,7 @@ contract OvercollateralizedAuctions is Auctions {
     function settle(uint256 auctionId) external {
         Auction storage auction = auctions[auctionId];
 
-        require(block.timestamp >= auction.revealDeadline, "early");
+        require(block.number > auction.revealDeadline, "early");
         require(address(auction.collection) != address(0));
 
         auction.bidToken.transfer(auction.proceedsReceiver, auction.highestAmount);

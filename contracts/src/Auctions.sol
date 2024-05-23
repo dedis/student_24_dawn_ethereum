@@ -6,18 +6,21 @@ import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
 // common interface for Simple- and OvercollateralizedAuctions
 interface Auctions {
-    event AuctionStarted(
+    event AuctionStarted( // block after which commits are accepted
+        // last block where commits can bet included
+        // last block where reveals can be included
         uint256 auctionId,
         IERC721 collection,
         uint256 tokenId,
         IERC20 bidToken,
         address proceedsReceiver,
+        uint64 opening,
         uint64 commitDeadline,
-        // In case of SimpleAuction, revealDeadline = commitDeadline
         uint64 revealDeadline,
-        // In case of SimpleAuction, maxBid = type(uint256).max
+        // In case of SimpleAuction, revealDeadline = commitDeadline
         uint256 maxBid
     );
+    // In case of SimpleAuction, maxBid = type(uint256).max
 
     function startAuction(IERC721 collection, uint256 tokenId, IERC20 bidToken, address proceedsReceiver)
         external

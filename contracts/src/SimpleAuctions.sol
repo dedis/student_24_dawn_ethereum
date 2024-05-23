@@ -12,6 +12,7 @@ contract SimpleAuctions is Auctions {
         uint256 tokenId;
         IERC20 bidToken;
         address proceedsReceiver;
+        uint64 opening;
         uint64 deadline;
         uint256 highestAmount;
         address highestBidder;
@@ -19,7 +20,7 @@ contract SimpleAuctions is Auctions {
 
     Auction[] public auctions;
 
-    uint64 constant delay = 60 seconds;
+    uint64 constant blockDelay = 2; // FIXME: hardcoded
 
     function startAuction(IERC721 collection, uint256 tokenId, IERC20 bidToken, address proceedsReceiver)
         external
@@ -33,7 +34,8 @@ contract SimpleAuctions is Auctions {
         auction.tokenId = tokenId;
         auction.bidToken = bidToken;
         auction.proceedsReceiver = proceedsReceiver;
-        auction.deadline = uint64(block.timestamp) + delay;
+        auction.opening = uint64(block.number) + blockDelay;
+        auction.deadline = auction.opening + blockDelay;
 
         collection.transferFrom(msg.sender, address(this), auction.tokenId);
 
@@ -43,6 +45,7 @@ contract SimpleAuctions is Auctions {
             tokenId,
             bidToken,
             proceedsReceiver,
+            auction.opening,
             auction.deadline,
             auction.deadline,
             type(uint256).max
@@ -52,7 +55,8 @@ contract SimpleAuctions is Auctions {
     function bid(uint256 auctionId, uint256 amount) external {
         Auction storage auction = auctions[auctionId];
 
-        require(block.timestamp < auction.deadline, "late");
+        require(block.number > auction.opening, "early");
+        require(block.number <= auction.deadline, "late");
 
         if (amount > auction.highestAmount) {
             address prevHighestBidder = auction.highestBidder;
@@ -67,7 +71,7 @@ contract SimpleAuctions is Auctions {
     function settle(uint256 auctionId) external {
         Auction storage auction = auctions[auctionId];
 
-        require(block.timestamp >= auction.deadline, "early");
+        require(block.number > auction.deadline, "early");
         require(address(auction.collection) != address(0));
 
         auction.bidToken.transfer(auction.proceedsReceiver, auction.highestAmount);

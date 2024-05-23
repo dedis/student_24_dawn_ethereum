@@ -39,16 +39,26 @@ contract SimpleAuctionsTest is Test {
         uint256 auctionId = startAuction(tokenId);
         uint256 amount = 1 ether;
         vm.prank(bidder1);
+        vm.roll(block.number + 3);
         auctions.bid(auctionId, amount);
         assertEq(bidToken.balanceOf(address(auctions)), amount);
         assertEq(bidToken.balanceOf(bidder1), 10 ether - amount);
+    }
+
+    function testEarlyBid() public {
+        uint256 tokenId = 2;
+        uint256 auctionId = startAuction(tokenId);
+        uint256 amount = 1 ether;
+        vm.expectRevert(bytes("early"));
+        vm.prank(bidder1);
+        auctions.bid(auctionId, amount);
     }
 
     function testLateBid() public {
         uint256 tokenId = 2;
         uint256 auctionId = startAuction(tokenId);
         uint256 amount = 1 ether;
-        skip(60 seconds);
+        vm.roll(block.number + 5);
         vm.expectRevert(bytes("late"));
         vm.prank(bidder1);
         auctions.bid(auctionId, amount);
@@ -59,8 +69,9 @@ contract SimpleAuctionsTest is Test {
         uint256 auctionId = startAuction(tokenId);
         uint256 amount = 1 ether;
         vm.prank(bidder1);
+        vm.roll(block.number + 3);
         auctions.bid(auctionId, amount);
-        skip(60 seconds);
+        vm.roll(block.number + 2);
         auctions.settle(auctionId);
         assertEq(bidToken.balanceOf(address(auctions)), 0);
         assertEq(bidToken.balanceOf(bidder1), 10 ether - amount);
@@ -72,11 +83,12 @@ contract SimpleAuctionsTest is Test {
         uint256 auctionId = startAuction(tokenId);
         uint256 amount1 = 1 ether;
         uint256 amount2 = 2 ether;
+        vm.roll(block.number + 3);
         vm.prank(bidder1);
         auctions.bid(auctionId, amount1);
         vm.prank(bidder2);
         auctions.bid(auctionId, amount2);
-        skip(60 seconds);
+        vm.roll(block.number + 2);
         auctions.settle(auctionId);
         assertEq(bidToken.balanceOf(address(auctions)), 0);
         assertEq(bidToken.balanceOf(bidder1), 10 ether);

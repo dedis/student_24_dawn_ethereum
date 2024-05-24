@@ -106,6 +106,7 @@ type Scenario struct {
 	OvercollateralizedAuctions *bindings.OvercollateralizedAuctions
 	SimpleAuctions *bindings.SimpleAuctions
 	Collection *bindings.Collection
+	Params *f3b.FullParams
 
 	BiddersReady sync.WaitGroup
 	BiddersDone sync.WaitGroup
@@ -161,7 +162,7 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 
 	amount := common.Big3 // FIXME: hardcoded
 	if s.OvercollateralizedAuctions != nil {
-	err = s.waitForBlockNumber(auctionStarted.Opening - 3)
+	err = s.waitForBlockNumber(auctionStarted.Opening)
 	if err != nil {
 		return err
 	}
@@ -191,7 +192,7 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 	}
 	log.Info("bid revealed")
 } else {
-	err = s.waitForBlockNumber(auctionStarted.Opening) // account for latency
+	err = s.waitForBlockNumber(auctionStarted.Opening - s.Params.BlockDelay) // account for latency
 	if err != nil {
 		return err
 	}
@@ -284,6 +285,7 @@ func (s *Scenario) operatorScript() error {
 	if err != nil {
 		return err
 	}
+	fmt.Println(auctionStarted)
 
 	return s.waitForBlockNumber(auctionStarted.RevealDeadline)
 }
@@ -349,7 +351,11 @@ func Main() error {
 		return err
 	}
 
-	f3bProtocol := f3b.SelectedProtocol()
+	params, err := f3b.ReadParams()
+	if err != nil {
+		return err
+	}
+
 	s := Scenario{
 		Context: ctx,
 		Client:  client,
@@ -359,9 +365,10 @@ func Main() error {
 		WETH:    weth,
 		Auctions: auctions,
 		Collection: collection,
+		Params: params,
 	}
 
-	if f3bProtocol == nil {
+	if params.Protocol == "" {
 		// no encryption, have to use overcollateralization
 		s.OvercollateralizedAuctions, err = bindings.NewOvercollateralizedAuctions(addresses["auctions"], client)
 	} else {
@@ -371,11 +378,7 @@ func Main() error {
 		return err
 	}
 
-	p, err := f3b.ReadParams()
-	if err != nil {
-		return err
-	}
-	nBidders := p.NumBidders
+	nBidders := params.NumBidders
 	s.BiddersReady.Add(nBidders)
 	s.BiddersDone.Add(nBidders)
 	it := accounts.DefaultIterator(hdwallet.DefaultBaseDerivationPath)

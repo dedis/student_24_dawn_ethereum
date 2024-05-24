@@ -1,2 +1,2 @@
 benchmarks/**/*.csv
-params.json
+.params.json

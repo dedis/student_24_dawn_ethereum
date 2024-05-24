@@ -35,7 +35,7 @@ func Main() error {
 	}
 	p.SmcPath = os.Getenv("F3B_SMC_PATH")
 
-	file, err = os.Create("params.json")
+	file, err = os.Create(".params.json")
 	if err != nil {
 		return err
 	}

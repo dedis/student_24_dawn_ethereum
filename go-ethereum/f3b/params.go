@@ -26,7 +26,7 @@ func ReadParams() (*FullParams, error) {
 	}
 	path, ok := os.LookupEnv("F3B_PARAMS")
 	if !ok {
-		path = "params.json"
+		path = ".params.json"
 	}
 	file, err := os.Open(path)
 	if err != nil {

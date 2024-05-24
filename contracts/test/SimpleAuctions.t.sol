@@ -17,7 +17,7 @@ contract SimpleAuctionsTest is Test {
     address payable constant proceedsReceiver = payable(0x3333333333333333333333333333333333333333);
 
     function setUp() public {
-        auctions = new SimpleAuctions();
+        auctions = new SimpleAuctions(2);
         collection = IERC721(address(new Collection()));
         bidToken = IERC20(address(deployMockERC20("I owe you", "IOU", 18)));
 

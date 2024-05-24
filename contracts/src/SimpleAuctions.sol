@@ -20,7 +20,11 @@ contract SimpleAuctions is Auctions {
 
     Auction[] public auctions;
 
-    uint64 constant blockDelay = 4; // FIXME: hardcoded
+    uint64 immutable blockDelay;
+
+    constructor(uint64 blockDelay_) {
+	blockDelay = blockDelay_;
+    }
 
     function startAuction(IERC721 collection, uint256 tokenId, IERC20 bidToken, address proceedsReceiver)
         external

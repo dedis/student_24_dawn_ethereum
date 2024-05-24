@@ -34,7 +34,8 @@ F3B_SMC_PATH=$tempdir/dela/node1 go run ./script/write_params
 
 export MNEMONIC="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
 go run ./script/write_genesis > $tempdir/clique.json
-protocol="$(jq -r .Protocol < params.json)"
+protocol="$(jq -r .Protocol < .params.json)"
+blockdelay="$(jq -r .BlockDelay < .params.json)"
 
 geth -datadir "$producer_datadir" -verbosity 1 init $tempdir/clique.json
 
@@ -79,7 +80,7 @@ geth attach --exec 'miner.stop()' $observer_datadir/geth.ipc
 
 export ADDRESSES_FILE=$tempdir/addresses
 (cd contracts
-	F3B_PROTOCOL=$protocol visibly 'forge script --keystore "$ETH_KEYSTORE/$deployer" --sender $deployer -f $ETH_RPC_URL --broadcast script/Setup.s.sol'
+	F3B_PROTOCOL=$protocol F3B_BLOCKDELAY=$blockdelay visibly 'forge script --keystore "$ETH_KEYSTORE/$deployer" --sender $deployer -f $ETH_RPC_URL --broadcast script/Setup.s.sol'
 )
 auctions_address=$(jq -r .auctions <$ADDRESSES_FILE)
 weth_address=$(jq -r .weth <$ADDRESSES_FILE)

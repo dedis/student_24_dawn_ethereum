@@ -18,10 +18,11 @@ contract Setup is Script {
         vm.startBroadcast();
         WETH weth = new WETH();
         Auctions auctions;
+	uint64 blockDelay = uint64(vm.envUint("F3B_BLOCKDELAY"));
         if (streq(vm.envString("F3B_PROTOCOL"), "")) {
-            auctions = new OvercollateralizedAuctions();
+            auctions = new OvercollateralizedAuctions(blockDelay);
         } else {
-            auctions = new SimpleAuctions();
+            auctions = new SimpleAuctions(blockDelay);
         }
         Collection collection = new Collection();
         vm.stopBroadcast();

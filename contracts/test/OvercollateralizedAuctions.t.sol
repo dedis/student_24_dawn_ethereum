@@ -17,7 +17,7 @@ contract OvercollateralizedAuctionsTest is Test {
     address payable constant proceedsReceiver = payable(0x3333333333333333333333333333333333333333);
 
     function setUp() public {
-        auctions = new OvercollateralizedAuctions();
+        auctions = new OvercollateralizedAuctions(2);
         collection = IERC721(address(new Collection()));
         bidToken = IERC20(address(deployMockERC20("I owe you", "IOU", 18)));
 

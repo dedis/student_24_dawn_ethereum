@@ -9,6 +9,8 @@ import (
 
 type Params struct {
 	Protocol string `toml:protocol`
+	NumBidders int `toml:num_bidders`
+	BlockDelay uint64 `toml:block_delay`
 }
 
 type FullParams struct {

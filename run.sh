@@ -30,8 +30,6 @@ producer_datadir=$tempdir/producer
 producer_nodekey="e74976d3e1d9069b85d6659038105fe601696a0ddcb63f0407b11328e341a47c"
 producer_addr="enode://3d1bb945ae2e250f5fe23f6da3f150b1af4d425bd280bdbfc3e7626ae4625cac2cfb3a59469b67528765a50237c0f434bc3cebcb63118b21949e4139de6b9fb1@127.0.0.1:30303"
 
-export NUM_BIDDERS=10
-
 F3B_SMC_PATH=$tempdir/dela/node1 go run ./script/write_params
 
 export MNEMONIC="candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
@@ -40,7 +38,6 @@ protocol="$(jq -r .Protocol < params.json)"
 
 geth -datadir "$producer_datadir" -verbosity 1 init $tempdir/clique.json
 
-echo "protocol=$protocol"a
 case $protocol in
 	tpke | tibe )
 tmux neww -d env LLVL=info smccli --config $tempdir/dela/node1 start --routing tree --listen tcp://127.0.0.1:2001

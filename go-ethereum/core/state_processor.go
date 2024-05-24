@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/f3b"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -70,20 +71,15 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	if p.config.DAOForkSupport && p.config.DAOForkBlock != nil && p.config.DAOForkBlock.Cmp(block.Number()) == 0 {
 		misc.ApplyDAOHardFork(statedb)
 	}
-	// Retrieve previous ordered enc txs
-	// pendingEncryptedTxs := RetrievePendingEncryptedTransactions(p.bc, types.EncryptedBlockDelay)
-	// Append with the plaintext tx
-	// allTx := append(pendingEncryptedTxs, block.Transactions()...)
-	// Iterate over and process the individual transactions
 	var (
 		beneficiary     common.Address
 		receipt         *types.Receipt
 	)
-	// tmp_rcs := p.bc.GetReceiptsByHash(block.Hash())
-	// if len(tmp_rcs) != block.Transactions().Len() {
-	// 	panic("unequal transaction length and receipts")
-	// }
-	beneficiary = RetrieveShadowCoinbase(p.bc, types.EncryptedBlockDelay)
+	params, err := f3b.ReadParams()
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	beneficiary = RetrieveShadowCoinbase(p.bc, params.BlockDelay)
 	_ = beneficiary
 	for i, tx := range block.Transactions() {
 		signer := types.MakeSigner(p.config, header.Number)

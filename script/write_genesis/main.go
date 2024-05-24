@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"strconv"
 	"fmt"
 	"math/big"
 	"os"
@@ -37,10 +36,11 @@ func Main() error {
 		deployer: {Balance: big.NewInt(params.Ether)},
 	}
 
-	nBidders, err := strconv.Atoi(os.Getenv("NUM_BIDDERS"))
+	p, err := f3b.ReadParams()
 	if err != nil {
 		return err
 	}
+	nBidders := p.NumBidders
 	amount := new(big.Int).Mul(big.NewInt(11), big.NewInt(params.Ether))
 	it := accounts.DefaultIterator(hdwallet.DefaultBaseDerivationPath)
 	for i := 0; i < nBidders; i++ {
@@ -82,10 +82,6 @@ func Main() error {
 		Alloc:      alloc,
 	}
 
-	p, err := f3b.ReadParams()
-	if err != nil {
-		return err
-	}
 	if p.Protocol != "" {
 		genesis.Config.LausanneBlock = common.Big0
 	}

@@ -1,3 +1,10 @@
 ## Experiment parameters for F3B/ZeroPriorKnownledge
-# Asymmetric encryption protocol, can be "", "tpke", "vdf", or "tibe"
+
+# Asymmetric encryption protocol to use, can be "", "tpke", "vdf", or "tibe"
 protocol = "tpke"
+
+# How many bidders to simulate
+num_bidders = 20
+
+# delay between inclusion and execution in blocks
+block_delay = 2

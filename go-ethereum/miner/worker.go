@@ -1100,7 +1100,11 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 	// F3B rules: fill shadow block, use last finalize shadow block for regular block
 	if w.chainConfig.IsLausanne(env.header.Number) {
 	log.Info("building shadow block")
-	pendingEncryptedTxs := core.RetrieveShadowTransactions(w.chain, types.EncryptedBlockDelay)
+	params, err := f3b.ReadParams()
+	if err != nil {
+		return err
+	}
+	pendingEncryptedTxs := core.RetrieveShadowTransactions(w.chain, params.BlockDelay)
 
 	log.Debug("retrieved shadow txs", "txs", pendingEncryptedTxs)
 	if len(pendingEncryptedTxs) > 0 {
@@ -1110,7 +1114,7 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		}
 	}
 
-	env.coinbase = core.RetrieveShadowCoinbase(w.chain, types.EncryptedBlockDelay)
+	env.coinbase = core.RetrieveShadowCoinbase(w.chain, params.BlockDelay)
 
 	// FIXME: need to account for shadow block gas
 	shadowTxs := []*types.Transaction{}

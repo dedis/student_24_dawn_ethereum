@@ -26,8 +26,6 @@ Run `git submodule update --init --recursive contracts` to make sure the foundry
 
 Run `run.sh` to start all the services and give a shell.
 
-# Config
-There is a default parameter that is changeable in the system in `go-ethereum/core/types/transaction.go` as shown below. The EncryptedBlockDelay defines the block delay between the ordering block and the execution block.
-```
-const EncryptedBlockDelay uint64 = 2
-```
+# Parameters
+The `params.toml` file can be edited to change the experiment parameters.
+In particular, it allows selecting the encryption method or reverting to C&R.

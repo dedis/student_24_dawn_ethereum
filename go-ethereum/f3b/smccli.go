@@ -1,6 +1,6 @@
 // Copyright EPFL DEDIS
 
-package ibe
+package f3b
 
 import (
 	"encoding/hex"
@@ -10,8 +10,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/f3b/ibe"
 )
 
+// fixed length array for map[]
 const LabelLength = 32
 type Label [LabelLength]byte
 
@@ -30,7 +33,11 @@ type SmcCli struct {
 
 func NewSmcCli() *SmcCli {
 	c := new(SmcCli)
-	c.configPath = filepath.Clean(getEnv("F3B_DKG_PATH"))
+	p, err := ReadParams()
+	if err != nil {
+		panic(err)
+	}
+	c.configPath = filepath.Clean(p.SmcPath)
 	c.cache = make(map[Label][]byte)
 	return c
 }
@@ -40,7 +47,7 @@ func (c *SmcCli) GetPublicKey() (kyber.Point, error) {
 	if err != nil {
 		return nil, err
 	}
-	pk := Suite.G2().Point()
+	pk := ibe.Suite.G2().Point()
 	err = pk.UnmarshalBinary(pkBytes)
 	if err != nil {
 		return nil, err

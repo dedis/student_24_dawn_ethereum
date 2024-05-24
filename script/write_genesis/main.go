@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/f3b"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/miguelmota/go-ethereum-hdwallet"
 )
@@ -81,7 +82,11 @@ func Main() error {
 		Alloc:      alloc,
 	}
 
-	if os.Getenv("F3B_PROTOCOL") != "" {
+	p, err := f3b.ReadParams()
+	if err != nil {
+		return err
+	}
+	if p.Protocol != "" {
 		genesis.Config.LausanneBlock = common.Big0
 	}
 

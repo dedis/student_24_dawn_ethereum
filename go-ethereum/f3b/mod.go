@@ -2,13 +2,16 @@
 
 package f3b
 
-import "os"
-
 var protocol Protocol
 
 func SelectedProtocol() Protocol {
 	if protocol == nil {
-		switch choice := os.Getenv("F3B_PROTOCOL"); choice {
+		p, err := ReadParams()
+		if err != nil {
+			panic(err)
+		}
+
+		switch p.Protocol {
 		case "tpke":
 			tpke, err := NewTPKE()
 			if err != nil {
@@ -20,7 +23,7 @@ func SelectedProtocol() Protocol {
 		case "":
 			protocol = nil
 		default:
-			panic("unknown F3B_PROTOCOL: " + choice)
+			panic("unknown F3B protocol: " + p.Protocol)
 		}
 	}
 	return protocol

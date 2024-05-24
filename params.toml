@@ -1,0 +1,3 @@
+## Experiment parameters for F3B/ZeroPriorKnownledge
+# Asymmetric encryption protocol, can be "", "tpke", "vdf", or "tibe"
+protocol = "tpke"

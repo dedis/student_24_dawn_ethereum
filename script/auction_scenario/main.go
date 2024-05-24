@@ -286,7 +286,7 @@ func (s *Scenario) operatorScript() error {
 		return err
 	}
 
-	return s.waitForBlockNumber(auctionStarted.CommitDeadline)
+	return s.waitForBlockNumber(auctionStarted.RevealDeadline)
 }
 
 func (s *Scenario) checkSuccess(tx *types.Transaction, err error) (*types.Transaction, error) {

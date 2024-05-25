@@ -51,11 +51,6 @@ func Main() error {
 		alloc[account.Address] = core.GenesisAccount{Balance: amount}
 	}
 
-	const (
-		// reflect gnosis
-		blockTime = 5
-		gasLimit  = 17_000_000
-	)
 	genesis := core.Genesis{
 		Config: &params.ChainConfig{
 			ChainID:             big.NewInt(1337),
@@ -70,14 +65,14 @@ func Main() error {
 			BerlinBlock:         common.Big0,
 			LondonBlock:         common.Big0,
 			Clique: &params.CliqueConfig{
-				Period: blockTime,
+				Period: p.BlockTime,
 				Epoch:  30000,
 			},
 		},
 		Nonce:      0,
 		Timestamp:  0x63206b0f,
 		ExtraData:  common.Hex2Bytes("0000000000000000000000000000000000000000000000000000000000000000280f6b48e4d9aee0efdb04eebe882023357f64340000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-		GasLimit:   gasLimit,
+		GasLimit:   p.BlockTime * p.GasPerSecond,
 		Difficulty: big.NewInt(1),
 		Alloc:      alloc,
 	}

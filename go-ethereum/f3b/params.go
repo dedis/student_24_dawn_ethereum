@@ -11,6 +11,8 @@ type Params struct {
 	Protocol string `toml:protocol`
 	NumBidders int `toml:num_bidders`
 	BlockDelay uint64 `toml:block_delay`
+	BlockTime uint64 `toml:block_time`
+	GasPerSecond uint64 `toml:gas_per_second`
 }
 
 type FullParams struct {

@@ -8,3 +8,9 @@ num_bidders = 20
 
 # delay between inclusion and execution in blocks
 block_delay = 2
+
+# time between blocks in seconds
+block_time = 5
+
+# max units of gas per second
+gas_per_second = 3400000

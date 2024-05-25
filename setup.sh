@@ -1,6 +1,10 @@
 #!/bin/sh
 
 status=0
+if ! forge --version > /dev/null; then
+	echo "Please install foundry (https://getfoundry.sh)"
+	status=1
+fi
 if ! tmux -V > /dev/null; then
 	echo "Please install tmux"
 	status=1

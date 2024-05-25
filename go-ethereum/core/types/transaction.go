@@ -85,6 +85,7 @@ type TxData interface {
 	value() *big.Int
 	nonce() uint64
 	to() *common.Address
+	targetBlock() uint64
 
 	rawSignatureValues() (v, r, s *big.Int)
 	setSignatureValues(chainID, v, r, s *big.Int)
@@ -396,6 +397,11 @@ func (tx *Transaction) Size() common.StorageSize {
 	rlp.Encode(&c, &tx.inner)
 	tx.size.Store(common.StorageSize(c))
 	return common.StorageSize(c)
+}
+
+// TargetBlock is the block number the transaction is encrypted for in F3B-TIBE
+func (tx *Transaction) TargetBlock() uint64 {
+	return tx.inner.targetBlock()
 }
 
 // WithSignature returns a new transaction with the given signature.

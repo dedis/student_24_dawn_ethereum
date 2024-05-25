@@ -1097,8 +1097,10 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		}
 	}
 
-	// F3B rules: fill shadow block, use last finalize shadow block for regular block
+	// F3B rules: fill shadow block, use last finalized shadow block for regular block
 	if w.chainConfig.IsLausanne(env.header.Number) {
+	f3bProtocol := f3b.SelectedProtocol()
+
 	log.Info("building shadow block")
 	params, err := f3b.ReadParams()
 	if err != nil {
@@ -1117,12 +1119,21 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 	env.coinbase = core.RetrieveShadowCoinbase(w.chain, params.BlockDelay)
 
 	// FIXME: need to account for shadow block gas
-	shadowTxs := []*types.Transaction{}
+	candidateTxs := []*types.Transaction{}
 	for _, tx := range localTxs {
-		shadowTxs = append(shadowTxs, tx...)
+		candidateTxs = append(candidateTxs, tx...)
 	}
 	for _, tx := range remoteTxs {
-		shadowTxs = append(shadowTxs, tx...)
+		candidateTxs = append(candidateTxs, tx...)
+	}
+
+	shadowTxs := []*types.Transaction{}
+	for _, tx := range candidateTxs {
+		if f3bProtocol.IsTibe() && tx.Type() == types.EncryptedTxType && tx.TargetBlock() > env.header.Number.Uint64() + params.BlockDelay {
+			// the target block is too far into the future, it will not be decrypted in time
+			continue
+		}
+		shadowTxs = append(shadowTxs, tx)
 	}
 
 	var totalGas uint64
@@ -1137,7 +1148,7 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 
 
 	// F3B: start VDF computations for the transaction if necessary
-	if f3bProtocol := f3b.SelectedProtocol(); f3bProtocol != nil && f3bProtocol.IsVdf() {
+	if f3bProtocol != nil && f3bProtocol.IsVdf() {
 		for _, tx := range shadowTxs {
 			if tx.Type() == types.EncryptedTxType {
 				if _, ok := vdfWorkers[tx.Hash()]; ok {

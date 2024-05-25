@@ -12,8 +12,15 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-func (t *Transaction) Encrypt(from common.Address, f3bProtocol f3b.Protocol) (*Transaction, error) {
-	label := binary.BigEndian.AppendUint64(from.Bytes(), t.Nonce())
+func getLabel(from common.Address, nonce uint64, f3bProtocol f3b.Protocol, targetBlock uint64) []byte {
+	if f3bProtocol.IsTibe() {
+		return binary.BigEndian.AppendUint64(nil, targetBlock)
+	} else {
+		return binary.BigEndian.AppendUint64(from.Bytes(), nonce)
+	}
+}
+func (t *Transaction) Encrypt(from common.Address, f3bProtocol f3b.Protocol, targetBlock uint64) (*Transaction, error) {
+	label := getLabel(from, t.Nonce(), f3bProtocol, targetBlock)
 	seed, encKey, err := f3bProtocol.ShareSecret(label)
 	if err != nil {
 		return nil, err
@@ -39,6 +46,7 @@ func (t *Transaction) Encrypt(from common.Address, f3bProtocol f3b.Protocol) (*T
 		Ciphertext: ciphertext,
 		Tag:        tag,
 		EncKey:     encKey,
+		TargetBlock: targetBlock,
 	}), nil
 }
 func (t *Transaction) Decrypt(f3bProtocol f3b.Protocol) (*Transaction, error) {
@@ -56,7 +64,7 @@ func (t *Transaction) Decrypt(f3bProtocol f3b.Protocol) (*Transaction, error) {
 	}
 
 
-	label := binary.BigEndian.AppendUint64(from.Bytes(), tx.Nonce)
+	label := getLabel(from, tx.Nonce, f3bProtocol, tx.TargetBlock)
 	reveal, err := f3bProtocol.RevealSecret(label, tx.EncKey)
 	if err != nil {
 		return nil, err
@@ -88,6 +96,7 @@ func (t *Transaction) Decrypt(f3bProtocol f3b.Protocol) (*Transaction, error) {
 		To:        &to,
 		Data:       data,
 		EncKey:     tx.EncKey,
+		TargetBlock: tx.TargetBlock,
 		Reveal:     reveal,
 		From:       from,
 
@@ -103,7 +112,7 @@ func (t *Transaction) Reencrypt(protocol f3b.Protocol) (*Transaction, error) {
 		return nil, errors.New("cannot reencrypt a non-decrypted transaction")
 	}
 
-	label := binary.BigEndian.AppendUint64(tx.From.Bytes(), tx.Nonce)
+	label := getLabel(tx.From, tx.Nonce, protocol, tx.TargetBlock)
 	seed, err := protocol.RecoverSecret(label, tx.EncKey, tx.Reveal)
 	if err != nil {
 		return nil, err

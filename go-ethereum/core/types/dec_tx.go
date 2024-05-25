@@ -20,6 +20,7 @@ type DecryptedTx struct {
 	AccessList AccessList
 	EncKey     []byte // The symmetric key k encrypted for the SMC
 	Reveal     []byte // witness data to help decrypt EncKey
+	TargetBlock uint64 // F3B-TIBE: block number the transaction is encrypted for
 	From       common.Address // the sender address, needed to properly reencrypt
 
 	// Signature values
@@ -85,6 +86,7 @@ func (tx *DecryptedTx) gasPrice() *big.Int     { return tx.GasFeeCap }
 func (tx *DecryptedTx) value() *big.Int        { return tx.Value }
 func (tx *DecryptedTx) nonce() uint64          { return tx.Nonce }
 func (tx *DecryptedTx) to() *common.Address    { return tx.To }
+func (tx *DecryptedTx) targetBlock() uint64    { return tx.TargetBlock }
 
 func (tx *DecryptedTx) rawSignatureValues() (v, r, s *big.Int) {
 	return tx.V, tx.R, tx.S

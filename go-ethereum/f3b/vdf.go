@@ -48,3 +48,7 @@ func (_ *VDF) RecoverSecret(label, encKey, reveal []byte) (seed []byte, err erro
 func (_ *VDF) IsVdf() bool {
 	return true
 }
+
+func (_ *VDF) IsTibe() bool {
+	return false
+}

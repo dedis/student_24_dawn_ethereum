@@ -74,12 +74,12 @@ func value(value *big.Int) func(*bind.TransactOpts) {
 	}
 }
 
-func encrypt() func(*bind.TransactOpts) {
+func encrypt(targetBlock uint64) func(*bind.TransactOpts) {
 	f3bProtocol := f3b.SelectedProtocol()
 	return func(transactOpts *bind.TransactOpts) {
 		prevSigner := transactOpts.Signer
 		transactOpts.Signer = func(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			tx, err := tx.Encrypt(addr, f3bProtocol)
+			tx, err := tx.Encrypt(addr, f3bProtocol, targetBlock)
 			if err != nil {
 				return nil, err
 			}
@@ -198,7 +198,8 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 	}
 	// 21k base gas, bid itself should be up to ~117k, plus slack
 	const limit = 21_000 + 120_000 + 10_000;
-	_, err = s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(), gasLimit(limit)), auctionStarted.AuctionId, amount))
+	targetBlock := auctionStarted.Opening
+	_, err = s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(targetBlock), gasLimit(limit)), auctionStarted.AuctionId, amount))
 	if err != nil {
 		return err
 	}

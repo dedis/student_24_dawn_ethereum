@@ -7,4 +7,5 @@ type Protocol interface {
 	RevealSecret(label, encKey []byte) (reveal []byte, err error)
 	RecoverSecret(label, encKey, reveal []byte) (seed []byte, err error)
 	IsVdf() bool
+	IsTibe() bool
 }

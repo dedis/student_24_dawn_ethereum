@@ -10,12 +10,12 @@ import (
 	"go.dedis.ch/kyber/v3"
 )
 
-type TPKE struct {
+type TIBE struct {
 	pk kyber.Point
 	smccli *SmcCli
 }
 
-func NewTPKE() (Protocol, error) {
+func NewTIBE() (Protocol, error) {
 	smccli := NewSmcCli()
 
 	pk, err := smccli.GetPublicKey()
@@ -23,10 +23,10 @@ func NewTPKE() (Protocol, error) {
 		return nil, err
 	}
 
-	return &TPKE{pk, smccli}, nil
+	return &TIBE{pk, smccli}, nil
 }
 
-func (e *TPKE) ShareSecret(labelBytes []byte) (seed, encKey []byte, err error) {
+func (e *TIBE) ShareSecret(labelBytes []byte) (seed, encKey []byte, err error) {
 	var label Label
 	copy(label[:], labelBytes)
 
@@ -43,14 +43,14 @@ func (e *TPKE) ShareSecret(labelBytes []byte) (seed, encKey []byte, err error) {
 	return
 }
 
-func (e *TPKE) RevealSecret(labelBytes []byte, encKey []byte) (reveal []byte, err error) {
+func (e *TIBE) RevealSecret(labelBytes []byte, encKey []byte) (reveal []byte, err error) {
 	var label Label
 	copy(label[:], labelBytes)
 
 	return e.smccli.Extract(label)
 }
 
-func (e *TPKE) RecoverSecret(labelBytes []byte, encKey, reveal []byte) (seed []byte, err error) {
+func (e *TIBE) RecoverSecret(labelBytes []byte, encKey, reveal []byte) (seed []byte, err error) {
 	var label Label
 	copy(label[:], labelBytes)
 
@@ -79,10 +79,10 @@ func (e *TPKE) RecoverSecret(labelBytes []byte, encKey, reveal []byte) (seed []b
 	return
 }
 
-func (e *TPKE) IsVdf() bool {
+func (e *TIBE) IsVdf() bool {
 	return false
 }
 
-func (e *TPKE) IsTibe() bool {
-	return false
+func (e *TIBE) IsTibe() bool {
+	return true
 }

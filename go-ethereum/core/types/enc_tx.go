@@ -32,6 +32,7 @@ type EncryptedTx struct {
 	Ciphertext []byte // Enc_k(to | data) symmetric encryption
 	Tag        []byte // MAC of Ciphertext
 	EncKey     []byte // The symmetric key k encrypted for the SMC
+	TargetBlock uint64 // F3B-TIBE: block number the transaction is encrypted for
 	AccessList AccessList
 
 	// Signature values
@@ -54,6 +55,7 @@ func (tx *EncryptedTx) copy() TxData {
 		ChainID:    new(big.Int),
 		GasTipCap:  new(big.Int),
 		GasFeeCap:  new(big.Int),
+		TargetBlock: tx.TargetBlock,
 		V:          new(big.Int),
 		R:          new(big.Int),
 		S:          new(big.Int),
@@ -95,6 +97,7 @@ func (tx *EncryptedTx) gasPrice() *big.Int     { return tx.GasFeeCap }
 func (tx *EncryptedTx) value() *big.Int        { return tx.Value }
 func (tx *EncryptedTx) nonce() uint64          { return tx.Nonce }
 func (tx *EncryptedTx) to() *common.Address    { return &common.Address{} }
+func (tx *EncryptedTx) targetBlock() uint64    { return tx.TargetBlock }
 
 func (tx *EncryptedTx) rawSignatureValues() (v, r, s *big.Int) {
 	return tx.V, tx.R, tx.S

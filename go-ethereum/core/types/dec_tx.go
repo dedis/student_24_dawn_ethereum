@@ -37,6 +37,7 @@ func (tx *DecryptedTx) copy() TxData {
 		Data:  common.CopyBytes(tx.Data),
 		EncKey:   common.CopyBytes(tx.EncKey),
 		Reveal:   common.CopyBytes(tx.Reveal),
+		TargetBlock: tx.TargetBlock,
 		From:     tx.From,
 		Gas:   tx.Gas,
 		// These are copied below.

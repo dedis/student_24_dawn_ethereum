@@ -136,6 +136,7 @@ func (t *Transaction) Reencrypt(protocol f3b.Protocol) (*Transaction, error) {
 		Ciphertext: ciphertext,
 		Tag:        tag,
 		EncKey:     tx.EncKey,
+		TargetBlock: tx.TargetBlock,
 
 		V: tx.V,
 		R: tx.R,

@@ -53,6 +53,7 @@ type txJSON struct {
 	EncKey     *hexutil.Bytes `json:"enc_key"`
 	Ciphertext *hexutil.Bytes `json:"ciphertext"`
 	Tag        *hexutil.Bytes `json:"tag"`
+	TargetBlock *hexutil.Uint64 `json:"targetBlock"`
 }
 
 // MarshalJSON marshals as JSON with a hash.
@@ -113,6 +114,7 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		enc.R = (*hexutil.Big)(tx.R)
 		enc.S = (*hexutil.Big)(tx.S)
 		enc.EncKey = (*hexutil.Bytes)(&tx.EncKey)
+		enc.TargetBlock = (*hexutil.Uint64)(&tx.TargetBlock)
 	}
 
 	return json.Marshal(&enc)
@@ -324,6 +326,9 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 		itx.Tag = *dec.Tag
 		if dec.V == nil {
 			return errors.New("missing required field 'v' in transaction")
+		}
+		if dec.TargetBlock != nil {
+			itx.TargetBlock = uint64(*dec.TargetBlock)
 		}
 		itx.V = (*big.Int)(dec.V)
 		if dec.R == nil {

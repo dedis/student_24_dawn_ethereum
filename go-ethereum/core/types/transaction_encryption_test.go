@@ -10,20 +10,25 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/f3b/vdf"
+	"github.com/ethereum/go-ethereum/f3b"
 )
 
 func TestHashEncryptedTx(t *testing.T) {
+	vdf := &f3b.VDF{}
+	f3b.ForceSelectedProtocol(t, vdf)
+
 	acct, err := crypto.GenerateKey()
-	from := crypto.PubkeyToAddress(acct.PublicKey).Bytes()
-	label := binary.BigEndian.AppendUint64(from, 0)
-	_, n := vdf.ShareSecret(label, types.Log2t)
-	l, π := vdf.Proof(label, n, types.Log2t)
-	reveal, err := rlp.EncodeToBytes([][]byte{from, l.Bytes(), π.Bytes()})
+	from := crypto.PubkeyToAddress(acct.PublicKey)
+	label := binary.BigEndian.AppendUint64(from.Bytes(), 0)
+	_, encKey, err := vdf.ShareSecret(label)
+	if err != nil {
+		t.Error(err)
+	}
+	reveal, err := vdf.RevealSecret(label, encKey)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	dec_tx := types.NewTx(&types.DecryptedTx{
 		ChainID:    big.NewInt(1),
 		Nonce:      0,
@@ -32,10 +37,11 @@ func TestHashEncryptedTx(t *testing.T) {
 		Value:      big.NewInt(0),
 		To:         &common.Address{},
 		Data:       []byte("hello world"),
-		EncKey:     n.Bytes(),
+		EncKey:     encKey,
 		Reveal:     reveal,
+		From:       from,
 	})
-	enc_tx, err := dec_tx.Reencrypt()
+	enc_tx, err := dec_tx.Reencrypt(vdf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,15 +53,21 @@ func TestHashEncryptedTx(t *testing.T) {
 }
 
 func TestSignEncryptedTx(t *testing.T) {
+	vdf := &f3b.VDF{}
+	f3b.ForceSelectedProtocol(t, vdf)
+
 	acct, err := crypto.GenerateKey()
-	from := crypto.PubkeyToAddress(acct.PublicKey).Bytes()
-	label := binary.BigEndian.AppendUint64(from, 0)
-	_, n := vdf.ShareSecret(label, types.Log2t)
-	l, π := vdf.Proof(label, n, types.Log2t)
-	reveal, err := rlp.EncodeToBytes([][]byte{from, l.Bytes(), π.Bytes()})
+	from := crypto.PubkeyToAddress(acct.PublicKey)
+	label := binary.BigEndian.AppendUint64(from.Bytes(), 0)
+	_, encKey, err := vdf.ShareSecret(label)
+	if err != nil {
+		t.Error(err)
+	}
+	reveal, err := vdf.RevealSecret(label, encKey)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	dec_tx := types.NewTx(&types.DecryptedTx{
 		ChainID:    big.NewInt(1),
 		Nonce:      0,
@@ -64,15 +76,16 @@ func TestSignEncryptedTx(t *testing.T) {
 		Value:      big.NewInt(0),
 		To:         &common.Address{},
 		Data:       []byte("hello world"),
-		EncKey:     n.Bytes(),
+		EncKey:     encKey,
 		Reveal:     reveal,
+		From:       from,
 	})
 	signer := types.NewLausanneSigner(big.NewInt(1))
 	dec_tx, err = types.SignTx(dec_tx, signer, acct)
 	if err != nil {
 		t.Fatal(err)
 	}
-	enc_tx, err := dec_tx.Reencrypt()
+	enc_tx, err := dec_tx.Reencrypt(vdf)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -2,6 +2,8 @@
 
 package f3b
 
+import "testing"
+
 var protocol Protocol
 
 func SelectedProtocol() Protocol {
@@ -27,4 +29,10 @@ func SelectedProtocol() Protocol {
 		}
 	}
 	return protocol
+}
+
+// ForceSelectedProtocol forcefully sets the globally selected protocol.
+// It is only meant to be used in tests.
+func ForceSelectedProtocol(_ *testing.T, p Protocol) {
+	protocol = p
 }

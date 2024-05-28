@@ -41,7 +41,7 @@ func TestHashEncryptedTx(t *testing.T) {
 		Reveal:     reveal,
 		From:       from,
 	})
-	enc_tx, err := dec_tx.Reencrypt(vdf)
+	enc_tx, err := dec_tx.Reencrypt()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func TestSignEncryptedTx(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	enc_tx, err := dec_tx.Reencrypt(vdf)
+	enc_tx, err := dec_tx.Reencrypt()
 	if err != nil {
 		t.Fatal(err)
 	}

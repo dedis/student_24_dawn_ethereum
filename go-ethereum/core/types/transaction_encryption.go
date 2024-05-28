@@ -19,7 +19,8 @@ func getLabel(from common.Address, nonce uint64, f3bProtocol f3b.Protocol, targe
 		return binary.BigEndian.AppendUint64(from.Bytes(), nonce)
 	}
 }
-func (t *Transaction) Encrypt(from common.Address, f3bProtocol f3b.Protocol, targetBlock uint64) (*Transaction, error) {
+func (t *Transaction) Encrypt(from common.Address, targetBlock uint64) (*Transaction, error) {
+	f3bProtocol := f3b.SelectedProtocol()
 	label := getLabel(from, t.Nonce(), f3bProtocol, targetBlock)
 	seed, encKey, err := f3bProtocol.ShareSecret(label)
 	if err != nil {
@@ -49,7 +50,8 @@ func (t *Transaction) Encrypt(from common.Address, f3bProtocol f3b.Protocol, tar
 		TargetBlock: targetBlock,
 	}), nil
 }
-func (t *Transaction) Decrypt(f3bProtocol f3b.Protocol) (*Transaction, error) {
+func (t *Transaction) Decrypt() (*Transaction, error) {
+	f3bProtocol := f3b.SelectedProtocol()
 	// Minimal signer for an encrypted transaction
 	signer := NewLausanneSigner(t.ChainId())
 
@@ -106,7 +108,8 @@ func (t *Transaction) Decrypt(f3bProtocol f3b.Protocol) (*Transaction, error) {
 	}), nil
 }
 
-func (t *Transaction) Reencrypt(protocol f3b.Protocol) (*Transaction, error) {
+func (t *Transaction) Reencrypt() (*Transaction, error) {
+	protocol := f3b.SelectedProtocol()
 	tx, ok := t.inner.(*DecryptedTx)
 	if !ok {
 		return nil, errors.New("cannot reencrypt a non-decrypted transaction")

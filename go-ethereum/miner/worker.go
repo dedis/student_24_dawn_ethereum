@@ -904,7 +904,7 @@ func (w *worker) commitTransactions(env *environment, txs *types.TransactionsByP
 				tx, err = w.Wait()
 				//delete(vdfWorkers, tx.Hash())
 			} else {
-				tx, err = tx.Decrypt(f3bProtocol)
+				tx, err = tx.Decrypt()
 			}
 			if err != nil {
 				// FIXME this shouldn't happen

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/f3b"
 )
 
 type vdfWorker struct {
@@ -26,7 +25,7 @@ func startVdf(tx *types.Transaction, ctx context.Context) (*vdfWorker, error) {
 
 func (w *vdfWorker) work(ctx context.Context, tx *types.Transaction) {
 	defer close(w.done)
-	w.result, w.err = tx.Decrypt(f3b.SelectedProtocol())
+	w.result, w.err = tx.Decrypt()
 }
 
 func (w *vdfWorker) Cancel() {

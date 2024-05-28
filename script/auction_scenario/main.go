@@ -75,11 +75,10 @@ func value(value *big.Int) func(*bind.TransactOpts) {
 }
 
 func encrypt(targetBlock uint64) func(*bind.TransactOpts) {
-	f3bProtocol := f3b.SelectedProtocol()
 	return func(transactOpts *bind.TransactOpts) {
 		prevSigner := transactOpts.Signer
 		transactOpts.Signer = func(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			tx, err := tx.Encrypt(addr, f3bProtocol, targetBlock)
+			tx, err := tx.Encrypt(addr, targetBlock)
 			if err != nil {
 				return nil, err
 			}

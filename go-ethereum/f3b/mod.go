@@ -14,6 +14,12 @@ func SelectedProtocol() Protocol {
 		}
 
 		switch p.Protocol {
+		case "tibe":
+			tibe, err := NewTIBE()
+			if err != nil {
+				panic(err)
+			}
+			protocol = tibe
 		case "tpke":
 			tpke, err := NewTPKE()
 			if err != nil {

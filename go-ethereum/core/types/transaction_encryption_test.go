@@ -14,7 +14,7 @@ import (
 )
 
 func TestHashEncryptedTx(t *testing.T) {
-	vdf := &f3b.VDF{}
+	vdf := &f3b.VDF{Log2t: 5}
 	f3b.ForceSelectedProtocol(t, vdf)
 
 	acct, err := crypto.GenerateKey()
@@ -53,7 +53,7 @@ func TestHashEncryptedTx(t *testing.T) {
 }
 
 func TestSignEncryptedTx(t *testing.T) {
-	vdf := &f3b.VDF{}
+	vdf := &f3b.VDF{Log2t: 5}
 	f3b.ForceSelectedProtocol(t, vdf)
 
 	acct, err := crypto.GenerateKey()

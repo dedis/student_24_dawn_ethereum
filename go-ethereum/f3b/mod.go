@@ -27,7 +27,7 @@ func SelectedProtocol() Protocol {
 			}
 			protocol = tpke
 		case "vdf":
-			protocol = &VDF{}
+			protocol = &VDF{defaultLog2t}
 		case "":
 			protocol = nil
 		default:

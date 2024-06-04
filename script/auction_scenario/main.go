@@ -298,13 +298,23 @@ func (s *Scenario) operatorScript() error {
 
 	log.Info("auction started")
 
-	_, auction, err := s.waitForAuction()
+	auctionId, auction, err := s.waitForAuction()
 	if err != nil {
 		return err
 	}
-	fmt.Println(auction)
 
-	return s.waitForBlockNumber(auction.RevealDeadline)
+	err = s.waitForBlockNumber(auction.RevealDeadline+1)
+	if err != nil {
+		return err
+	}
+
+	log.Info("closing auction")
+	_, err = s.checkSuccess(s.Auctions.Settle(transactOpts, auctionId))
+	if err != nil {
+		return err
+	}
+	log.Info("auction settled")
+	return nil
 }
 
 func (s *Scenario) checkSuccess(tx *types.Transaction, err error) (*types.Transaction, error) {

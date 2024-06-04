@@ -87,8 +87,3 @@ weth_address=$(jq -r .weth <$ADDRESSES_FILE)
 collection_address=$(jq -r .collection <$ADDRESSES_FILE)
 
 visibly 'go run ./script/auction_scenario'
-
-auction_id=0 # FIXME: hardcoded
-txhash=$(cast send --keystore "$ETH_KEYSTORE/$deployer" -f $deployer $auctions_address 'settle(uint256)' $auction_id --json | jq -r .transactionHash)
-echo $txhash
-cast run $txhash

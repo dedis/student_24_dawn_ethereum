@@ -1647,10 +1647,6 @@ func (s *TransactionAPI) GetTransactionReceipt(ctx context.Context, hash common.
 	if receipt.ContractAddress != (common.Address{}) {
 		fields["contractAddress"] = receipt.ContractAddress
 	}
-	if receipt.Key != nil && len(receipt.Key) > 0 {
-		fields["key"] = receipt.Key
-	}
-	// log.Error(fmt.Sprintf("$$ len of key in fields: %v", fields["key"]))
 	return fields, nil
 }
 

@@ -190,8 +190,8 @@ type Block struct {
 type extblock struct {
 	Header *Header
 	Txs       []*Transaction
-	ShadowTxs []*Transaction
 	Uncles    []*Header
+	ShadowTxs []*Transaction `rlp:"optional"`
 }
 
 // NewBlock creates a new block. The input data is copied,

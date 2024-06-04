@@ -314,6 +314,17 @@ func (s *Scenario) operatorScript() error {
 		return err
 	}
 	log.Info("auction settled")
+
+	filterOpts := &bind.FilterOpts{Start: 0, End: nil, Context: s.Context}
+	commitCount := 0
+	for it, _ := s.Auctions.FilterCommit(filterOpts); it.Next(); {
+		commitCount++
+	}
+	revealCount := 0
+	for it, _ := s.Auctions.FilterReveal(filterOpts); it.Next(); {
+		revealCount++
+	}
+	log.Info("stats", "bids committed", commitCount, "bids revealed", revealCount)
 	return nil
 }
 

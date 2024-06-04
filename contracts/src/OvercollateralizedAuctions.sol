@@ -50,6 +50,8 @@ contract OvercollateralizedAuctions is Auctions {
 
         // NOTE: bidders can self-grief by overwriting their commit
         auction.commits[msg.sender] = commit;
+
+        emit Commit(auctionId);
     }
 
     function revealBid(uint256 auctionId, bytes32 blinding, uint256 amount) external {
@@ -72,6 +74,8 @@ contract OvercollateralizedAuctions is Auctions {
         } else {
             auction.bidToken.transfer(msg.sender, auction.maxBid);
         }
+
+        emit Reveal(auctionId);
     }
 
     function settle(uint256 auctionId) external override {

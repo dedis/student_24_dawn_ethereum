@@ -50,6 +50,8 @@ contract SimpleAuctions is Auctions {
             auction.bidToken.transferFrom(msg.sender, address(this), amount);
             auction.bidToken.transfer(prevHighestBidder, prevHighestAmount);
         }
+        emit Commit(auctionId);
+        emit Reveal(auctionId);
     }
 
     function settle(uint256 auctionId) external override {

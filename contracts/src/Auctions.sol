@@ -23,6 +23,11 @@ abstract contract Auctions {
 
     event AuctionStarted(uint256 auctionId);
 
+    // must be emitted once when a bid is committed/revealed
+    // SimpleAuction must emit both
+    event Commit(uint256 auctionId);
+    event Reveal(uint256 auctionId);
+
     Auction[] public auctions;
 
     function startAuction(IERC721 collection, uint256 tokenId, IERC20 bidToken, address proceedsReceiver)

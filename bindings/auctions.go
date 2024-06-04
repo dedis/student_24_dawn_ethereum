@@ -30,7 +30,7 @@ var (
 
 // AuctionsMetaData contains all meta data concerning the Auctions contract.
 var AuctionsMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"function\",\"name\":\"auctions\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"collection\",\"type\":\"address\",\"internalType\":\"contractIERC721\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"bidToken\",\"type\":\"address\",\"internalType\":\"contractIERC20\"},{\"name\":\"proceedsReceiver\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"opening\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"commitDeadline\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"revealDeadline\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"maxBid\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"highestAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"highestBidder\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"settle\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"startAuction\",\"inputs\":[{\"name\":\"collection\",\"type\":\"address\",\"internalType\":\"contractIERC721\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"bidToken\",\"type\":\"address\",\"internalType\":\"contractIERC20\"},{\"name\":\"proceedsReceiver\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"AuctionStarted\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false}]",
+	ABI: "[{\"type\":\"function\",\"name\":\"auctions\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"collection\",\"type\":\"address\",\"internalType\":\"contractIERC721\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"bidToken\",\"type\":\"address\",\"internalType\":\"contractIERC20\"},{\"name\":\"proceedsReceiver\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"opening\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"commitDeadline\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"revealDeadline\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"maxBid\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"highestAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"highestBidder\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"settle\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"startAuction\",\"inputs\":[{\"name\":\"collection\",\"type\":\"address\",\"internalType\":\"contractIERC721\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"bidToken\",\"type\":\"address\",\"internalType\":\"contractIERC20\"},{\"name\":\"proceedsReceiver\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"AuctionStarted\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Commit\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Reveal\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false}]",
 }
 
 // AuctionsABI is the input ABI used to generate the binding from.
@@ -434,6 +434,274 @@ func (_Auctions *AuctionsFilterer) WatchAuctionStarted(opts *bind.WatchOpts, sin
 func (_Auctions *AuctionsFilterer) ParseAuctionStarted(log types.Log) (*AuctionsAuctionStarted, error) {
 	event := new(AuctionsAuctionStarted)
 	if err := _Auctions.contract.UnpackLog(event, "AuctionStarted", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AuctionsCommitIterator is returned from FilterCommit and is used to iterate over the raw logs and unpacked data for Commit events raised by the Auctions contract.
+type AuctionsCommitIterator struct {
+	Event *AuctionsCommit // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AuctionsCommitIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AuctionsCommit)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AuctionsCommit)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AuctionsCommitIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AuctionsCommitIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AuctionsCommit represents a Commit event raised by the Auctions contract.
+type AuctionsCommit struct {
+	AuctionId *big.Int
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterCommit is a free log retrieval operation binding the contract event 0x5bdd2fc99022530157777690475b670d3872f32262eb1d47d9ba8000dad58f87.
+//
+// Solidity: event Commit(uint256 auctionId)
+func (_Auctions *AuctionsFilterer) FilterCommit(opts *bind.FilterOpts) (*AuctionsCommitIterator, error) {
+
+	logs, sub, err := _Auctions.contract.FilterLogs(opts, "Commit")
+	if err != nil {
+		return nil, err
+	}
+	return &AuctionsCommitIterator{contract: _Auctions.contract, event: "Commit", logs: logs, sub: sub}, nil
+}
+
+// WatchCommit is a free log subscription operation binding the contract event 0x5bdd2fc99022530157777690475b670d3872f32262eb1d47d9ba8000dad58f87.
+//
+// Solidity: event Commit(uint256 auctionId)
+func (_Auctions *AuctionsFilterer) WatchCommit(opts *bind.WatchOpts, sink chan<- *AuctionsCommit) (event.Subscription, error) {
+
+	logs, sub, err := _Auctions.contract.WatchLogs(opts, "Commit")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AuctionsCommit)
+				if err := _Auctions.contract.UnpackLog(event, "Commit", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseCommit is a log parse operation binding the contract event 0x5bdd2fc99022530157777690475b670d3872f32262eb1d47d9ba8000dad58f87.
+//
+// Solidity: event Commit(uint256 auctionId)
+func (_Auctions *AuctionsFilterer) ParseCommit(log types.Log) (*AuctionsCommit, error) {
+	event := new(AuctionsCommit)
+	if err := _Auctions.contract.UnpackLog(event, "Commit", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AuctionsRevealIterator is returned from FilterReveal and is used to iterate over the raw logs and unpacked data for Reveal events raised by the Auctions contract.
+type AuctionsRevealIterator struct {
+	Event *AuctionsReveal // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AuctionsRevealIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AuctionsReveal)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AuctionsReveal)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AuctionsRevealIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AuctionsRevealIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AuctionsReveal represents a Reveal event raised by the Auctions contract.
+type AuctionsReveal struct {
+	AuctionId *big.Int
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterReveal is a free log retrieval operation binding the contract event 0x1747b48b6ade85d7dc97c0f523e0e780795930a468c01b18a51546791fdd3ac0.
+//
+// Solidity: event Reveal(uint256 auctionId)
+func (_Auctions *AuctionsFilterer) FilterReveal(opts *bind.FilterOpts) (*AuctionsRevealIterator, error) {
+
+	logs, sub, err := _Auctions.contract.FilterLogs(opts, "Reveal")
+	if err != nil {
+		return nil, err
+	}
+	return &AuctionsRevealIterator{contract: _Auctions.contract, event: "Reveal", logs: logs, sub: sub}, nil
+}
+
+// WatchReveal is a free log subscription operation binding the contract event 0x1747b48b6ade85d7dc97c0f523e0e780795930a468c01b18a51546791fdd3ac0.
+//
+// Solidity: event Reveal(uint256 auctionId)
+func (_Auctions *AuctionsFilterer) WatchReveal(opts *bind.WatchOpts, sink chan<- *AuctionsReveal) (event.Subscription, error) {
+
+	logs, sub, err := _Auctions.contract.WatchLogs(opts, "Reveal")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AuctionsReveal)
+				if err := _Auctions.contract.UnpackLog(event, "Reveal", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseReveal is a log parse operation binding the contract event 0x1747b48b6ade85d7dc97c0f523e0e780795930a468c01b18a51546791fdd3ac0.
+//
+// Solidity: event Reveal(uint256 auctionId)
+func (_Auctions *AuctionsFilterer) ParseReveal(log types.Log) (*AuctionsReveal, error) {
+	event := new(AuctionsReveal)
+	if err := _Auctions.contract.UnpackLog(event, "Reveal", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

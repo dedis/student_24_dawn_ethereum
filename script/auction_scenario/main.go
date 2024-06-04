@@ -271,20 +271,20 @@ func (s *Scenario) waitForBlockNumber(bn uint64) error {
 }
 
 func (s *Scenario) operatorScript() error {
+	acct := accounts.Account{Address: common.HexToAddress("0x280F6B48E4d9aEe0Efdb04EeBe882023357f6434")}
 	ks := keystore.NewKeyStore("keystore/", keystore.StandardScryptN, keystore.StandardScryptP)
-	transactOpts := new(bind.TransactOpts)
-	transactOpts.From = common.HexToAddress("0x280F6B48E4d9aEe0Efdb04EeBe882023357f6434")
-	transactOpts.Signer = func(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
-		from := accounts.Account{Address: addr}
-		if err := ks.Unlock(from, ""); err != nil {
-			return nil, err
-		}
-		return ks.SignTx(from, tx, s.ChainID)
+	if err := ks.Unlock(acct, ""); err != nil {
+		return err
 	}
+	transactOpts, err := bind.NewKeyStoreTransactorWithChainID(ks, acct, s.ChainID)
+	if err != nil {
+		return err
+	}
+	transactOpts.From = acct.Address
 	transactOpts.Context = s.Context
 
 	tokenId := common.Big1
-	_, err := s.checkSuccess(s.Collection.Approve(transactOpts, s.Addresses["auctions"], tokenId))
+	_, err = s.checkSuccess(s.Collection.Approve(transactOpts, s.Addresses["auctions"], tokenId))
 	if err != nil {
 		return err
 	}

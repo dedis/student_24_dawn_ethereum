@@ -14,17 +14,21 @@ import (
 )
 
 func TestHashEncryptedTx(t *testing.T) {
-	vdf := &f3b.VDF{Log2t: 5}
-	f3b.ForceSelectedProtocol(t, vdf)
+	//protocol := &f3b.VDF{Log2t: 5}
+	protocol, err := f3b.NewTPKE(f3b.NewFakeSmcCli())
+	if err != nil {
+		t.Error(err)
+	}
+	f3b.ForceSelectedProtocol(t, protocol)
 
 	acct, err := crypto.GenerateKey()
 	from := crypto.PubkeyToAddress(acct.PublicKey)
 	label := binary.BigEndian.AppendUint64(from.Bytes(), 0)
-	_, encKey, err := vdf.ShareSecret(label)
+	_, encKey, err := protocol.ShareSecret(label)
 	if err != nil {
 		t.Error(err)
 	}
-	reveal, err := vdf.RevealSecret(label, encKey)
+	reveal, err := protocol.RevealSecret(label, encKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,17 +57,21 @@ func TestHashEncryptedTx(t *testing.T) {
 }
 
 func TestSignEncryptedTx(t *testing.T) {
-	vdf := &f3b.VDF{Log2t: 5}
-	f3b.ForceSelectedProtocol(t, vdf)
+	//protocol := &f3b.VDF{Log2t: 5}
+	protocol, err := f3b.NewTPKE(f3b.NewFakeSmcCli())
+	if err != nil {
+		t.Error(err)
+	}
+	f3b.ForceSelectedProtocol(t, protocol)
 
 	acct, err := crypto.GenerateKey()
 	from := crypto.PubkeyToAddress(acct.PublicKey)
 	label := binary.BigEndian.AppendUint64(from.Bytes(), 0)
-	_, encKey, err := vdf.ShareSecret(label)
+	_, encKey, err := protocol.ShareSecret(label)
 	if err != nil {
 		t.Error(err)
 	}
-	reveal, err := vdf.RevealSecret(label, encKey)
+	reveal, err := protocol.RevealSecret(label, encKey)
 	if err != nil {
 		t.Fatal(err)
 	}

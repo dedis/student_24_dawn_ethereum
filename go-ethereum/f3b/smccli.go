@@ -26,23 +26,24 @@ func getEnv(name string) string {
 	return value
 }
 
-type SmcCli struct {
+type SmcCli interface {
+	GetPublicKey() (kyber.Point, error)
+	Extract(Label) ([]byte, error)
+}
+
+type smcCliImpl struct {
 	configPath string
 	cache map[Label][]byte
 }
 
-func NewSmcCli() *SmcCli {
-	c := new(SmcCli)
-	p, err := ReadParams()
-	if err != nil {
-		panic(err)
-	}
+func NewSmcCli(p *FullParams) SmcCli {
+	c := new(smcCliImpl)
 	c.configPath = filepath.Clean(p.SmcPath)
 	c.cache = make(map[Label][]byte)
 	return c
 }
 
-func (c *SmcCli) GetPublicKey() (kyber.Point, error) {
+func (c *smcCliImpl) GetPublicKey() (kyber.Point, error) {
 	pkBytes, err := c.run("get-public-key")
 	if err != nil {
 		return nil, err
@@ -56,7 +57,7 @@ func (c *SmcCli) GetPublicKey() (kyber.Point, error) {
 	return pk, nil
 }
 
-func (c *SmcCli) Extract(label Label) (v []byte, err error) {
+func (c *smcCliImpl) Extract(label Label) (v []byte, err error) {
 	v, ok := c.cache[label]
 	if !ok {
 		v, err = c.run("extract", "--label", hex.EncodeToString(label[:]))
@@ -68,7 +69,7 @@ func (c *SmcCli) Extract(label Label) (v []byte, err error) {
 	return v, nil
 }
 
-func (c *SmcCli) run(args ...string) ([]byte, error) {
+func (c *smcCliImpl) run(args ...string) ([]byte, error) {
 	args = append([]string{"--config", c.configPath, "dkg"}, args...)
 	output, err := exec.Command("smccli", args...).Output()
 

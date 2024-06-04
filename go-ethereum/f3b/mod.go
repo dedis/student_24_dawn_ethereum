@@ -15,13 +15,13 @@ func SelectedProtocol() Protocol {
 
 		switch p.Protocol {
 		case "tibe":
-			tibe, err := NewTIBE()
+			tibe, err := NewTIBE(NewSmcCli(p))
 			if err != nil {
 				panic(err)
 			}
 			protocol = tibe
 		case "tpke":
-			tpke, err := NewTPKE()
+			tpke, err := NewTPKE(NewSmcCli(p))
 			if err != nil {
 				panic(err)
 			}

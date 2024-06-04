@@ -12,12 +12,10 @@ import (
 
 type TPKE struct {
 	pk kyber.Point
-	smccli *SmcCli
+	smccli SmcCli
 }
 
-func NewTPKE() (Protocol, error) {
-	smccli := NewSmcCli()
-
+func NewTPKE(smccli SmcCli) (Protocol, error) {
 	pk, err := smccli.GetPublicKey()
 	if err != nil {
 		return nil, err

@@ -12,12 +12,10 @@ import (
 
 type TIBE struct {
 	pk kyber.Point
-	smccli *SmcCli
+	smccli SmcCli
 }
 
-func NewTIBE() (Protocol, error) {
-	smccli := NewSmcCli()
-
+func NewTIBE(smccli SmcCli) (Protocol, error) {
 	pk, err := smccli.GetPublicKey()
 	if err != nil {
 		return nil, err

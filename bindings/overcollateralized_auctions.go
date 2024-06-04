@@ -30,7 +30,7 @@ var (
 
 // OvercollateralizedAuctionsMetaData contains all meta data concerning the OvercollateralizedAuctions contract.
 var OvercollateralizedAuctionsMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"function\",\"name\":\"auctions\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"collection\",\"type\":\"address\",\"internalType\":\"contractIERC721\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"bidToken\",\"type\":\"address\",\"internalType\":\"contractIERC20\"},{\"name\":\"proceedsReceiver\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"opening\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"commitDeadline\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"revealDeadline\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"maxBid\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"highestAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"highestBidder\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"commitBid\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"commit\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"computeCommitment\",\"inputs\":[{\"name\":\"blinding\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"bidder\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"commit\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"pure\"},{\"type\":\"function\",\"name\":\"revealBid\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"blinding\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"settle\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"startAuction\",\"inputs\":[{\"name\":\"collection\",\"type\":\"address\",\"internalType\":\"contractIERC721\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"bidToken\",\"type\":\"address\",\"internalType\":\"contractIERC20\"},{\"name\":\"proceedsReceiver\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"AuctionStarted\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"collection\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"contractIERC721\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"bidToken\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"contractIERC20\"},{\"name\":\"proceedsReceiver\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"opening\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"commitDeadline\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"revealDeadline\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"},{\"name\":\"maxBid\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false}]",
+	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"blockDelay_\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"auctions\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"collection\",\"type\":\"address\",\"internalType\":\"contractIERC721\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"bidToken\",\"type\":\"address\",\"internalType\":\"contractIERC20\"},{\"name\":\"proceedsReceiver\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"opening\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"commitDeadline\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"revealDeadline\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"maxBid\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"highestAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"highestBidder\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"commitBid\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"commit\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"computeCommitment\",\"inputs\":[{\"name\":\"blinding\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"bidder\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"commit\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"pure\"},{\"type\":\"function\",\"name\":\"revealBid\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"blinding\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"settle\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"startAuction\",\"inputs\":[{\"name\":\"collection\",\"type\":\"address\",\"internalType\":\"contractIERC721\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"bidToken\",\"type\":\"address\",\"internalType\":\"contractIERC20\"},{\"name\":\"proceedsReceiver\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"AuctionStarted\",\"inputs\":[{\"name\":\"auctionId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false}]",
 }
 
 // OvercollateralizedAuctionsABI is the input ABI used to generate the binding from.
@@ -448,21 +448,13 @@ func (it *OvercollateralizedAuctionsAuctionStartedIterator) Close() error {
 
 // OvercollateralizedAuctionsAuctionStarted represents a AuctionStarted event raised by the OvercollateralizedAuctions contract.
 type OvercollateralizedAuctionsAuctionStarted struct {
-	AuctionId        *big.Int
-	Collection       common.Address
-	TokenId          *big.Int
-	BidToken         common.Address
-	ProceedsReceiver common.Address
-	Opening          uint64
-	CommitDeadline   uint64
-	RevealDeadline   uint64
-	MaxBid           *big.Int
-	Raw              types.Log // Blockchain specific contextual infos
+	AuctionId *big.Int
+	Raw       types.Log // Blockchain specific contextual infos
 }
 
-// FilterAuctionStarted is a free log retrieval operation binding the contract event 0x43a0de591003148639e617086d0eeea238ad9ce99e6340e1905256ca602e8d31.
+// FilterAuctionStarted is a free log retrieval operation binding the contract event 0x1bb96dff6ab5005aff98cdc0cf176bb7d8e0423cb48e02217d35b042cec81e9f.
 //
-// Solidity: event AuctionStarted(uint256 auctionId, address collection, uint256 tokenId, address bidToken, address proceedsReceiver, uint64 opening, uint64 commitDeadline, uint64 revealDeadline, uint256 maxBid)
+// Solidity: event AuctionStarted(uint256 auctionId)
 func (_OvercollateralizedAuctions *OvercollateralizedAuctionsFilterer) FilterAuctionStarted(opts *bind.FilterOpts) (*OvercollateralizedAuctionsAuctionStartedIterator, error) {
 
 	logs, sub, err := _OvercollateralizedAuctions.contract.FilterLogs(opts, "AuctionStarted")
@@ -472,9 +464,9 @@ func (_OvercollateralizedAuctions *OvercollateralizedAuctionsFilterer) FilterAuc
 	return &OvercollateralizedAuctionsAuctionStartedIterator{contract: _OvercollateralizedAuctions.contract, event: "AuctionStarted", logs: logs, sub: sub}, nil
 }
 
-// WatchAuctionStarted is a free log subscription operation binding the contract event 0x43a0de591003148639e617086d0eeea238ad9ce99e6340e1905256ca602e8d31.
+// WatchAuctionStarted is a free log subscription operation binding the contract event 0x1bb96dff6ab5005aff98cdc0cf176bb7d8e0423cb48e02217d35b042cec81e9f.
 //
-// Solidity: event AuctionStarted(uint256 auctionId, address collection, uint256 tokenId, address bidToken, address proceedsReceiver, uint64 opening, uint64 commitDeadline, uint64 revealDeadline, uint256 maxBid)
+// Solidity: event AuctionStarted(uint256 auctionId)
 func (_OvercollateralizedAuctions *OvercollateralizedAuctionsFilterer) WatchAuctionStarted(opts *bind.WatchOpts, sink chan<- *OvercollateralizedAuctionsAuctionStarted) (event.Subscription, error) {
 
 	logs, sub, err := _OvercollateralizedAuctions.contract.WatchLogs(opts, "AuctionStarted")
@@ -509,9 +501,9 @@ func (_OvercollateralizedAuctions *OvercollateralizedAuctionsFilterer) WatchAuct
 	}), nil
 }
 
-// ParseAuctionStarted is a log parse operation binding the contract event 0x43a0de591003148639e617086d0eeea238ad9ce99e6340e1905256ca602e8d31.
+// ParseAuctionStarted is a log parse operation binding the contract event 0x1bb96dff6ab5005aff98cdc0cf176bb7d8e0423cb48e02217d35b042cec81e9f.
 //
-// Solidity: event AuctionStarted(uint256 auctionId, address collection, uint256 tokenId, address bidToken, address proceedsReceiver, uint64 opening, uint64 commitDeadline, uint64 revealDeadline, uint256 maxBid)
+// Solidity: event AuctionStarted(uint256 auctionId)
 func (_OvercollateralizedAuctions *OvercollateralizedAuctionsFilterer) ParseAuctionStarted(log types.Log) (*OvercollateralizedAuctionsAuctionStarted, error) {
 	event := new(OvercollateralizedAuctionsAuctionStarted)
 	if err := _OvercollateralizedAuctions.contract.UnpackLog(event, "AuctionStarted", log); err != nil {

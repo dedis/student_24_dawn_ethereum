@@ -7,30 +7,15 @@ import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {Auctions} from "./Auctions.sol";
 
 contract OvercollateralizedAuctions is Auctions {
-    struct Auction {
-        IERC721 collection;
-        uint256 tokenId;
-        IERC20 bidToken;
-        address proceedsReceiver;
-        uint64 opening;
-        uint64 commitDeadline;
-        uint64 revealDeadline;
-        uint256 maxBid;
-        uint256 highestAmount;
-        address highestBidder;
-        mapping(address => bytes32) commits;
-    }
-
-    Auction[] public auctions;
-
     uint64 immutable blockDelay;
 
     constructor(uint64 blockDelay_) {
-	blockDelay = blockDelay_;
+        blockDelay = blockDelay_;
     }
 
     function startAuction(IERC721 collection, uint256 tokenId, IERC20 bidToken, address proceedsReceiver)
         external
+        override
         returns (uint256 auctionId)
     {
         auctionId = auctions.length;
@@ -48,17 +33,7 @@ contract OvercollateralizedAuctions is Auctions {
 
         collection.transferFrom(msg.sender, address(this), auction.tokenId);
 
-        emit AuctionStarted(
-            auctionId,
-            collection,
-            tokenId,
-            bidToken,
-            proceedsReceiver,
-            auction.opening,
-            auction.commitDeadline,
-            auction.revealDeadline,
-            auction.maxBid
-        );
+        emit AuctionStarted(auctionId);
     }
 
     function computeCommitment(bytes32 blinding, address bidder, uint256 amount) public pure returns (bytes32 commit) {
@@ -99,7 +74,7 @@ contract OvercollateralizedAuctions is Auctions {
         }
     }
 
-    function settle(uint256 auctionId) external {
+    function settle(uint256 auctionId) external override {
         Auction storage auction = auctions[auctionId];
 
         require(block.number > auction.revealDeadline, "early");

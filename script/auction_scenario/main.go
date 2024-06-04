@@ -154,14 +154,14 @@ func (s *Scenario) bidderScriptPrepare(account accounts.Account) (*bind.Transact
 }
 
 func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
-	auctionStarted, err := s.waitForAuction()
+	auctionId, auction, err := s.waitForAuction()
 	if err != nil {
 		return err
 	}
 
 	amount := common.Big3 // FIXME: hardcoded
 	if s.OvercollateralizedAuctions != nil {
-	err = s.waitForBlockNumber(auctionStarted.Opening)
+	err = s.waitForBlockNumber(auction.Opening)
 	if err != nil {
 		return err
 	}
@@ -174,31 +174,31 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 		return err
 	}
 
-	_, err = s.checkSuccess(s.OvercollateralizedAuctions.CommitBid(transactOpts, auctionStarted.AuctionId, commit))
+	_, err = s.checkSuccess(s.OvercollateralizedAuctions.CommitBid(transactOpts, auctionId, commit))
 	if err != nil {
 		return err
 	}
 	log.Info("bid committed")
 
-	err = s.waitForBlockNumber(auctionStarted.CommitDeadline)
+	err = s.waitForBlockNumber(auction.CommitDeadline)
 	if err != nil {
 		return err
 	}
 
-	_, err = s.checkSuccess(s.OvercollateralizedAuctions.RevealBid(transactOpts, auctionStarted.AuctionId, blinding, amount))
+	_, err = s.checkSuccess(s.OvercollateralizedAuctions.RevealBid(transactOpts, auctionId, blinding, amount))
 	if err != nil {
 		return err
 	}
 	log.Info("bid revealed")
 } else {
-	err = s.waitForBlockNumber(auctionStarted.Opening - s.Params.BlockDelay) // account for latency
+	err = s.waitForBlockNumber(auction.Opening - s.Params.BlockDelay) // account for latency
 	if err != nil {
 		return err
 	}
 	// 21k base gas, bid itself should be up to ~117k, plus slack
 	const limit = 21_000 + 120_000 + 10_000;
-	targetBlock := auctionStarted.Opening
-	_, err = s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(targetBlock), gasLimit(limit)), auctionStarted.AuctionId, amount))
+	targetBlock := auction.Opening
+	_, err = s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(targetBlock), gasLimit(limit)), auctionId, amount))
 	if err != nil {
 		return err
 	}
@@ -209,19 +209,36 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 	return nil
 }
 
-func (s *Scenario) waitForAuction() (*bindings.AuctionsAuctionStarted, error) {
+func (s *Scenario) waitForAuction() (*big.Int, *struct {
+		Collection       common.Address
+		TokenId          *big.Int
+		BidToken         common.Address
+		ProceedsReceiver common.Address
+		Opening          uint64
+		CommitDeadline   uint64
+		RevealDeadline   uint64
+		MaxBid           *big.Int
+		HighestAmount    *big.Int
+		HighestBidder    common.Address
+	}, error) {
 	// FIXME: should use Watch instead of looping
 	for {
 		it, err := s.Auctions.FilterAuctionStarted(&bind.FilterOpts{Start: 0, End: nil, Context: s.Context})
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		for it.Next() {
-			return it.Event, nil
+			auctionId := it.Event.AuctionId
+			callOpts := &bind.CallOpts{Context: s.Context}
+			auction, err := s.Auctions.Auctions(callOpts, auctionId)
+			if err != nil {
+				return nil, nil, err
+			}
+			return auctionId, &auction, nil
 		}
 		if it.Error() != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 }
@@ -281,13 +298,13 @@ func (s *Scenario) operatorScript() error {
 
 	log.Info("auction started")
 
-	auctionStarted, err := s.waitForAuction()
+	_, auction, err := s.waitForAuction()
 	if err != nil {
 		return err
 	}
-	fmt.Println(auctionStarted)
+	fmt.Println(auction)
 
-	return s.waitForBlockNumber(auctionStarted.RevealDeadline)
+	return s.waitForBlockNumber(auction.RevealDeadline)
 }
 
 func (s *Scenario) checkSuccess(tx *types.Transaction, err error) (*types.Transaction, error) {

@@ -7,27 +7,15 @@ import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {Auctions} from "./Auctions.sol";
 
 contract SimpleAuctions is Auctions {
-    struct Auction {
-        IERC721 collection;
-        uint256 tokenId;
-        IERC20 bidToken;
-        address proceedsReceiver;
-        uint64 opening;
-        uint64 deadline;
-        uint256 highestAmount;
-        address highestBidder;
-    }
-
-    Auction[] public auctions;
-
     uint64 immutable blockDelay;
 
     constructor(uint64 blockDelay_) {
-	blockDelay = blockDelay_;
+        blockDelay = blockDelay_;
     }
 
     function startAuction(IERC721 collection, uint256 tokenId, IERC20 bidToken, address proceedsReceiver)
         external
+        override
         returns (uint256 auctionId)
     {
         auctionId = auctions.length;
@@ -39,28 +27,20 @@ contract SimpleAuctions is Auctions {
         auction.bidToken = bidToken;
         auction.proceedsReceiver = proceedsReceiver;
         auction.opening = uint64(block.number) + blockDelay;
-        auction.deadline = auction.opening + blockDelay;
+        auction.commitDeadline = auction.opening + blockDelay;
+        auction.revealDeadline = auction.commitDeadline;
+        auction.maxBid = type(uint256).max;
 
         collection.transferFrom(msg.sender, address(this), auction.tokenId);
 
-        emit AuctionStarted(
-            auctionId,
-            collection,
-            tokenId,
-            bidToken,
-            proceedsReceiver,
-            auction.opening,
-            auction.deadline,
-            auction.deadline,
-            type(uint256).max
-        );
+        emit AuctionStarted(auctionId);
     }
 
     function bid(uint256 auctionId, uint256 amount) external {
         Auction storage auction = auctions[auctionId];
 
         require(block.number > auction.opening, "early");
-        require(block.number <= auction.deadline, "late");
+        require(block.number <= auction.commitDeadline, "late");
 
         if (amount > auction.highestAmount) {
             address prevHighestBidder = auction.highestBidder;
@@ -72,10 +52,10 @@ contract SimpleAuctions is Auctions {
         }
     }
 
-    function settle(uint256 auctionId) external {
+    function settle(uint256 auctionId) external override {
         Auction storage auction = auctions[auctionId];
 
-        require(block.number > auction.deadline, "early");
+        require(block.number > auction.revealDeadline, "early");
         require(address(auction.collection) != address(0));
 
         auction.bidToken.transfer(auction.proceedsReceiver, auction.highestAmount);

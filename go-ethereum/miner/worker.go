@@ -103,6 +103,7 @@ type environment struct {
 	receipts []*types.Receipt
 	uncles   map[common.Hash]*types.Header
 	shadowTxs []*types.Transaction
+	shadowNonces map[common.Address]uint64
 }
 
 // copy creates a deep copy of environment.
@@ -131,6 +132,10 @@ func (env *environment) copy() *environment {
 	for hash, uncle := range env.uncles {
 		cpy.uncles[hash] = uncle
 	}
+	cpy.shadowNonces = make(map[common.Address]uint64)
+	for addr, nonce := range env.shadowNonces {
+		cpy.shadowNonces[addr] = nonce
+	}
 	return cpy
 }
 
@@ -143,17 +148,17 @@ func (env *environment) unclelist() []*types.Header {
 	return uncles
 }
 
-func (w *worker) getShadowNonce(addr common.Address) uint64 {
-	nonce, ok := w.shadowNonces[addr]
+func (env *environment) getShadowNonce(addr common.Address) uint64 {
+	nonce, ok := env.shadowNonces[addr]
 	if !ok {
-		nonce = w.current.state.GetNonce(addr)
-		w.shadowNonces[addr] = nonce
+		nonce = env.state.GetNonce(addr)
+		env.shadowNonces[addr] = nonce
 	}
 	return nonce
 }
 
-func (w *worker) setShadowNonce(addr common.Address, nonce uint64) {
-	w.shadowNonces[addr] = nonce
+func (env *environment) setShadowNonce(addr common.Address, nonce uint64) {
+	env.shadowNonces[addr] = nonce
 }
 
 // discard terminates the background prefetcher go-routine. It should
@@ -261,8 +266,6 @@ type worker struct {
 	// non-stop and no real transaction will be included.
 	noempty uint32
 
-	shadowNonces map[common.Address]uint64
-
 	// External functions
 	isLocalBlock func(header *types.Header) bool // Function used to determine whether the specified block is mined by local miner.
 
@@ -297,7 +300,6 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 		startCh:            make(chan struct{}, 1),
 		resubmitIntervalCh: make(chan time.Duration),
 		resubmitAdjustCh:   make(chan *intervalAdjust, resubmitAdjustChanSize),
-		shadowNonces:       make(map[common.Address]uint64),
 	}
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
@@ -793,6 +795,7 @@ func (w *worker) makeEnv(parent *types.Block, header *types.Header, coinbase com
 		family:    mapset.NewSet(),
 		header:    header,
 		uncles:    make(map[common.Hash]*types.Header),
+		shadowNonces: make(map[common.Address]uint64),
 	}
 	// when 08 is processed ancestors contain 07 (quick block)
 	for _, ancestor := range w.chain.GetBlocksFromHash(parent.Hash(), 7) {
@@ -1143,8 +1146,6 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		candidateTxs = append(candidateTxs, tx...)
 	}
 
-	// NOTE: gasLimit is dynamic so it may change between now and the target block
-	gasLimit := env.header.GasLimit
 	shadowTxs := []*types.Transaction{}
 	var totalGas uint64
 	for _, tx := range candidateTxs {
@@ -1156,17 +1157,15 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		if err != nil {
 			log.Warn("failed to get sender", "tx", tx.Hash().String(), "err", err)
 		}
-		nonce := tx.Nonce()
-		if nonce != w.getShadowNonce(from) {
+		if tx.Nonce() != env.getShadowNonce(from) {
 			continue
 		}
 		totalGas += tx.Gas()
 		// FIXME: might be DoSable if someone submits a gigantic tx
-		if totalGas > gasLimit {
+		if totalGas > w.config.GasCeil {
 			break
 		}
-		w.setShadowNonce(from, nonce+1)
-		log.Info("selected shadow tx", "from", from, "nonce", nonce, "totalGas", totalGas)
+		env.setShadowNonce(from, tx.Nonce()+1)
 		shadowTxs = append(shadowTxs, tx)
 	}
 
@@ -1188,6 +1187,7 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		}
 	}
 
+	log.Debug("selected shadow txs", "txs", shadowTxs)
 	env.shadowTxs = shadowTxs
 	} else {
 	// pre-Lausanne block building

@@ -103,6 +103,7 @@ type environment struct {
 	receipts []*types.Receipt
 	uncles   map[common.Hash]*types.Header
 	shadowTxs []*types.Transaction
+	shadowNonces map[common.Address]uint64
 }
 
 // copy creates a deep copy of environment.
@@ -131,6 +132,10 @@ func (env *environment) copy() *environment {
 	for hash, uncle := range env.uncles {
 		cpy.uncles[hash] = uncle
 	}
+	cpy.shadowNonces = make(map[common.Address]uint64)
+	for addr, nonce := range env.shadowNonces {
+		cpy.shadowNonces[addr] = nonce
+	}
 	return cpy
 }
 
@@ -141,6 +146,19 @@ func (env *environment) unclelist() []*types.Header {
 		uncles = append(uncles, uncle)
 	}
 	return uncles
+}
+
+func (env *environment) getShadowNonce(addr common.Address) uint64 {
+	nonce, ok := env.shadowNonces[addr]
+	if !ok {
+		nonce = env.state.GetNonce(addr)
+		env.shadowNonces[addr] = nonce
+	}
+	return nonce
+}
+
+func (env *environment) setShadowNonce(addr common.Address, nonce uint64) {
+	env.shadowNonces[addr] = nonce
 }
 
 // discard terminates the background prefetcher go-routine. It should
@@ -777,6 +795,7 @@ func (w *worker) makeEnv(parent *types.Block, header *types.Header, coinbase com
 		family:    mapset.NewSet(),
 		header:    header,
 		uncles:    make(map[common.Hash]*types.Header),
+		shadowNonces: make(map[common.Address]uint64),
 	}
 	// when 08 is processed ancestors contain 07 (quick block)
 	for _, ancestor := range w.chain.GetBlocksFromHash(parent.Hash(), 7) {
@@ -1128,22 +1147,26 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 	}
 
 	shadowTxs := []*types.Transaction{}
+	var totalGas uint64
 	for _, tx := range candidateTxs {
 		if f3bProtocol.IsTibe() && tx.Type() == types.EncryptedTxType && tx.TargetBlock() > env.header.Number.Uint64() + params.BlockDelay {
 			// the target block is too far into the future, it will not be decrypted in time
 			continue
 		}
-		shadowTxs = append(shadowTxs, tx)
-	}
-
-	var totalGas uint64
-	for i, tx := range shadowTxs {
+		from, err := env.signer.Sender(tx)
+		if err != nil {
+			log.Warn("failed to get sender", "tx", tx.Hash().String(), "err", err)
+		}
+		if tx.Nonce() != env.getShadowNonce(from) {
+			continue
+		}
 		totalGas += tx.Gas()
 		// FIXME: might be DoSable if someone submits a gigantic tx
 		if totalGas > w.config.GasCeil {
-			shadowTxs = shadowTxs[:i]
 			break
 		}
+		env.setShadowNonce(from, tx.Nonce()+1)
+		shadowTxs = append(shadowTxs, tx)
 	}
 
 

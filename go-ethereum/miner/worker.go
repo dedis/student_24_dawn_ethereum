@@ -157,10 +157,6 @@ func (env *environment) getShadowNonce(addr common.Address) uint64 {
 	return nonce
 }
 
-func (env *environment) setShadowNonce(addr common.Address, nonce uint64) {
-	env.shadowNonces[addr] = nonce
-}
-
 // discard terminates the background prefetcher go-routine. It should
 // always be called for all created environment instances otherwise
 // the go-routine leak can happen.
@@ -1098,6 +1094,25 @@ func (w *worker) prepareWork(genParams *generateParams) (*environment, error) {
 		commitUncles(w.localUncles)
 		commitUncles(w.remoteUncles)
 	}
+
+	// Prepare fresh shadow nonces
+	// The shadow nonce is equal to the highest nonce in a pending encrypted transaction,
+	// or to the normal nonce if there are none
+	f3bParams, err := f3b.ReadParams()
+	if err != nil {
+		return nil, err
+	}
+	signer := types.MakeSigner(w.chainConfig, header.Number)
+	for i := f3bParams.BlockDelay; i > 0; i-- {
+		pendingEncryptedTxs := core.RetrieveShadowTransactions(w.chain, i)
+		for _, tx := range pendingEncryptedTxs {
+			from, err := signer.Sender(tx)
+			if err != nil {
+				return nil, err
+			}
+			env.shadowNonces[from] = tx.Nonce() + 1
+		}
+	}
 	return env, nil
 }
 
@@ -1165,7 +1180,7 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		if totalGas > w.config.GasCeil {
 			break
 		}
-		env.setShadowNonce(from, tx.Nonce()+1)
+		env.shadowNonces[from]++
 		shadowTxs = append(shadowTxs, tx)
 	}
 

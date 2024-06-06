@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/f3b"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -114,6 +115,7 @@ func applyTransaction(msg types.Message, config *params.ChainConfig, author *com
 
 	// Apply the transaction to the current state (included in the env).
 	result, err := ApplyMessage(evm, msg, gp, nil)
+	log.Info("tx executed", "from", msg.From(), "nonce", msg.Nonce(), "err", err)
 	if err != nil {
 		return nil, err
 	}

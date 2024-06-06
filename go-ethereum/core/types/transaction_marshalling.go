@@ -21,6 +21,7 @@ import (
 	"errors"
 	"math/big"
 
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
@@ -50,10 +51,12 @@ type txJSON struct {
 	Hash common.Hash    `json:"hash"`
 
 	// F3B Extensions
-	EncKey     *hexutil.Bytes `json:"enc_key"`
-	Ciphertext *hexutil.Bytes `json:"ciphertext"`
-	Tag        *hexutil.Bytes `json:"tag"`
+	EncKey      *hexutil.Bytes  `json:"enc_key"`
+	Ciphertext  *hexutil.Bytes  `json:"ciphertext"`
+	Tag         *hexutil.Bytes  `json:"tag"`
+	Reveal      *hexutil.Bytes  `json:"reveal"`
 	TargetBlock *hexutil.Uint64 `json:"targetBlock"`
+	From        *common.Address `json:"from"`
 }
 
 // MarshalJSON marshals as JSON with a hash.
@@ -115,6 +118,22 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		enc.S = (*hexutil.Big)(tx.S)
 		enc.EncKey = (*hexutil.Bytes)(&tx.EncKey)
 		enc.TargetBlock = (*hexutil.Uint64)(&tx.TargetBlock)
+	case *DecryptedTx:
+		enc.ChainID = (*hexutil.Big)(tx.ChainID)
+		enc.AccessList = &tx.AccessList
+		enc.Nonce = (*hexutil.Uint64)(&tx.Nonce)
+		enc.Gas = (*hexutil.Uint64)(&tx.Gas)
+		enc.MaxFeePerGas = (*hexutil.Big)(tx.GasFeeCap)
+		enc.MaxPriorityFeePerGas = (*hexutil.Big)(tx.GasTipCap)
+		enc.Value = (*hexutil.Big)(tx.Value)
+		enc.Data = (*hexutil.Bytes)(&tx.Data)
+		enc.V = (*hexutil.Big)(tx.V)
+		enc.R = (*hexutil.Big)(tx.R)
+		enc.S = (*hexutil.Big)(tx.S)
+		enc.EncKey = (*hexutil.Bytes)(&tx.EncKey)
+		enc.Reveal = (*hexutil.Bytes)(&tx.Reveal)
+		enc.TargetBlock = (*hexutil.Uint64)(&tx.TargetBlock)
+		enc.From = &tx.From
 	}
 
 	return json.Marshal(&enc)
@@ -342,12 +361,79 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 		if dec.EncKey != nil {
 			itx.EncKey = *dec.EncKey
 		}
-		// withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0
-		// if withSignature {
-		// 	if err := sanityCheckSignature(itx.V, itx.R, itx.S, false); err != nil {
-		// 		return err
-		// 	}
-		// }
+		withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0
+		if withSignature {
+			if err := sanityCheckSignature(itx.V, itx.R, itx.S, false); err != nil {
+				return err
+			}
+		}
+
+	case DecryptedTxType:
+		var itx DecryptedTx
+		inner = &itx
+		// Access list is optional for now.
+		if dec.AccessList != nil {
+			itx.AccessList = *dec.AccessList
+		}
+		if dec.ChainID == nil {
+			return errors.New("missing required field 'chainId' in transaction")
+		}
+		itx.ChainID = (*big.Int)(dec.ChainID)
+		itx.To = dec.To
+		if dec.Nonce == nil {
+			return errors.New("missing required field 'nonce' in transaction")
+		}
+		itx.Nonce = uint64(*dec.Nonce)
+		if dec.MaxPriorityFeePerGas == nil {
+			return errors.New("missing required field 'maxPriorityFeePerGas' for txdata")
+		}
+		itx.GasTipCap = (*big.Int)(dec.MaxPriorityFeePerGas)
+		if dec.MaxFeePerGas == nil {
+			return errors.New("missing required field 'maxFeePerGas' for txdata")
+		}
+		itx.GasFeeCap = (*big.Int)(dec.MaxFeePerGas)
+		if dec.Gas == nil {
+			return errors.New("missing required field 'gas' for txdata")
+		}
+		itx.Gas = uint64(*dec.Gas)
+		if dec.Value == nil {
+			return errors.New("missing required field 'value' in transaction")
+		}
+		itx.Value = (*big.Int)(dec.Value)
+		if dec.Data == nil {
+			return errors.New("missing required field 'ciphertext' in transaction")
+		}
+		itx.Data = *dec.Data
+		if dec.V == nil {
+			return errors.New("missing required field 'v' in transaction")
+		}
+		if dec.TargetBlock != nil {
+			itx.TargetBlock = uint64(*dec.TargetBlock)
+		}
+		itx.V = (*big.Int)(dec.V)
+		if dec.R == nil {
+			return errors.New("missing required field 'r' in transaction")
+		}
+		itx.R = (*big.Int)(dec.R)
+		if dec.S == nil {
+			return errors.New("missing required field 's' in transaction")
+		}
+		itx.S = (*big.Int)(dec.S)
+		if dec.EncKey != nil {
+			itx.EncKey = *dec.EncKey
+		}
+		if dec.Reveal != nil {
+			itx.Reveal = *dec.Reveal
+		}
+		if dec.From != nil {
+			itx.From = *dec.From
+		}
+		withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0
+		if withSignature {
+			if err := sanityCheckSignature(itx.V, itx.R, itx.S, false); err != nil {
+				return err
+			}
+		}
 
 	default:
 		return ErrTxTypeNotSupported

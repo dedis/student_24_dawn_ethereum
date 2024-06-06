@@ -184,7 +184,6 @@ func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool, plaintextMsgData []byte
 	if plaintextMsgData != nil {
 		st.setData(plaintextMsgData)
 	}
-	log.Info(fmt.Sprintf("msg.to = %v", msg.To()))
 	return st.TransitionDb()
 }
 
@@ -399,8 +398,6 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			st.state.AddBalance(st.evm.Context.Coinbase, fee)
 		}
 	}
-
-	log.Info("tx executed", "err", vmerr, "ret", ret)
 
 	return &ExecutionResult{
 		UsedGas:    st.gasUsed(),

@@ -75,14 +75,15 @@ func value(value *big.Int) func(*bind.TransactOpts) {
 	}
 }
 
-func encrypt(targetBlock uint64) func(*bind.TransactOpts) {
+func encrypt(s *Scenario, targetBlock uint64) func(*bind.TransactOpts) {
 	return func(transactOpts *bind.TransactOpts) {
 		prevSigner := transactOpts.Signer
 		transactOpts.Signer = func(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			tx, err := tx.Encrypt(addr, targetBlock)
+			t, err := tx.Encrypt(addr, targetBlock)
 			if err != nil {
 				return nil, err
 			}
+			t.ChainID = s.ChainID
 			return prevSigner(addr, tx)
 		}
 	}
@@ -196,14 +197,14 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 	if err != nil {
 		return err
 	}
-	// 21k base gas, bid itself should be up to ~117k, plus slack
-	const limit = 21_000 + 120_000 + 10_000;
+	// 21k base gas, 200k encryption verification, execution should be up to ~117k, plus slack
+	const limit = 21_000 + 200_000 + 120_000 + 10_000;
 	targetBlock := auction.Opening
-	_, err = s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(targetBlock), gasLimit(limit)), auctionId, amount))
+	log.Info("sending bid")
+	_, err = s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(s, targetBlock), gasLimit(limit)), auctionId, amount))
 	if err != nil {
 		return err
 	}
-	log.Info("bid sent")
 }
 
 
@@ -303,17 +304,16 @@ func (s *Scenario) operatorScript() error {
 		return err
 	}
 
+	log.Info("auction started", "opening", auction.Opening, "commit deadline", auction.CommitDeadline, "reveal deadline", auction.RevealDeadline)
+
 	err = s.waitForBlockNumber(auction.RevealDeadline+1)
 	if err != nil {
 		return err
 	}
 
-	log.Info("closing auction")
 	_, err = s.checkSuccess(s.Auctions.Settle(transactOpts, auctionId))
-	if err != nil {
-		return err
-	}
 	log.Info("auction settled")
+	// defer error checking so we can see stats
 
 	filterOpts := &bind.FilterOpts{Start: 0, End: nil, Context: s.Context}
 	commitCount := 0
@@ -325,7 +325,7 @@ func (s *Scenario) operatorScript() error {
 		revealCount++
 	}
 	log.Info("stats", "bids committed", commitCount, "bids revealed", revealCount)
-	return nil
+	return err
 }
 
 func (s *Scenario) checkSuccess(tx *types.Transaction, err error) (*types.Transaction, error) {
@@ -407,6 +407,33 @@ func Main() error {
 		Collection: collection,
 		Params: params,
 	}
+
+	go func() {
+		ch := make(chan *types.Header)
+		_, err := s.Client.SubscribeNewHead(s.Context, ch)
+		if err != nil {
+			log.Error("subscribing", "err", err)
+		}
+		signer := types.NewLausanneSigner(s.ChainID)
+		for h := range ch {
+			log.Info("new block", "number", h.Number)
+			block, err := s.Client.BlockByHash(s.Context, h.Hash())
+			if err != nil {
+				log.Error("block fetch", "err", err)
+				continue
+			}
+			txs := block.Transactions()
+			log.Info("tx count", "count", len(txs))
+			for _, tx := range txs {
+				from, err := signer.Sender(tx)
+				if err != nil {
+					log.Error("signer", "err", err)
+					continue
+				}
+				log.Info("tx", "from", from, "nonce", tx.Nonce())
+			}
+		}
+	}()
 
 	if params.Protocol == "" {
 		// no encryption, have to use overcollateralization

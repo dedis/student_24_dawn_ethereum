@@ -84,6 +84,7 @@ func encrypt(s *Scenario, targetBlock uint64) func(*bind.TransactOpts) {
 				return nil, err
 			}
 			t.ChainID = s.ChainID
+			tx = types.NewTx(t)
 			return prevSigner(addr, tx)
 		}
 	}
@@ -414,24 +415,25 @@ func Main() error {
 		if err != nil {
 			log.Error("subscribing", "err", err)
 		}
-		signer := types.NewLausanneSigner(s.ChainID)
 		for h := range ch {
-			log.Info("new block", "number", h.Number)
 			block, err := s.Client.BlockByHash(s.Context, h.Hash())
 			if err != nil {
 				log.Error("block fetch", "err", err)
 				continue
 			}
 			txs := block.Transactions()
-			log.Info("tx count", "count", len(txs))
+			log.Info("new block", "number", h.Number, "tx count", len(txs))
+			/*
+			signer := types.NewLausanneSigner(s.ChainID)
 			for _, tx := range txs {
 				from, err := signer.Sender(tx)
 				if err != nil {
 					log.Error("signer", "err", err)
 					continue
 				}
-				log.Info("tx", "from", from, "nonce", tx.Nonce())
+				log.Debug("tx", "from", from, "nonce", tx.Nonce())
 			}
+			*/
 		}
 	}()
 

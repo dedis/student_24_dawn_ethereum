@@ -409,34 +409,6 @@ func Main() error {
 		Params: params,
 	}
 
-	go func() {
-		ch := make(chan *types.Header)
-		_, err := s.Client.SubscribeNewHead(s.Context, ch)
-		if err != nil {
-			log.Error("subscribing", "err", err)
-		}
-		for h := range ch {
-			block, err := s.Client.BlockByHash(s.Context, h.Hash())
-			if err != nil {
-				log.Error("block fetch", "err", err)
-				continue
-			}
-			txs := block.Transactions()
-			log.Info("new block", "number", h.Number, "tx count", len(txs))
-			/*
-			signer := types.NewLausanneSigner(s.ChainID)
-			for _, tx := range txs {
-				from, err := signer.Sender(tx)
-				if err != nil {
-					log.Error("signer", "err", err)
-					continue
-				}
-				log.Debug("tx", "from", from, "nonce", tx.Nonce())
-			}
-			*/
-		}
-	}()
-
 	if params.Protocol == "" {
 		// no encryption, have to use overcollateralization
 		s.OvercollateralizedAuctions, err = bindings.NewOvercollateralizedAuctions(addresses["auctions"], client)

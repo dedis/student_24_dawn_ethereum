@@ -26,7 +26,7 @@ contract SimpleAuctions is Auctions {
         auction.tokenId = tokenId;
         auction.bidToken = bidToken;
         auction.proceedsReceiver = proceedsReceiver;
-        auction.opening = uint64(block.number) + blockDelay;
+        auction.opening = uint64(block.number) + blockDelay + 1;
         auction.commitDeadline = auction.opening + blockDelay;
         auction.revealDeadline = auction.commitDeadline;
         auction.maxBid = type(uint256).max;

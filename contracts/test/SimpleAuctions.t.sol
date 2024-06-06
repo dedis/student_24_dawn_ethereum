@@ -39,7 +39,7 @@ contract SimpleAuctionsTest is Test {
         uint256 auctionId = startAuction(tokenId);
         uint256 amount = 1 ether;
         vm.prank(bidder1);
-        vm.roll(block.number + 3);
+        vm.roll(block.number + 4);
         auctions.bid(auctionId, amount);
         assertEq(bidToken.balanceOf(address(auctions)), amount);
         assertEq(bidToken.balanceOf(bidder1), 10 ether - amount);
@@ -58,7 +58,7 @@ contract SimpleAuctionsTest is Test {
         uint256 tokenId = 2;
         uint256 auctionId = startAuction(tokenId);
         uint256 amount = 1 ether;
-        vm.roll(block.number + 5);
+        vm.roll(block.number + 6);
         vm.expectRevert(bytes("late"));
         vm.prank(bidder1);
         auctions.bid(auctionId, amount);
@@ -69,7 +69,7 @@ contract SimpleAuctionsTest is Test {
         uint256 auctionId = startAuction(tokenId);
         uint256 amount = 1 ether;
         vm.prank(bidder1);
-        vm.roll(block.number + 3);
+        vm.roll(block.number + 5);
         auctions.bid(auctionId, amount);
         vm.roll(block.number + 2);
         auctions.settle(auctionId);
@@ -83,7 +83,7 @@ contract SimpleAuctionsTest is Test {
         uint256 auctionId = startAuction(tokenId);
         uint256 amount1 = 1 ether;
         uint256 amount2 = 2 ether;
-        vm.roll(block.number + 3);
+        vm.roll(block.number + 5);
         vm.prank(bidder1);
         auctions.bid(auctionId, amount1);
         vm.prank(bidder2);

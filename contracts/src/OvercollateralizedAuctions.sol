@@ -26,7 +26,7 @@ contract OvercollateralizedAuctions is Auctions {
         auction.tokenId = tokenId;
         auction.bidToken = bidToken;
         auction.proceedsReceiver = proceedsReceiver;
-        auction.opening = uint64(block.number);
+        auction.opening = uint64(block.number) + 1;
         auction.commitDeadline = auction.opening + blockDelay;
         auction.revealDeadline = auction.commitDeadline + blockDelay;
         auction.maxBid = 10 ether; // FIXME: hardcoded

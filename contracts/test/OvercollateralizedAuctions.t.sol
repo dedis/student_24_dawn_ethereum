@@ -54,7 +54,7 @@ contract OvercollateralizedAuctionsTest is Test {
         uint256 auctionId = startAuction(tokenId);
         uint256 amount = 1 ether;
         (, bytes32 commit) = prepareCommit(bidder1, amount);
-        vm.roll(block.number + 1);
+        vm.roll(block.number + 2);
         doCommit(auctionId, bidder1, commit);
         assertEq(bidToken.balanceOf(address(auctions)), 10 ether);
         assertEq(bidToken.balanceOf(bidder1), 0);
@@ -74,7 +74,7 @@ contract OvercollateralizedAuctionsTest is Test {
         uint256 auctionId = startAuction(tokenId);
         uint256 amount = 1 ether;
         (, bytes32 commit) = prepareCommit(bidder1, amount);
-        vm.roll(block.number + 3);
+        vm.roll(block.number + 4);
         vm.expectRevert(bytes("late"));
         doCommit(auctionId, bidder1, commit);
     }
@@ -84,7 +84,7 @@ contract OvercollateralizedAuctionsTest is Test {
         uint256 auctionId = startAuction(tokenId);
         uint256 amount = 1 ether;
         (bytes32 blinding, bytes32 commit) = prepareCommit(bidder1, amount);
-        vm.roll(block.number + 1);
+        vm.roll(block.number + 2);
         doCommit(auctionId, bidder1, commit);
         vm.roll(block.number + 2);
         doReveal(auctionId, bidder1, blinding, amount);
@@ -97,7 +97,7 @@ contract OvercollateralizedAuctionsTest is Test {
         uint256 auctionId = startAuction(tokenId);
         uint256 amount = 1 ether;
         (bytes32 blinding, bytes32 commit) = prepareCommit(bidder1, amount);
-        vm.roll(block.number + 1);
+        vm.roll(block.number + 2);
         doCommit(auctionId, bidder1, commit);
         vm.roll(block.number + 1);
         vm.expectRevert("early");
@@ -109,7 +109,7 @@ contract OvercollateralizedAuctionsTest is Test {
         uint256 auctionId = startAuction(tokenId);
         uint256 amount = 1 ether;
         (bytes32 blinding, bytes32 commit) = prepareCommit(bidder1, amount);
-        vm.roll(block.number + 1);
+        vm.roll(block.number + 2);
         doCommit(auctionId, bidder1, commit);
         vm.roll(block.number + 4);
         vm.expectRevert(bytes("late"));
@@ -121,7 +121,7 @@ contract OvercollateralizedAuctionsTest is Test {
         uint256 auctionId = startAuction(tokenId);
         uint256 amount = 1 ether;
         (bytes32 blinding, bytes32 commit) = prepareCommit(bidder1, amount);
-        vm.roll(block.number + 1);
+        vm.roll(block.number + 2);
         doCommit(auctionId, bidder1, commit);
         vm.roll(block.number + 2);
         vm.expectRevert("commit");
@@ -134,7 +134,7 @@ contract OvercollateralizedAuctionsTest is Test {
         uint256 amount = 1 ether;
         // Scenario: bidder2 sniffs bidder1's commit and wants to copy the bid
         (bytes32 blinding, bytes32 commit) = prepareCommit(bidder1, amount);
-        vm.roll(block.number + 1);
+        vm.roll(block.number + 2);
         doCommit(auctionId, bidder2, commit);
         vm.roll(block.number + 2);
         vm.expectRevert("commit");
@@ -146,7 +146,7 @@ contract OvercollateralizedAuctionsTest is Test {
         uint256 auctionId = startAuction(tokenId);
         uint256 amount = 1 ether;
         (bytes32 blinding, bytes32 commit) = prepareCommit(bidder1, amount);
-        vm.roll(block.number + 1);
+        vm.roll(block.number + 2);
         doCommit(auctionId, bidder1, commit);
         vm.roll(block.number + 2);
         doReveal(auctionId, bidder1, blinding, amount);
@@ -162,7 +162,7 @@ contract OvercollateralizedAuctionsTest is Test {
         uint256 auctionId = startAuction(tokenId);
         uint256 amount1 = 1 ether;
         uint256 amount2 = 2 ether;
-        vm.roll(block.number + 1);
+        vm.roll(block.number + 2);
         (bytes32 blinding1, bytes32 commit1) = prepareCommit(bidder1, amount1);
         doCommit(auctionId, bidder1, commit1);
         (bytes32 blinding2, bytes32 commit2) = prepareCommit(bidder2, amount2);

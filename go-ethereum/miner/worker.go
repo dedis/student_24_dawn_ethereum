@@ -849,7 +849,6 @@ func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*
 	snap := env.state.Snapshot()
 
 	beneficiary := env.coinbase
-	log.Info(fmt.Sprintf("[Other] use current coinbase: %v", beneficiary))
 
 	receipt, err := core.ApplyTransaction(w.chainConfig, w.chain, &beneficiary, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig())
 
@@ -1137,7 +1136,6 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 	if w.chainConfig.IsLausanne(env.header.Number) {
 	f3bProtocol := f3b.SelectedProtocol()
 
-	log.Info("building shadow block")
 	params, err := f3b.ReadParams()
 	if err != nil {
 		return err
@@ -1185,6 +1183,7 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		env.shadowNonces[from]++
 		shadowTxs = append(shadowTxs, tx)
 	}
+	log.Info("shadow block built", "tx count", len(shadowTxs))
 
 
 	// F3B: start VDF computations for the transaction if necessary
@@ -1204,7 +1203,6 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		}
 	}
 
-	log.Debug("selected shadow txs", "txs", shadowTxs)
 	env.shadowTxs = shadowTxs
 	} else {
 	// pre-Lausanne block building

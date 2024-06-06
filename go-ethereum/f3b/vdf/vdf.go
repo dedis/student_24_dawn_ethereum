@@ -31,7 +31,7 @@ func ShareSecret(label []byte, log2t int) (secret, l, π, n *big.Int) {
 	φ := new(big.Int).Mul(pMinusOne, qMinusOne)
 	g := deriveInitial(label, priv.N)
 	secret = new(big.Int).Exp(g, tmp.Exp(common.Big2, tmp.SetUint64(1 << log2t), φ) , priv.N)
-	log.Info("Sharing secret", "label", label, "n", priv.N, "log2t", log2t)
+	log.Debug("Sharing secret", "label", label, "n", priv.N, "log2t", log2t)
 	t := big.NewInt(1 << log2t)
 	l = sampleL(g, secret)
 	r := new(big.Int).Exp(common.Big2, t, l)
@@ -51,7 +51,7 @@ func deriveInitial(label []byte, n *big.Int) *big.Int {
 
 
 func RecoverSecret(label []byte, n *big.Int, log2t int) *big.Int {
-	log.Info("Recovering secret", "label", label, "n", n, "log2t", log2t)
+	log.Debug("Recovering secret", "label", label, "n", n, "log2t", log2t)
 	x := deriveInitial(label, n)
 	t := 1 << log2t
 	for i := 0; i < t; i++ {
@@ -62,7 +62,7 @@ func RecoverSecret(label []byte, n *big.Int, log2t int) *big.Int {
 }
 
 func Proof(label []byte, n *big.Int, log2t int) (l *big.Int, π *big.Int) {
-	log.Info("Generating proof", "label", label, "n", n, "log2t", log2t)
+	log.Debug("Generating proof", "label", label, "n", n, "log2t", log2t)
 	var tmp big.Int
 	g := deriveInitial(label, n)
 	x := new(big.Int).Set(g)
@@ -119,7 +119,7 @@ func sampleL(g, y *big.Int) *big.Int {
 }
 
 func RecoverSecretFromProof(label []byte, l, π, n *big.Int, log2t int) (y *big.Int, ok bool) {
-	log.Info("Recovering secret from proof", "label", label, "n", n, "log2t", log2t)
+	log.Debug("Recovering secret from proof", "label", label, "n", n, "log2t", log2t)
 	g := deriveInitial(label, n)
 	t := new(big.Int).SetUint64(1 << log2t)
 	// r = 2**t mod l

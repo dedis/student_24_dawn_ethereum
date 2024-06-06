@@ -63,20 +63,14 @@ esac
 
 
 cp keystore/$coinbase $producer_datadir/keystore
-tmux splitw -vd geth -datadir "$producer_datadir" -nodiscover -mine -password /dev/null -unlock $coinbase -nodekeyhex $producer_nodekey -nat none
+tmux splitw -vd geth -datadir "$producer_datadir" -nodiscover -mine -password /dev/null -unlock $coinbase -nodekeyhex $producer_nodekey -nat none -http -ws -allow-insecure-unlock
 
-observer_datadir=$tempdir/observer
-geth -datadir "$observer_datadir" -verbosity 1 init $tempdir/clique.json
-tmux neww -d geth -datadir "$observer_datadir" -http -port 0 -authrpc.port 0 -ws -bootnodes $producer_addr
 export ETH_RPC_URL=http://localhost:8545
 
 # wait for geth to start
 while ! cast block-number 2> /dev/null; do
 	sleep 1
 done
-
-# do not duplicate mining work
-geth attach --exec 'miner.stop()' $observer_datadir/geth.ipc
 
 export ADDRESSES_FILE=$tempdir/addresses
 (cd contracts

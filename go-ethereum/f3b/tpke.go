@@ -24,11 +24,8 @@ func NewTPKE(smccli SmcCli) (Protocol, error) {
 	return &TPKE{pk, smccli}, nil
 }
 
-func (e *TPKE) ShareSecret(labelBytes []byte) (seed, encKey []byte, err error) {
-	var label Label
-	copy(label[:], labelBytes)
-
-	U, secret := ibe.ShareSecret(e.pk, label[:])
+func (e *TPKE) ShareSecret(label []byte) (seed, encKey []byte, err error) {
+	U, secret := ibe.ShareSecret(e.pk, label)
 
 	seed, err = secret.MarshalBinary()
 	if err != nil {
@@ -41,17 +38,11 @@ func (e *TPKE) ShareSecret(labelBytes []byte) (seed, encKey []byte, err error) {
 	return
 }
 
-func (e *TPKE) RevealSecret(labelBytes []byte, encKey []byte) (reveal []byte, err error) {
-	var label Label
-	copy(label[:], labelBytes)
-
+func (e *TPKE) RevealSecret(label []byte, encKey []byte) (reveal []byte, err error) {
 	return e.smccli.Extract(label)
 }
 
-func (e *TPKE) RecoverSecret(labelBytes []byte, encKey, reveal []byte) (seed []byte, err error) {
-	var label Label
-	copy(label[:], labelBytes)
-
+func (e *TPKE) RecoverSecret(label []byte, encKey, reveal []byte) (seed []byte, err error) {
 	U := ibe.Suite.G2().Point()
 	err = U.UnmarshalBinary(encKey)
 	if err != nil {
@@ -64,7 +55,7 @@ func (e *TPKE) RecoverSecret(labelBytes []byte, encKey, reveal []byte) (seed []b
 		return nil, err
 	}
 
-	if !ibe.VerifyIdentity(e.pk, identity, label[:]) {
+	if !ibe.VerifyIdentity(e.pk, identity, label) {
 		return nil, errors.New("bad identity")
 	}
 
@@ -83,4 +74,8 @@ func (e *TPKE) IsVdf() bool {
 
 func (e *TPKE) IsTibe() bool {
 	return false
+}
+
+func (_ *TPKE) IsTpke() bool {
+	return true
 }

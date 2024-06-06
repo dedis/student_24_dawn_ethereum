@@ -8,4 +8,5 @@ type Protocol interface {
 	RecoverSecret(label, encKey, reveal []byte) (seed []byte, err error)
 	IsVdf() bool
 	IsTibe() bool
+	IsTpke() bool
 }

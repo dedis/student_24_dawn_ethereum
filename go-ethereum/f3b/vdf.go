@@ -52,3 +52,7 @@ func (_ *VDF) IsVdf() bool {
 func (_ *VDF) IsTibe() bool {
 	return false
 }
+
+func (_ *VDF) IsTpke() bool {
+	return false
+}

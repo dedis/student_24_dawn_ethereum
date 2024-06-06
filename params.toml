@@ -1,16 +1,16 @@
-## Experiment parameters for F3B/ZeroPriorKnownledge
+## Experiment parameters for F3B / Dawn
 
 # Asymmetric encryption protocol to use, can be "", "tpke", "vdf", or "tibe"
 protocol = "tibe"
 
 # How many bidders to simulate
-num_bidders = 20
+num_bidders = 100
 
 # delay between inclusion and execution in blocks
-block_delay = 2
+block_delay = 10
 
 # time between blocks in seconds
-block_time = 5
+block_time = 2
 
 # max units of gas per second
 gas_per_second = 3400000

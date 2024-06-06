@@ -10,9 +10,14 @@ import (
 	"go.dedis.ch/kyber/v3"
 )
 
+// fixed length array for map[]
+const LabelLength = 8
+type Label [LabelLength]byte
+
 type TIBE struct {
 	pk kyber.Point
 	smccli SmcCli
+	cache map[Label][]byte
 }
 
 func NewTIBE(smccli SmcCli) (Protocol, error) {
@@ -21,14 +26,11 @@ func NewTIBE(smccli SmcCli) (Protocol, error) {
 		return nil, err
 	}
 
-	return &TIBE{pk, smccli}, nil
+	return &TIBE{pk, smccli, make(map[Label][]byte)}, nil
 }
 
 func (e *TIBE) ShareSecret(labelBytes []byte) (seed, encKey []byte, err error) {
-	var label Label
-	copy(label[:], labelBytes)
-
-	U, secret := ibe.ShareSecret(e.pk, label[:])
+	U, secret := ibe.ShareSecret(e.pk, labelBytes)
 
 	seed, err = secret.MarshalBinary()
 	if err != nil {
@@ -44,14 +46,19 @@ func (e *TIBE) ShareSecret(labelBytes []byte) (seed, encKey []byte, err error) {
 func (e *TIBE) RevealSecret(labelBytes []byte, encKey []byte) (reveal []byte, err error) {
 	var label Label
 	copy(label[:], labelBytes)
+	reveal, ok := e.cache[label]
+	if !ok {
+		reveal, err = e.smccli.Extract(labelBytes)
+		if err != nil {
+			return nil, err
+		}
+		e.cache[label] = reveal
+	}
+	return reveal, nil
 
-	return e.smccli.Extract(label)
 }
 
 func (e *TIBE) RecoverSecret(labelBytes []byte, encKey, reveal []byte) (seed []byte, err error) {
-	var label Label
-	copy(label[:], labelBytes)
-
 	U := ibe.Suite.G2().Point()
 	err = U.UnmarshalBinary(encKey)
 	if err != nil {
@@ -64,7 +71,7 @@ func (e *TIBE) RecoverSecret(labelBytes []byte, encKey, reveal []byte) (seed []b
 		return nil, err
 	}
 
-	if !ibe.VerifyIdentity(e.pk, identity, label[:]) {
+	if !ibe.VerifyIdentity(e.pk, identity, labelBytes) {
 		return nil, errors.New("bad identity")
 	}
 
@@ -83,4 +90,8 @@ func (e *TIBE) IsVdf() bool {
 
 func (e *TIBE) IsTibe() bool {
 	return true
+}
+
+func (_ *TIBE) IsTpke() bool {
+	return false
 }

@@ -6,16 +6,16 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-type vdfWorker struct {
+type decryptionWorker struct {
 	cancel context.CancelFunc
 	result *types.Transaction
 	err error
 	done chan struct{}
 }
 
-func startVdf(tx *types.Transaction, ctx context.Context) (*vdfWorker, error) {
+func startDecryption(tx *types.Transaction, ctx context.Context) (*decryptionWorker, error) {
 	workerCtx, cancelFunc := context.WithCancel(ctx)
-	w := &vdfWorker{
+	w := &decryptionWorker{
 		cancel: cancelFunc,
 		done: make(chan struct{}),
 	}
@@ -23,16 +23,16 @@ func startVdf(tx *types.Transaction, ctx context.Context) (*vdfWorker, error) {
 	return w, nil
 }
 
-func (w *vdfWorker) work(ctx context.Context, tx *types.Transaction) {
+func (w *decryptionWorker) work(ctx context.Context, tx *types.Transaction) {
 	defer close(w.done)
 	w.result, w.err = tx.Decrypt()
 }
 
-func (w *vdfWorker) Cancel() {
+func (w *decryptionWorker) Cancel() {
 	w.cancel()
 }
 
-func (w *vdfWorker) Wait() (*types.Transaction, error) {
+func (w *decryptionWorker) Wait() (*types.Transaction, error) {
 	<-w.done
 	return w.result, w.err
 }

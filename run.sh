@@ -63,7 +63,7 @@ esac
 
 
 cp keystore/$coinbase $producer_datadir/keystore
-tmux splitw -vd geth -datadir "$producer_datadir" -nodiscover -mine -password /dev/null -unlock $coinbase -nodekeyhex $producer_nodekey -nat none -http -ws -allow-insecure-unlock
+tmux splitw -hd geth -datadir "$producer_datadir" -nodiscover -mine -password /dev/null -unlock $coinbase -nodekeyhex $producer_nodekey -nat none -http -ws -allow-insecure-unlock
 
 export ETH_RPC_URL=http://localhost:8545
 

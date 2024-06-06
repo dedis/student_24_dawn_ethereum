@@ -79,7 +79,7 @@ const (
 	staleThreshold = 7
 )
 
-var vdfWorkers map[common.Hash]*vdfWorker = make(map[common.Hash]*vdfWorker)
+var decryptWorkers map[common.Hash]*decryptionWorker = make(map[common.Hash]*decryptionWorker)
 
 var (
 	errBlockInterruptedByNewHead  = errors.New("new head arrived while building block")
@@ -908,15 +908,15 @@ func (w *worker) commitTransactions(env *environment, txs *types.TransactionsByP
 
 		// F3B: decrypt the transaction if necessary
 		if tx.Type() == types.EncryptedTxType {
-			if f3bProtocol.IsVdf() {
-				w, ok := vdfWorkers[tx.Hash()]
+			if f3bProtocol.IsVdf() || f3bProtocol.IsTpke() {
+				w, ok := decryptWorkers[tx.Hash()]
 				if !ok {
 					log.Error("VDF worker not found", "tx", tx.Hash().String())
 					txs.Pop()
 					continue
 				}
 				tx, err = w.Wait()
-				//delete(vdfWorkers, tx.Hash())
+				//delete(decryptWorkers, tx.Hash())
 			} else {
 				tx, err = tx.Decrypt()
 			}
@@ -1143,9 +1143,27 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 	pendingEncryptedTxs := core.RetrieveShadowTransactions(w.chain, params.BlockDelay)
 
 	log.Debug("retrieved shadow txs", "txs", pendingEncryptedTxs)
+
+	// F3B: start SMC requests in parallel for TPKE
+	if f3bProtocol != nil && f3bProtocol.IsTpke() {
+		for _, tx := range pendingEncryptedTxs {
+			if tx.Type() == types.EncryptedTxType {
+				if _, ok := decryptWorkers[tx.Hash()]; ok {
+					continue
+				}
+				w, err := startDecryption(tx, context.TODO())
+				if err != nil {
+					log.Error("start decryption", "err", err)
+				}
+				decryptWorkers[tx.Hash()] = w
+				log.Debug("starting decryption", "tx", tx.Hash().String(), "decryptWorkers", decryptWorkers)
+			}
+		}
+	}
 	if len(pendingEncryptedTxs) > 0 {
 		txs := types.NewEncryptedTxsByConsensus(env.signer, pendingEncryptedTxs)
 		if err := w.commitTransactions(env, txs, interrupt); err != nil {
+			log.Error("commit transactions", "err", err)
 			return err
 		}
 	}
@@ -1177,28 +1195,29 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 		}
 		totalGas += tx.Gas()
 		// FIXME: might be DoSable if someone submits a gigantic tx
-		if totalGas > w.config.GasCeil {
+		if totalGas > env.header.GasLimit {
 			break
 		}
+		log.Info("adding tx to shadow block", "gas", tx.Gas(), "total gas", totalGas)
 		env.shadowNonces[from]++
 		shadowTxs = append(shadowTxs, tx)
 	}
-	log.Info("shadow block built", "tx count", len(shadowTxs))
+	log.Info("shadow block built", "tx count", len(shadowTxs), "total gas", totalGas)
 
 
 	// F3B: start VDF computations for the transaction if necessary
 	if f3bProtocol != nil && f3bProtocol.IsVdf() {
 		for _, tx := range shadowTxs {
 			if tx.Type() == types.EncryptedTxType {
-				if _, ok := vdfWorkers[tx.Hash()]; ok {
+				if _, ok := decryptWorkers[tx.Hash()]; ok {
 					continue
 				}
-				w, err := startVdf(tx, context.TODO())
+				w, err := startDecryption(tx, context.TODO())
 				if err != nil {
-					log.Error("start vdf", "err", err)
+					log.Error("start decryption", "err", err)
 				}
-				vdfWorkers[tx.Hash()] = w
-				log.Debug("starting vdf", "tx", tx.Hash().String(), "vdfWorkers", vdfWorkers)
+				decryptWorkers[tx.Hash()] = w
+				log.Debug("starting decryption", "tx", tx.Hash().String(), "decryptWorkers", decryptWorkers)
 			}
 		}
 	}

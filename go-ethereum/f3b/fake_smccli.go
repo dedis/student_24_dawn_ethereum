@@ -25,6 +25,6 @@ func (c *fakeSmcCli) GetPublicKey() (kyber.Point, error) {
 	return c.pubkey.Clone(), nil
 }
 
-func (c *fakeSmcCli) Extract(label Label) (v []byte, err error) {
-	return bdn.Sign(ibe.Suite, c.privkey, label[:])
+func (c *fakeSmcCli) Extract(label []byte) (v []byte, err error) {
+	return bdn.Sign(ibe.Suite, c.privkey, label)
 }

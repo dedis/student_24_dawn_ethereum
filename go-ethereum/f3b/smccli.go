@@ -14,10 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/f3b/ibe"
 )
 
-// fixed length array for map[]
-const LabelLength = 32
-type Label [LabelLength]byte
-
 func getEnv(name string) string {
 	value, ok := os.LookupEnv(name)
 	if !ok {
@@ -28,18 +24,16 @@ func getEnv(name string) string {
 
 type SmcCli interface {
 	GetPublicKey() (kyber.Point, error)
-	Extract(Label) ([]byte, error)
+	Extract([]byte) ([]byte, error)
 }
 
 type smcCliImpl struct {
 	configPath string
-	cache map[Label][]byte
 }
 
 func NewSmcCli(p *FullParams) SmcCli {
 	c := new(smcCliImpl)
 	c.configPath = filepath.Clean(p.SmcPath)
-	c.cache = make(map[Label][]byte)
 	return c
 }
 
@@ -57,16 +51,8 @@ func (c *smcCliImpl) GetPublicKey() (kyber.Point, error) {
 	return pk, nil
 }
 
-func (c *smcCliImpl) Extract(label Label) (v []byte, err error) {
-	v, ok := c.cache[label]
-	if !ok {
-		v, err = c.run("extract", "--label", hex.EncodeToString(label[:]))
-		if err != nil {
-			return nil, err
-		}
-		c.cache[label] = v
-	}
-	return v, nil
+func (c *smcCliImpl) Extract(label []byte) (v []byte, err error) {
+	return c.run("extract", "--label", hex.EncodeToString(label[:]))
 }
 
 func (c *smcCliImpl) run(args ...string) ([]byte, error) {

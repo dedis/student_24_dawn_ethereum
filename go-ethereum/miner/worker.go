@@ -1103,14 +1103,16 @@ func (w *worker) prepareWork(genParams *generateParams) (*environment, error) {
 		return nil, err
 	}
 	signer := types.MakeSigner(w.chainConfig, header.Number)
-	for i := f3bParams.BlockDelay; i > 0; i-- {
-		pendingEncryptedTxs := core.RetrieveShadowTransactions(w.chain, i)
+	for i := int(f3bParams.BlockDelay); i >= 0; i-- {
+		pendingEncryptedTxs := core.RetrieveShadowTransactions(w.chain, uint64(i))
 		for _, tx := range pendingEncryptedTxs {
 			from, err := signer.Sender(tx)
 			if err != nil {
 				return nil, err
 			}
-			env.shadowNonces[from] = tx.Nonce() + 1
+			if env.shadowNonces[from] <= tx.Nonce() {
+				env.shadowNonces[from] = tx.Nonce() + 1
+			}
 		}
 	}
 	return env, nil

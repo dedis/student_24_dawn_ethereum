@@ -11,6 +11,7 @@ import (
 	"time"
 	"sync"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -291,12 +292,11 @@ func (s *Scenario) operatorScript() error {
 
 	s.BiddersReady.Wait()
 
+	log.Info("starting auction")
 	_, err = s.checkSuccess(s.Auctions.StartAuction(transactOpts, s.Addresses["collection"], tokenId, s.Addresses["weth"], common.Address{}))
 	if err != nil {
 		return err
 	}
-
-	log.Info("auction started")
 
 	auctionId, auction, err := s.waitForAuction()
 	if err != nil {
@@ -338,6 +338,8 @@ func (s *Scenario) checkSuccess(tx *types.Transaction, err error) (*types.Transa
 		rcpt, err = s.Client.TransactionReceipt(s.Context, tx.Hash())
 		if err == nil {
 			break
+		} else if err != ethereum.NotFound {
+			return nil, err
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
@@ -427,7 +429,9 @@ func Main() error {
 		}
 		go s.bidderScript(account)
 	}
-	defer s.BiddersDone.Wait()
 
-	return s.operatorScript()
+	err = s.operatorScript()
+	cancel()
+	s.BiddersDone.Wait()
+	return err
 }

@@ -1198,7 +1198,7 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 					log.Error("start vdf", "err", err)
 				}
 				vdfWorkers[tx.Hash()] = w
-				log.Info("starting vdf", "tx", tx.Hash().String(), "vdfWorkers", vdfWorkers)
+				log.Debug("starting vdf", "tx", tx.Hash().String(), "vdfWorkers", vdfWorkers)
 			}
 		}
 	}

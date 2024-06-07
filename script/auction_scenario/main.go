@@ -151,8 +151,6 @@ func (s *Scenario) bidderScriptPrepare(account accounts.Account) (*bind.Transact
 		return nil, err
 	}
 
-	log.Info("bidder ready")
-
 	return transactOpts, nil
 }
 
@@ -201,7 +199,7 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 	// 21k base gas, 200k encryption verification, execution should be up to ~117k, plus slack
 	const limit = 21_000 + 200_000 + 120_000 + 10_000;
 	targetBlock := auction.Opening
-	log.Info("sending bid")
+	log.Debug("sending bid")
 	_, err = s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(s, targetBlock), gasLimit(limit)), auctionId, amount))
 	if err != nil {
 		return err
@@ -293,8 +291,8 @@ func (s *Scenario) operatorScript() error {
 	}
 
 	s.BiddersReady.Wait()
+	log.Info("bidders ready")
 
-	log.Info("starting auction")
 	_, err = s.checkSuccess(s.Auctions.StartAuction(transactOpts, s.Addresses["collection"], tokenId, s.Addresses["weth"], common.Address{}))
 	if err != nil {
 		return err

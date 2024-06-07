@@ -1162,6 +1162,7 @@ func (w *worker) fillTransactions(interrupt *int32, env *environment) error {
 	}
 	if len(pendingEncryptedTxs) > 0 {
 		txs := types.NewEncryptedTxsByConsensus(env.signer, pendingEncryptedTxs)
+
 		if err := w.commitTransactions(env, txs, interrupt); err != nil {
 			log.Error("commit transactions", "err", err)
 			return err
@@ -1278,9 +1279,13 @@ func (w *worker) commitWork(interrupt *int32, noempty bool, timestamp int64) {
 	if err != nil {
 		return
 	}
+
 	// Create an empty block based on temporary copied state for
 	// sealing in advance without waiting block execution finished.
-	if !noempty && atomic.LoadUint32(&w.noempty) == 0 {
+	// F3B: we forcefully disable empty blocks if delayed execution is on.
+	// If a non-empty shadow block has matured, we should not produce an empty block.
+	// Better to have a late or missed block.
+	if f3b.SelectedProtocol() == nil && !noempty && atomic.LoadUint32(&w.noempty) == 0 {
 		w.commit(work.copy(), nil, false, start)
 	}
 

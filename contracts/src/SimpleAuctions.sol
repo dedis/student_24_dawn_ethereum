@@ -33,6 +33,12 @@ contract SimpleAuctions is Auctions {
 
         collection.transferFrom(msg.sender, address(this), auction.tokenId);
 
+	// use a dummy bid to initialize storage slots
+	uint256 amount = 1;
+	auction.highestBidder = msg.sender;
+	auction.highestAmount = amount;
+	auction.bidToken.transferFrom(msg.sender, address(this), amount);
+
         emit AuctionStarted(auctionId);
     }
 

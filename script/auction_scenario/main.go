@@ -196,8 +196,8 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 	if err != nil {
 		return err
 	}
-	// 21k base gas, 200k encryption verification, execution should be up to ~117k, plus slack
-	const limit = 21_000 + 200_000 + 120_000 + 10_000;
+	// 21k base gas, 200k encryption verification, execution should empirically be up to ~88k depending on code path, plus slack
+	const limit = 21_000 + 200_000 + 88000 + 10_000;
 	targetBlock := auction.Opening
 	log.Debug("sending bid")
 	_, err = s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(s, targetBlock), gasLimit(limit)), auctionId, amount))
@@ -286,6 +286,16 @@ func (s *Scenario) operatorScript() error {
 
 	tokenId := common.Big1
 	_, err = s.checkSuccess(s.Collection.Approve(transactOpts, s.Addresses["auctions"], tokenId))
+	if err != nil {
+		return err
+	}
+
+	_, err = s.WETH.Deposit(with(transactOpts, value(common.Big1)))
+	if err != nil {
+		return err
+	}
+
+	_, err = s.checkSuccess(s.WETH.Approve(transactOpts, s.Addresses["auctions"], common.Big1))
 	if err != nil {
 		return err
 	}

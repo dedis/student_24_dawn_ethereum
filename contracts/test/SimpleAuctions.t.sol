@@ -31,6 +31,8 @@ contract SimpleAuctionsTest is Test {
 
     function startAuction(uint256 tokenId) internal returns (uint256 auctionId) {
         collection.approve(address(auctions), tokenId);
+        deal(address(bidToken), address(this), 1 wei);
+        bidToken.approve(address(auctions), 1 wei);
         return auctions.startAuction(collection, tokenId, bidToken, proceedsReceiver);
     }
 

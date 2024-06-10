@@ -31,6 +31,8 @@ contract OvercollateralizedAuctionsTest is Test {
 
     function startAuction(uint256 tokenId) internal returns (uint256 auctionId) {
         collection.approve(address(auctions), tokenId);
+        deal(address(bidToken), address(this), 1 wei);
+        bidToken.approve(address(auctions), 1 wei);
         return auctions.startAuction(collection, tokenId, bidToken, proceedsReceiver);
     }
 
@@ -56,7 +58,7 @@ contract OvercollateralizedAuctionsTest is Test {
         (, bytes32 commit) = prepareCommit(bidder1, amount);
         vm.roll(block.number + 2);
         doCommit(auctionId, bidder1, commit);
-        assertEq(bidToken.balanceOf(address(auctions)), 10 ether);
+        assertEq(bidToken.balanceOf(address(auctions)), 10 ether + 1 wei);
         assertEq(bidToken.balanceOf(bidder1), 0);
     }
 

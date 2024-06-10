@@ -160,7 +160,8 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 		return err
 	}
 
-	amount := common.Big3 // FIXME: hardcoded
+	maxBid, _ := new(big.Int).SetString("10000000000000000000", 10)
+	amount, err := rand.Int(rand.Reader, maxBid)
 	if s.OvercollateralizedAuctions != nil {
 	err = s.waitForBlockNumber(auction.Opening)
 	if err != nil {

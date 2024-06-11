@@ -29,3 +29,14 @@ Run `run.sh` to start all the services and give a shell.
 # Parameters
 The `params.toml` file can be edited to change the experiment parameters.
 In particular, it allows selecting the encryption method or reverting to C&R.
+
+# Known bugs
+
+`cast` seems to have issues with transaction signatures during the experiments.
+This applies even when the Lausanne hard fork is off.
+Try for example `cast tx 0xedf4e0d37e54c49710960396abff350f90c6b6aa83100ebba236e488e39dd586`
+and note that the `from` value is the zero address.
+The cause of this is currently unknown.
+
+More of a quirk: the SMC uses Schnorr over BN254 as a way to authenticate nodes.
+It is a bit odd, it would make more sense to do Ed25519.

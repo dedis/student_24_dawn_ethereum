@@ -1,4 +1,3 @@
-tmux set -g remain-on-exit failed ||
 tmux set -g remain-on-exit on
 
 tempdir=$(mktemp -dt f3b.XXXXXX)
@@ -41,7 +40,7 @@ case $protocol in
 	tpke | tibe )
 		
 for i in $(seq $n); do
-	tmux neww -de LLVL=info smccli --config $tempdir/dela/node$i start --routing tree --listen tcp://127.0.0.1:$((2000+i))
+	tmux neww -d env LLVL=info smccli --config $tempdir/dela/node$i start --routing tree --listen tcp://127.0.0.1:$((2000+i))
 done
 sleep 1
 

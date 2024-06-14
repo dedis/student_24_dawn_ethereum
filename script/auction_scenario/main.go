@@ -79,12 +79,10 @@ func encrypt(s *Scenario, targetBlock uint64) func(*bind.TransactOpts) {
 	return func(transactOpts *bind.TransactOpts) {
 		prevSigner := transactOpts.Signer
 		transactOpts.Signer = func(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			t, err := tx.Encrypt(addr, targetBlock)
+			tx, err := tx.Encrypt(addr, targetBlock)
 			if err != nil {
 				return nil, err
 			}
-			t.ChainID = s.ChainID
-			tx = types.NewTx(t)
 			return prevSigner(addr, tx)
 		}
 	}

@@ -44,6 +44,6 @@ func SelectedProtocol() Protocol {
 
 // ForceSelectedProtocol forcefully sets the globally selected protocol.
 // It is only meant to be used in tests.
-func ForceSelectedProtocol(_ *testing.T, p Protocol) {
+func ForceSelectedProtocol(_ testing.TB, p Protocol) {
 	protocol = p
 }

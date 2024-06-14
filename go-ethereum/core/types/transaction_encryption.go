@@ -19,7 +19,7 @@ func getLabel(from common.Address, nonce uint64, f3bProtocol f3b.Protocol, targe
 		return binary.BigEndian.AppendUint64(from.Bytes(), nonce)
 	}
 }
-func (t *Transaction) Encrypt(from common.Address, targetBlock uint64) (*EncryptedTx, error) {
+func (t *Transaction) Encrypt(from common.Address, targetBlock uint64) (*Transaction, error) {
 	f3bProtocol := f3b.SelectedProtocol()
 	label := getLabel(from, t.Nonce(), f3bProtocol, targetBlock)
 	seed, encKey, err := f3bProtocol.ShareSecret(label)
@@ -37,7 +37,7 @@ func (t *Transaction) Encrypt(from common.Address, targetBlock uint64) (*Encrypt
 		return nil, err
 	}
 
-	return &EncryptedTx{
+	return NewTx(&EncryptedTx{
 		ChainID:    t.ChainId(),
 		Nonce:      t.Nonce(),
 		GasTipCap:  t.GasTipCap(),
@@ -48,7 +48,7 @@ func (t *Transaction) Encrypt(from common.Address, targetBlock uint64) (*Encrypt
 		Tag:        tag,
 		EncKey:     encKey,
 		TargetBlock: targetBlock,
-	}, nil
+	}), nil
 }
 func (t *Transaction) Decrypt() (*Transaction, error) {
 	f3bProtocol := f3b.SelectedProtocol()

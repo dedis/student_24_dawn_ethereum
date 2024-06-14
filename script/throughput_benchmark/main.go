@@ -24,7 +24,7 @@ func benchmark(b *testing.B, batchSize int) {
 	}
 	
 	b.ResetTimer()
-	for _ = range b.N {
+	for i := 0; i < b.N; i++ {
 	var wg sync.WaitGroup
 	wg.Add(len(inputs))
 	for i := range inputs {
@@ -42,7 +42,7 @@ func benchmark(b *testing.B, batchSize int) {
 
 func main() {
 	//testing.Init()
-	for i := range 12 {
+	for i := 0; i < 12; i++ {
 		batchSize := 1 << i
 		r := testing.Benchmark(func(b *testing.B) {
 			benchmark(b, batchSize)

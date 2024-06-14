@@ -1,8 +1,6 @@
 module github.com/dedis/f3b-ethereum
 
-go 1.22.1
-
-toolchain go1.22.2
+go 1.20
 
 replace go.dedis.ch/kyber/v3 => ./kyber/
 

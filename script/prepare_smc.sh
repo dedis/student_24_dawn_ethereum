@@ -34,24 +34,30 @@ blockdelay="$(jq -r .BlockDelay < .params.json)"
 
 geth -datadir "$producer_datadir" -verbosity 1 init $tempdir/clique.json
 
+n=16
+t=$((n/2+1))
+
 case $protocol in
 	tpke | tibe )
-tmux neww -de LLVL=info smccli --config $tempdir/dela/node1 start --routing tree --listen tcp://127.0.0.1:2001
-tmux neww -de LLVL=info smccli --config $tempdir/dela/node2 start --routing tree --listen tcp://127.0.0.1:2002
-tmux neww -de LLVL=info smccli --config $tempdir/dela/node3 start --routing tree --listen tcp://127.0.0.1:2003
+		
+for i in $(seq $n); do
+	tmux neww -de LLVL=info smccli --config $tempdir/dela/node$i start --routing tree --listen tcp://127.0.0.1:$((2000+i))
+done
 sleep 1
 
-smccli --config $tempdir/dela/node2 minogrpc join --address //127.0.0.1:2001 $(smccli --config $tempdir/dela/node1 minogrpc token)
-smccli --config $tempdir/dela/node3 minogrpc join --address //127.0.0.1:2001 $(smccli --config $tempdir/dela/node1 minogrpc token)
-                                   
-smccli --config $tempdir/dela/node1 dkg listen
-smccli --config $tempdir/dela/node2 dkg listen
-smccli --config $tempdir/dela/node3 dkg listen
 
-smccli --config $tempdir/dela/node1 dkg setup \
-    --authority $(cat $tempdir/dela/node1/dkgauthority) \
-    --authority $(cat $tempdir/dela/node2/dkgauthority) \
-    --authority $(cat $tempdir/dela/node3/dkgauthority) \
-    --threshold 2
+for i in $(seq 2 $n); do
+	smccli --config $tempdir/dela/node$i minogrpc join --address //127.0.0.1:2001 $(smccli --config $tempdir/dela/node1 minogrpc token)
+done
+                                   
+for i in $(seq $n); do
+	smccli --config $tempdir/dela/node$i dkg listen
+done
+
+cmd=(smccli --config $tempdir/dela/node1 dkg setup --threshold $t)
+for i in $(seq $n); do
+    cmd+=(--authority $(cat $tempdir/dela/node$i/dkgauthority))
+done
+"${cmd[@]}"
     ;;
 esac

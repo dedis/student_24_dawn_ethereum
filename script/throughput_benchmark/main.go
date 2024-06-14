@@ -47,6 +47,6 @@ func main() {
 		r := testing.Benchmark(func(b *testing.B) {
 			benchmark(b, batchSize)
 		})
-		fmt.Printf("batchSize=%d\t%s", batchSize, r)
+		fmt.Printf("batchSize=%d\t%s\n", batchSize, r)
 	}
 }

@@ -26,7 +26,7 @@ import (
 
 
 func main() {
-	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
+	log.Root().SetHandler(log.LvlFilterHandler(log.LvlDebug, log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
 	if err := Main(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -174,22 +174,22 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 		return err
 	}
 
-	_, err = s.checkSuccess(s.OvercollateralizedAuctions.CommitBid(transactOpts, auctionId, commit))
+	rcpt, err := s.checkSuccess(s.OvercollateralizedAuctions.CommitBid(transactOpts, auctionId, commit))
 	if err != nil {
 		return err
 	}
-	log.Info("bid committed")
+	log.Debug("bid committed", "gas used", rcpt.GasUsed)
 
 	err = s.waitForBlockNumber(auction.CommitDeadline)
 	if err != nil {
 		return err
 	}
 
-	_, err = s.checkSuccess(s.OvercollateralizedAuctions.RevealBid(transactOpts, auctionId, blinding, amount))
+	rcpt, err = s.checkSuccess(s.OvercollateralizedAuctions.RevealBid(transactOpts, auctionId, blinding, amount))
 	if err != nil {
 		return err
 	}
-	log.Info("bid revealed")
+	log.Debug("bid revealed", "gas used", rcpt.GasUsed)
 } else {
 	err = s.waitForBlockNumber(auction.Opening - s.Params.BlockDelay) // account for latency
 	if err != nil {
@@ -198,11 +198,11 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 	// 21k base gas, 200k encryption verification, execution should empirically be up to ~88k depending on code path, plus slack
 	const limit = 21_000 + 200_000 + 88000 + 10_000;
 	targetBlock := auction.Opening
-	log.Debug("sending bid")
-	_, err = s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(s, targetBlock), gasLimit(limit)), auctionId, amount))
+	rcpt, err := s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(s, targetBlock), gasLimit(limit)), auctionId, amount))
 	if err != nil {
 		return err
 	}
+	log.Debug("bid sent", "gas used", rcpt.GasUsed)
 }
 
 
@@ -336,7 +336,7 @@ func (s *Scenario) operatorScript() error {
 	return err
 }
 
-func (s *Scenario) checkSuccess(tx *types.Transaction, err error) (*types.Transaction, error) {
+func (s *Scenario) checkSuccess(tx *types.Transaction, err error) (*types.Receipt, error) {
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +354,7 @@ func (s *Scenario) checkSuccess(tx *types.Transaction, err error) (*types.Transa
 	if rcpt.Status != types.ReceiptStatusSuccessful {
 		return nil, fmt.Errorf("transaction failed")
 	}
-	return tx, nil
+	return rcpt, nil
 }
 
 

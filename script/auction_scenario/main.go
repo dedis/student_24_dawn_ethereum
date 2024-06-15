@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
@@ -196,7 +197,11 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 		return err
 	}
 	// 21k base gas, 200k encryption verification, execution should empirically be up to ~88k depending on code path, plus slack
-	const limit = 21_000 + 200_000 + 88000 + 10_000;
+	igas, err := core.IntrinsicGas([]byte{}, types.AccessList{}, false, true, true, true)
+	if err != nil {
+		return err
+	}
+	limit := igas + 50537;
 	targetBlock := auction.Opening
 	rcpt, err := s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(s, targetBlock), gasLimit(limit)), auctionId, amount))
 	if err != nil {

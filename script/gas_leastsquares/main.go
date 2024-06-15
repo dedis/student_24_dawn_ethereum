@@ -77,10 +77,8 @@ func Main() error {
 		{"smc", smc},
 		{"vdf", vdf},
 	} {
-		feature_variable_names[f.feature] = fmt.Sprintf(`c_\text{%s}`, f.desc)
+		feature_variable_names[f.feature] = fmt.Sprintf(`\text{%s}`, f.desc)
 	}
-	fmt.Printf(`c_\text{base} = %d & c_\text{smc} = %d & c_\text{vdf} = %d \\`, components[base.Index()], components[smc.Index()], components[vdf.Index()])
-	fmt.Println()
 	fmt.Printf(`\begin{tabular}{llr}`)
 	fmt.Println()
 	for _, row := range []struct{desc string; features features}{
@@ -104,11 +102,15 @@ func Main() error {
 				}
 			}
 		}
-		fmt.Printf(`%s & %s & %d \\`, row.desc, strings.Join(terms, " + "), sum)
+		fmt.Printf(`%s & $%s$ & $%d$ \\`, row.desc, strings.Join(terms, " + "), sum)
 		fmt.Println()
 	}
 	fmt.Printf(`\end{tabular}`)
 	fmt.Println()
+
+	fmt.Printf(`\text{base} = %d & \text{smc} = %d & \text{vdf} = %d \\`, components[base.Index()], components[smc.Index()], components[vdf.Index()])
+	fmt.Println()
+
 	return nil
 }
 

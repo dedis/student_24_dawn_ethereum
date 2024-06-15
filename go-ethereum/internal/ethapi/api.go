@@ -731,10 +731,10 @@ func (s *BlockChainAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) m
 }
 
 // GetBlockByNumber returns the requested canonical block.
-//   - When blockNr is -1 the chain head is returned.
-//   - When blockNr is -2 the pending chain head is returned.
-//   - When fullTx is true all transactions in the block are returned, otherwise
-//     only the transaction hash is returned.
+// * When blockNr is -1 the chain head is returned.
+// * When blockNr is -2 the pending chain head is returned.
+// * When fullTx is true all transactions in the block are returned, otherwise
+//   only the transaction hash is returned.
 func (s *BlockChainAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
 	block, err := s.b.BlockByNumber(ctx, number)
 	if block != nil && err == nil {
@@ -1266,7 +1266,7 @@ type RPCTransaction struct {
 // newRPCTransaction returns a transaction that will serialize to the RPC
 // representation, with the given location metadata set (if available).
 func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, baseFee *big.Int, config *params.ChainConfig) *RPCTransaction {
-	signer := types.NewEIP155Signer(config.ChainID)
+	signer := types.MakeSigner(config, new(big.Int).SetUint64(blockNumber))
 	from, _ := types.Sender(signer, tx)
 	v, r, s := tx.RawSignatureValues()
 	result := &RPCTransaction{
@@ -1299,20 +1299,6 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		result.Accesses = &al
 		result.ChainID = (*hexutil.Big)(tx.ChainId())
 	case types.DynamicFeeTxType:
-		al := tx.AccessList()
-		result.Accesses = &al
-		result.ChainID = (*hexutil.Big)(tx.ChainId())
-		result.GasFeeCap = (*hexutil.Big)(tx.GasFeeCap())
-		result.GasTipCap = (*hexutil.Big)(tx.GasTipCap())
-		// if the transaction has been mined, compute the effective gas price
-		if baseFee != nil && blockHash != (common.Hash{}) {
-			// price = min(tip, gasFeeCap - baseFee) + baseFee
-			price := math.BigMin(new(big.Int).Add(tx.GasTipCap(), baseFee), tx.GasFeeCap())
-			result.GasPrice = (*hexutil.Big)(price)
-		} else {
-			result.GasPrice = (*hexutil.Big)(tx.GasFeeCap())
-		}
-	case types.EncryptedTxType:
 		al := tx.AccessList()
 		result.Accesses = &al
 		result.ChainID = (*hexutil.Big)(tx.ChainId())
@@ -1647,47 +1633,6 @@ func (s *TransactionAPI) GetTransactionReceipt(ctx context.Context, hash common.
 	if receipt.ContractAddress != (common.Address{}) {
 		fields["contractAddress"] = receipt.ContractAddress
 	}
-	return fields, nil
-}
-
-// GetTransactionReceipt returns the transaction receipt for the given transaction hash.
-func (s *TransactionAPI) GetAllReceipt(ctx context.Context, blockHash common.Hash) (map[string]interface{}, error) {
-	receipts, err := s.b.GetReceipts(ctx, blockHash)
-	if err != nil || len(receipts) == 0 {
-		return nil, err
-	}
-	receipt := receipts[0]
-
-	// Derive the sender.
-	// bigblock := new(big.Int).SetUint64(blockNumber)
-	// signer := types.MakeSigner(s.b.ChainConfig(), bigblock)
-	// from, _ := types.Sender(signer, tx)
-
-	fields := map[string]interface{}{
-		"blockHash":         blockHash,
-		"blockNumber":       receipt.BlockNumber,
-		"transactionHash":   receipt.TxHash,
-		"transactionIndex":  hexutil.Uint64(receipt.TransactionIndex),
-		"from":              receipt.ContractAddress,
-		"to":                receipt.ContractAddress,
-		"gasUsed":           hexutil.Uint64(receipt.GasUsed),
-		"cumulativeGasUsed": hexutil.Uint64(receipt.CumulativeGasUsed),
-		"contractAddress":   nil,
-		"logs":              receipt.Logs,
-		"logsBloom":         receipt.Bloom,
-		"type":              hexutil.Uint(receipt.Type),
-	}
-
-	// Assign receipt status or post state.
-	if len(receipt.PostState) > 0 {
-		fields["root"] = hexutil.Bytes(receipt.PostState)
-	} else {
-		fields["status"] = hexutil.Uint(receipt.Status)
-	}
-	if receipt.Logs == nil {
-		fields["logs"] = []*types.Log{}
-	}
-
 	return fields, nil
 }
 

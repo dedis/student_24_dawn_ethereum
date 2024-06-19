@@ -153,6 +153,14 @@ func (s *Scenario) bidderScriptPrepare(account accounts.Account) (*bind.Transact
 	return transactOpts, nil
 }
 
+func txLen(tx *types.Transaction) int {
+	rlp, err := tx.MarshalBinary()
+	if err != nil {
+		panic(err)
+	}
+	return len(rlp)
+}
+
 func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 	auctionId, auction, err := s.waitForAuction()
 	if err != nil {
@@ -175,22 +183,24 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 		return err
 	}
 
-	rcpt, err := s.checkSuccess(s.OvercollateralizedAuctions.CommitBid(transactOpts, auctionId, commit))
+	tx, err := s.OvercollateralizedAuctions.CommitBid(transactOpts, auctionId, commit)
+	rcpt, err := s.checkSuccess(tx, err)
 	if err != nil {
 		return err
 	}
-	log.Debug("bid committed", "gas used", rcpt.GasUsed)
+	log.Debug("bid committed", "gas used", rcpt.GasUsed, "length", txLen(tx))
 
 	err = s.waitForBlockNumber(auction.CommitDeadline)
 	if err != nil {
 		return err
 	}
 
-	rcpt, err = s.checkSuccess(s.OvercollateralizedAuctions.RevealBid(transactOpts, auctionId, blinding, amount))
+	tx, err = s.OvercollateralizedAuctions.RevealBid(transactOpts, auctionId, blinding, amount)
+	rcpt, err = s.checkSuccess(tx, err)
 	if err != nil {
 		return err
 	}
-	log.Debug("bid revealed", "gas used", rcpt.GasUsed)
+	log.Debug("bid revealed", "gas used", rcpt.GasUsed, "length", txLen(tx))
 } else {
 	err = s.waitForBlockNumber(auction.Opening - s.Params.BlockDelay) // account for latency
 	if err != nil {
@@ -201,13 +211,14 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 	if err != nil {
 		return err
 	}
-	limit := igas + 50537;
+	limit := igas + 50537
 	targetBlock := auction.Opening
-	rcpt, err := s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(s, targetBlock), gasLimit(limit)), auctionId, amount))
+	tx, err := s.SimpleAuctions.Bid(with(transactOpts, encrypt(s, targetBlock), gasLimit(limit)), auctionId, amount)
+	rcpt, err := s.checkSuccess(tx, err)
 	if err != nil {
 		return err
 	}
-	log.Debug("bid sent", "gas used", rcpt.GasUsed)
+	log.Debug("bid sent", "gas used", rcpt.GasUsed, "length", txLen(tx))
 }
 
 

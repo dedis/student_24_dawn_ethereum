@@ -7,10 +7,10 @@ protocol = "tibe"
 num_bidders = 100
 
 # delay between inclusion and execution in blocks
-block_delay = 10
+block_delay = 4
 
 # time between blocks in seconds
-block_time = 2
+block_time = 6
 
 # max units of gas per second
-gas_per_second = 3400000
+gas_per_second = 2500000

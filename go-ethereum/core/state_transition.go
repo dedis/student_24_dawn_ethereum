@@ -219,10 +219,8 @@ func (st *StateTransition) buyGas() error {
 	if have, want := st.state.GetBalance(st.msg.From()), balanceCheck; have.Cmp(want) < 0 {
 		return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
 	}
-	if st.msg.Type() != types.EncryptedTxType {
-		if err := st.gp.SubGas(st.msg.Gas()); err != nil {
-			return err
-		}
+	if err := st.gp.SubGas(st.msg.Gas()); err != nil {
+		return err
 	}
 	st.gas += st.msg.Gas()
 
@@ -236,7 +234,6 @@ func (st *StateTransition) preCheck() error {
 	if !st.msg.IsFake() {
 		// Make sure this transaction's nonce is correct.
 		stNonce := st.state.GetNonce(st.msg.From())
-
 		if msgNonce := st.msg.Nonce(); stNonce < msgNonce {
 			return fmt.Errorf("%w: address %v, tx: %d state: %d", ErrNonceTooHigh,
 				st.msg.From().Hex(), msgNonce, stNonce)
@@ -355,26 +352,13 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
 	}
 
-	if st.msg.Type() != types.EncryptedTxType {
-		// for non-encrypted tx, normal refund
-		if !rules.IsLondon {
-			// Before EIP-3529: refunds were capped to gasUsed / 2
-			st.refundGas(params.RefundQuotient)
-		} else {
-			// After EIP-3529: refunds are capped to gasUsed / 5
-			st.refundGas(params.RefundQuotientEIP3529)
-		}
+	if !rules.IsLondon {
+		// Before EIP-3529: refunds were capped to gasUsed / 2
+		st.refundGas(params.RefundQuotient)
 	} else {
-		// for encrypted tx, no refund of left gas limit, only refund according to opcode
-		if !rules.IsLondon {
-			// Before EIP-3529: refunds were capped to gasUsed / 2
-			st.refundGasEncryptedTx(params.RefundQuotient)
-		} else {
-			// After EIP-3529: refunds are capped to gasUsed / 5
-			st.refundGasEncryptedTx(params.RefundQuotientEIP3529)
-		}
+		// After EIP-3529: refunds are capped to gasUsed / 5
+		st.refundGas(params.RefundQuotientEIP3529)
 	}
-
 	effectiveTip := st.gasPrice
 	if rules.IsLondon {
 		effectiveTip = cmath.BigMin(st.gasTipCap, new(big.Int).Sub(st.gasFeeCap, st.evm.Context.BaseFee))
@@ -426,21 +410,6 @@ func (st *StateTransition) refundGas(refundQuotient uint64) {
 	// Also return remaining gas to the block gas counter so it is
 	// available for the next transaction.
 	st.gp.AddGas(st.gas)
-}
-
-func (st *StateTransition) refundGasEncryptedTx(refundQuotient uint64) {
-	// Apply refund counter, capped to a refund quotient
-	refund := st.gasUsed() / refundQuotient
-	if refund > st.state.GetRefund() {
-		refund = st.state.GetRefund()
-	}
-
-	// Return ETH for remaining gas, exchanged at the original rate.
-	remaining := new(big.Int).Mul(new(big.Int).SetUint64(refund), st.gasPrice)
-	st.state.AddBalance(st.msg.From(), remaining)
-
-	// the line below is commented, as for encrypted tx, the gp is not decrease for execution
-	// st.gp.AddGas(st.gas)
 }
 
 // gasUsed returns the amount of gas used up by the state transition.

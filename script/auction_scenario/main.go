@@ -305,7 +305,7 @@ func (s *Scenario) operatorScript() error {
 		return err
 	}
 
-	_, err = s.WETH.Deposit(with(transactOpts, value(common.Big1)))
+	_, err = s.WETH.Deposit(with(transactOpts, value(common.Big2)))
 	if err != nil {
 		return err
 	}

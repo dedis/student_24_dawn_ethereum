@@ -38,5 +38,13 @@ Try for example `cast tx 0xedf4e0d37e54c49710960396abff350f90c6b6aa83100ebba236e
 and note that the `from` value is the zero address.
 The cause of this is currently unknown.
 
+Context binding is not implemented in the TIBE case.
+The simplest solution would be to add the transaction label to a HKDF step.
+
+The Geth miner will normally prepare an empty block before starting block building.
+We disabled this due to the shadow blocks rule.
+
+It may happen that Clique decrees a block is *lost* if decryption causes too much delay.
+
 More of a quirk: the SMC uses Schnorr over BN254 as a way to authenticate nodes.
 It is a bit odd, it would make more sense to do Ed25519.

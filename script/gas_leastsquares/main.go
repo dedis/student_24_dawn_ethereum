@@ -20,6 +20,7 @@ const (
 	smc
 	bid
 	bid_highest
+	swap
 	n_features int = iota
 )
 
@@ -43,6 +44,9 @@ func Main() error {
 		{base | smc | bid_highest, 263_537},
 		{base | vdf | bid, 98_487},
 		{base | vdf | bid_highest, 137_537},
+
+		// provided by Etherscan.io
+		{ base | swap, 356190 },
 	}
 	a := mat.NewDense(len(points), n_features, nil)
 	x := mat.NewDense(n_features, 1, nil)
@@ -85,10 +89,13 @@ func Main() error {
 		{"Commit bid", base | commit},
 		{"Reveal bid", base | reveal},
 		{"Reveal highest bid", base | reveal_highest},
-		{"bid (SMC)", base | smc | bid},
-		{"bid highest (SMC)", base | smc | bid_highest},
-		{"bid (VDF)", base | vdf | bid},
-		{"bid highest (VDF)", base | vdf | bid_highest},
+		{"Bid (SMC)", base | smc | bid},
+		{"Bid highest (SMC)", base | smc | bid_highest},
+		{"Bid (VDF)", base | vdf | bid},
+		{"Bid highest (VDF)", base | vdf | bid_highest},
+		{`Swap\textsuperscript{\dagger}`, base | swap},
+		{`Swap (SMC)\textsuperscript{\ddagger}`, base | smc | swap},
+		{`Swap (VDF)\textsuperscript{\ddagger}`, base | vdf | swap},
 	} {
 		terms := []string{}
 		sum := 0

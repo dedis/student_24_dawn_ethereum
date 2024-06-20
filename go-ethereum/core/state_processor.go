@@ -72,16 +72,13 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	if p.config.DAOForkSupport && p.config.DAOForkBlock != nil && p.config.DAOForkBlock.Cmp(block.Number()) == 0 {
 		misc.ApplyDAOHardFork(statedb)
 	}
-	var (
-		beneficiary     common.Address
-		receipt         *types.Receipt
-	)
+	blockContext := NewEVMBlockContext(header, p.bc, nil)
+	vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, p.config, cfg)
 	params, err := f3b.ReadParams()
 	if err != nil {
 		return nil, nil, 0, err
 	}
-	beneficiary = RetrieveShadowCoinbase(p.bc, params.BlockDelay)
-	_ = beneficiary
+	_ = RetrieveShadowCoinbase(p.bc, params.BlockDelay) // FIXME
 	for i, tx := range block.Transactions() {
 		signer := types.MakeSigner(p.config, header.Number)
 		msg, err := tx.AsMessage(signer, header.BaseFee)
@@ -91,10 +88,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 
 		statedb.Prepare(tx.Hash(), i)
 
-		blockContext := NewEVMBlockContext(header, p.bc, nil)
-		vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, p.config, cfg)
-
-		receipt, err = applyTransaction(msg, p.config, nil, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv)
+		receipt, err := applyTransaction(msg, p.config, nil, gp, statedb, blockNumber, blockHash, tx, usedGas, vmenv)
 
 		if err != nil {
 			return nil, nil, 0, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)

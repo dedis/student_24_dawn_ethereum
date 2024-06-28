@@ -29,6 +29,11 @@ func (t *Transaction) Encrypt(from common.Address, targetBlock uint64) (*Transac
 
 	log.Debug("Encrypting", "label", label, "encKey", encKey, "seed", seed)
 
+	if !f3bProtocol.IsTibe() {
+		// optimization
+		targetBlock = 0
+	}
+
 	plaintext := append(t.To().Bytes(), t.Data()...)
 	ciphertext := make([]byte, len(plaintext))
 	tag := make([]byte, cae.Selected.TagLen())

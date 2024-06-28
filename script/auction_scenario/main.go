@@ -153,7 +153,12 @@ func (s *Scenario) bidderScriptPrepare(account accounts.Account) (*bind.Transact
 	return transactOpts, nil
 }
 
-func txLen(tx *types.Transaction) int {
+func (s *Scenario) TxLen(txHash common.Hash) int {
+	// refetch tx to get decrypted version
+	tx, _, err := s.Client.TransactionByHash(s.Context, txHash)
+	if err != nil {
+		panic(err)
+	}
 	rlp, err := tx.MarshalBinary()
 	if err != nil {
 		panic(err)
@@ -183,24 +188,22 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 		return err
 	}
 
-	tx, err := s.OvercollateralizedAuctions.CommitBid(transactOpts, auctionId, commit)
-	rcpt, err := s.checkSuccess(tx, err)
+	rcpt, err := s.checkSuccess(s.OvercollateralizedAuctions.CommitBid(transactOpts, auctionId, commit))
 	if err != nil {
 		return err
 	}
-	log.Debug("bid committed", "gas used", rcpt.GasUsed, "length", txLen(tx))
+	log.Debug("bid committed", "gas used", rcpt.GasUsed, "length", s.TxLen(rcpt.TxHash))
 
 	err = s.waitForBlockNumber(auction.CommitDeadline)
 	if err != nil {
 		return err
 	}
 
-	tx, err = s.OvercollateralizedAuctions.RevealBid(transactOpts, auctionId, blinding, amount)
-	rcpt, err = s.checkSuccess(tx, err)
+	rcpt, err = s.checkSuccess(s.OvercollateralizedAuctions.RevealBid(transactOpts, auctionId, blinding, amount))
 	if err != nil {
 		return err
 	}
-	log.Debug("bid revealed", "gas used", rcpt.GasUsed, "length", txLen(tx))
+	log.Debug("bid revealed", "gas used", rcpt.GasUsed, "length", s.TxLen(rcpt.TxHash))
 } else {
 	err = s.waitForBlockNumber(auction.Opening - s.Params.BlockDelay) // account for latency
 	if err != nil {
@@ -213,12 +216,11 @@ func (s *Scenario) bidderScriptBid(transactOpts *bind.TransactOpts) error {
 	}
 	limit := igas + 50537
 	targetBlock := auction.Opening
-	tx, err := s.SimpleAuctions.Bid(with(transactOpts, encrypt(s, targetBlock), gasLimit(limit)), auctionId, amount)
-	rcpt, err := s.checkSuccess(tx, err)
+	rcpt, err := s.checkSuccess(s.SimpleAuctions.Bid(with(transactOpts, encrypt(s, targetBlock), gasLimit(limit)), auctionId, amount))
 	if err != nil {
 		return err
 	}
-	log.Debug("bid sent", "gas used", rcpt.GasUsed, "length", txLen(tx))
+	log.Debug("bid sent", "gas used", rcpt.GasUsed, "length", s.TxLen(rcpt.TxHash))
 }
 
 

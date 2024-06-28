@@ -1258,6 +1258,11 @@ type RPCTransaction struct {
 	Type             hexutil.Uint64    `json:"type"`
 	Accesses         *types.AccessList `json:"accessList,omitempty"`
 	ChainID          *hexutil.Big      `json:"chainId,omitempty"`
+	Ciphertext       hexutil.Bytes     `json:"ciphertext,omitempty"`
+	Tag              hexutil.Bytes     `json:"tag,omitempty"`
+	EncKey           hexutil.Bytes     `json:"enckey,omitempty"`
+	Reveal           hexutil.Bytes     `json:"reveal,omitempty"`
+	TargetBlock      hexutil.Uint64    `json:"targetBlock,omitempty"`
 	V                *hexutil.Big      `json:"v"`
 	R                *hexutil.Big      `json:"r"`
 	S                *hexutil.Big      `json:"s"`
@@ -1312,6 +1317,43 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		} else {
 			result.GasPrice = (*hexutil.Big)(tx.GasFeeCap())
 		}
+	case types.EncryptedTxType:
+		al := tx.AccessList()
+		result.Accesses = &al
+		result.ChainID = (*hexutil.Big)(tx.ChainId())
+		result.GasFeeCap = (*hexutil.Big)(tx.GasFeeCap())
+		result.GasTipCap = (*hexutil.Big)(tx.GasTipCap())
+		// if the transaction has been mined, compute the effective gas price
+		if baseFee != nil && blockHash != (common.Hash{}) {
+			// price = min(tip, gasFeeCap - baseFee) + baseFee
+			price := math.BigMin(new(big.Int).Add(tx.GasTipCap(), baseFee), tx.GasFeeCap())
+			result.GasPrice = (*hexutil.Big)(price)
+		} else {
+			result.GasPrice = (*hexutil.Big)(tx.GasFeeCap())
+		}
+		result.Ciphertext = tx.Ciphertext()
+		result.Tag = tx.Tag()
+		result.EncKey = tx.EncKey()
+		result.TargetBlock = hexutil.Uint64(tx.TargetBlock())
+	case types.DecryptedTxType:
+		al := tx.AccessList()
+		result.Accesses = &al
+		result.ChainID = (*hexutil.Big)(tx.ChainId())
+		result.GasFeeCap = (*hexutil.Big)(tx.GasFeeCap())
+		result.GasTipCap = (*hexutil.Big)(tx.GasTipCap())
+		// if the transaction has been mined, compute the effective gas price
+		if baseFee != nil && blockHash != (common.Hash{}) {
+			// price = min(tip, gasFeeCap - baseFee) + baseFee
+			price := math.BigMin(new(big.Int).Add(tx.GasTipCap(), baseFee), tx.GasFeeCap())
+			result.GasPrice = (*hexutil.Big)(price)
+		} else {
+			result.GasPrice = (*hexutil.Big)(tx.GasFeeCap())
+		}
+		result.Ciphertext = tx.Ciphertext()
+		result.Tag = tx.Tag()
+		result.EncKey = tx.EncKey()
+		result.Reveal = tx.Reveal()
+		result.TargetBlock = hexutil.Uint64(tx.TargetBlock())
 	}
 	return result
 }

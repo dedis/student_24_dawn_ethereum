@@ -87,6 +87,10 @@ func (tx *DecryptedTx) gasPrice() *big.Int     { return tx.GasFeeCap }
 func (tx *DecryptedTx) value() *big.Int        { return tx.Value }
 func (tx *DecryptedTx) nonce() uint64          { return tx.Nonce }
 func (tx *DecryptedTx) to() *common.Address    { return tx.To }
+func (tx *DecryptedTx) ciphertext() []byte     { return nil }
+func (tx *DecryptedTx) tag() []byte            { return nil }
+func (tx *DecryptedTx) encKey() []byte         { return tx.EncKey }
+func (tx *DecryptedTx) reveal() []byte         { return tx.Reveal }
 func (tx *DecryptedTx) targetBlock() uint64    { return tx.TargetBlock }
 
 func (tx *DecryptedTx) rawSignatureValues() (v, r, s *big.Int) {

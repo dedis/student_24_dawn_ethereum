@@ -93,7 +93,10 @@ func (tx *DynamicFeeTx) gasPrice() *big.Int     { return tx.GasFeeCap }
 func (tx *DynamicFeeTx) value() *big.Int        { return tx.Value }
 func (tx *DynamicFeeTx) nonce() uint64          { return tx.Nonce }
 func (tx *DynamicFeeTx) to() *common.Address    { return tx.To }
-func (tx *DynamicFeeTx) key() []byte            { return nil }
+func (tx *DynamicFeeTx) ciphertext() []byte     { return nil }
+func (tx *DynamicFeeTx) tag() []byte            { return nil }
+func (tx *DynamicFeeTx) encKey() []byte         { return nil }
+func (tx *DynamicFeeTx) reveal() []byte         { return nil }
 func (tx *DynamicFeeTx) targetBlock() uint64    { return 0 }
 
 func (tx *DynamicFeeTx) rawSignatureValues() (v, r, s *big.Int) {

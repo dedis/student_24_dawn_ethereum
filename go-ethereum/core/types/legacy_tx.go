@@ -102,7 +102,10 @@ func (tx *LegacyTx) gasFeeCap() *big.Int    { return tx.GasPrice }
 func (tx *LegacyTx) value() *big.Int        { return tx.Value }
 func (tx *LegacyTx) nonce() uint64          { return tx.Nonce }
 func (tx *LegacyTx) to() *common.Address    { return tx.To }
-func (tx *LegacyTx) key() []byte            { return nil }
+func (tx *LegacyTx) ciphertext() []byte     { return nil }
+func (tx *LegacyTx) tag() []byte            { return nil }
+func (tx *LegacyTx) encKey() []byte         { return nil }
+func (tx *LegacyTx) reveal() []byte         { return nil }
 func (tx *LegacyTx) targetBlock() uint64    { return 0 }
 
 func (tx *LegacyTx) rawSignatureValues() (v, r, s *big.Int) {

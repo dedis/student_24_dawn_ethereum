@@ -27,7 +27,7 @@ import (
 
 
 func main() {
-	log.Root().SetHandler(log.LvlFilterHandler(log.LvlDebug, log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
+	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
 	if err := Main(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

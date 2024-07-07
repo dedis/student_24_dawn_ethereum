@@ -1,6 +1,8 @@
 module github.com/dedis/f3b-ethereum
 
-go 1.20
+go 1.22.1
+
+toolchain go1.22.3
 
 replace go.dedis.ch/kyber/v3 => ./kyber/
 
@@ -11,6 +13,7 @@ replace go.dedis.ch/f3b/smc => ./smc
 require (
 	github.com/ethereum/go-ethereum v1.10.17
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.2
+	github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416
 	go.dedis.ch/f3b/smc v0.0.0-00010101000000-000000000000
 	golang.org/x/perf v0.0.0-20240305160248-5eefbfdba9dd
 	gonum.org/v1/gonum v0.11.0
@@ -64,7 +67,6 @@ require (
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/mitchellh/pointerstructure v1.2.0 // indirect
 	github.com/naoina/go-stringutil v0.1.0 // indirect
-	github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/opentracing-contrib/go-grpc v0.0.0-20210225150812-73cb765af46e // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect

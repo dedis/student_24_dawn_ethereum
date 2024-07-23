@@ -33,6 +33,10 @@ Other benchmarks are in `go-ethereum/f3b` and can be run with `go test -bench`.
 The `params.toml` file can be edited to change the experiment parameters.
 In particular, it allows selecting the encryption method or reverting to hash-based commit-and-reveal.
 
+# Copying
+Original work by DEDIS is dual-licensed MIT and Apache 2.
+Geth and Kyber retain their original licenses.
+
 # Known bugs
 
 `cast` seems to have issues with transaction signatures during the experiments.

@@ -1,5 +1,5 @@
 # Dawn
-Delayed execution Ethereum, part of "Optimizing Commit-and-reveal for Smart Contracts", Master's Thesis, Julie Bettens.
+Delayed execution Ethereum, part of ["Optimizing Commit-and-reveal for Smart Contracts", Master's Thesis, Julie Bettens.](https://blog.bbjubjub.fr/thesis.pdf)
 Based on previous work by Shufan Wang.
 
 The goal of the project is to enable decentralized applications that require pre-execution privacy.

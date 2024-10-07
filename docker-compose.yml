@@ -14,4 +14,4 @@ services:
       - type: bind
         source: .
         target: /app
-    command: sh -c "./setup.sh && tmux new-session ./run.sh"
+    command: sh -c "./setup.sh && LANG=C.UTF-8 tmux new-session ./run.sh"

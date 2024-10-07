@@ -4,13 +4,13 @@
 protocol = "tibe"
 
 # How many bidders to simulate
-num_bidders = 100
+num_bidders = 200
 
 # delay between inclusion and execution in blocks
 block_delay = 4
 
 # time between blocks in seconds
-block_time = 6
+block_time = 2
 
 # max units of gas per second
-gas_per_second = 2500000
+gas_per_second = 15000000

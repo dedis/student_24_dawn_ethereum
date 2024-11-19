@@ -20,7 +20,7 @@ func (e *VDF) ShareSecret(label []byte) (seed, encKey []byte, err error) {
 }
 
 const lBytes = 32
-const πBytes = 512
+const πBytes = 256
 
 func (e *VDF) RevealSecret(label, encKey []byte) (reveal []byte, err error) {
 	n := new(big.Int).SetBytes(encKey)
